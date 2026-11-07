@@ -2,7 +2,7 @@ import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electr
 import { join } from 'path'
 import { mkdirSync, writeFileSync } from 'fs'
 import { discoverGenres, genreProgress, genreScanStatus, scanGenresNow, scanSiteGenres, startGenreScheduler, urlKey } from './genres'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { closeWarm, ensureSession, hiddenWindow, loadPage, probeLinks, refererHints, warmUp } from './grabber'
 import { installImageProxy, registerImageScheme } from './imageProxy'
@@ -233,7 +233,9 @@ async function refineSource(id: string, emit: (p: CrawlProgress) => void): Promi
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.yomi.reader') // its own taskbar entry and icon, not Electron's
+  // Its own taskbar entry and icon. (The toolkit's helper swaps in Electron's own program path while developing, which
+  // makes Windows show Electron's atom icon instead of ours, so the id is set directly.)
+  if (process.platform === 'win32') app.setAppUserModelId('com.yomi.reader')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

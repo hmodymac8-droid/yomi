@@ -254,17 +254,42 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
     )
   }, [target?.url, offline, referer])
   const unread = list.filter((c) => !readSet.has(c.url))
-  // Esc = Back (unless you are typing in a box)
+  const scrollBox = useRef<HTMLDivElement>(null)
+  const [pinned, setPinned] = useState(false)
+  // Esc, Alt + Left, or the mouse's own Back button = Back (unless you are typing in a box)
   useEffect(() => {
     const k = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && !(e.target as HTMLElement).closest('input, textarea, select')) onBack()
+      if ((e.target as HTMLElement).closest('input, textarea, select')) return
+      if (e.key === 'Escape' || (e.altKey && e.key === 'ArrowLeft')) onBack()
+    }
+    const m = (e: MouseEvent): void => {
+      if (e.button === 3) {
+        e.preventDefault()
+        onBack()
+      }
     }
     window.addEventListener('keydown', k)
-    return () => window.removeEventListener('keydown', k)
+    window.addEventListener('mouseup', m)
+    return () => {
+      window.removeEventListener('keydown', k)
+      window.removeEventListener('mouseup', m)
+    }
   }, [onBack])
 
   return (
-    <div className="series">
+    <div className="series" ref={scrollBox} onScroll={(e) => setPinned(e.currentTarget.scrollTop > 280)}>
+      {/* once the header is scrolled away, a slim bar with Back stays at the top */}
+      <div className="pinback-wrap">
+        <div className={`pinback${pinned ? ' on' : ''}`} aria-hidden={!pinned}>
+          <button className="back" onClick={onBack} tabIndex={pinned ? 0 : -1}>
+            <Icon name="back" /> Back to {backLabel}
+          </button>
+          <span className="pintitle">{series.title}</span>
+          <button className="secondary" tabIndex={pinned ? 0 : -1} onClick={() => scrollBox.current?.scrollTo({ top: 0, behavior: 'smooth' })}>
+            ↑ Top
+          </button>
+        </div>
+      </div>
       <div className="head">
         <div className="cover big">
           {(series.cover || detail?.cover) && (

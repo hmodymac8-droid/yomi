@@ -509,3 +509,20 @@ select { cursor: pointer; }
 }
 .head .back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
 .head .back:hover { background: var(--paper); border-color: var(--primary); color: var(--primary-text); }
+
+/* series page: Back stays reachable while scrolling the chapters */
+.series > .pinback-wrap { position: sticky; top: 0; height: 0; z-index: 20; max-width: none; margin: 0; }
+.pinback {
+  position: absolute; top: 0; left: -32px; right: -32px; height: 60px; display: flex; align-items: center; gap: 16px; padding: 0 32px;
+  background: color-mix(in oklab, var(--background) 96%, transparent); border-bottom: 1px solid var(--border);
+  transform: translateY(-100%); opacity: 0; pointer-events: none; transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.pinback.on { transform: none; opacity: 1; pointer-events: auto; }
+.pinback .pintitle { flex: 1; min-width: 0; font-family: var(--font-display); font-size: 18px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pinback .back {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px 9px 12px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--paper); color: var(--foreground); font-size: 13px; font-weight: 500; transition: border-color 0.3s, color 0.3s;
+}
+.pinback .back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.pinback .back:hover { border-color: var(--primary); color: var(--primary-text); }
+.pinback .secondary { padding: 8px 14px; }
