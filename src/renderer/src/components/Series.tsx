@@ -1,4 +1,5 @@
 import { Tags } from './Tags'
+import { Icon } from './Icon'
 import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, proxied } from '../lib'
@@ -6,6 +7,8 @@ import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, proxied } 
 interface Props {
   series: OpenSeries
   onBack: () => void
+  /** Name of the screen Back returns to ("Following", "Discover"…). */
+  backLabel: string
   onRead: (c: OpenChapter) => void
 }
 
@@ -16,7 +19,7 @@ const chapterNumber = (t: string): number => {
   return m ? Number(m[1]) : 0
 }
 
-export default function Series({ series, onBack, onRead }: Props): React.JSX.Element {
+export default function Series({ series, onBack, onRead, backLabel }: Props): React.JSX.Element {
   const [entryIdx, setEntryIdx] = useState(0)
   const [detail, setDetail] = useState<SeriesDetail | null>(null)
   const [error, setError] = useState('')
@@ -251,6 +254,14 @@ export default function Series({ series, onBack, onRead }: Props): React.JSX.Ele
     )
   }, [target?.url, offline, referer])
   const unread = list.filter((c) => !readSet.has(c.url))
+  // Esc = Back (unless you are typing in a box)
+  useEffect(() => {
+    const k = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape' && !(e.target as HTMLElement).closest('input, textarea, select')) onBack()
+    }
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
+  }, [onBack])
 
   return (
     <div className="series">
@@ -264,8 +275,8 @@ export default function Series({ series, onBack, onRead }: Props): React.JSX.Ele
           )}
         </div>
         <div className="info">
-          <button className="back" onClick={onBack}>
-            ← Back to Discover
+          <button className="back" onClick={onBack} title="Esc">
+            <Icon name="back" /> Back to {backLabel}
           </button>
           <Tags detail={detail} />
           <h2>{series.title}</h2>

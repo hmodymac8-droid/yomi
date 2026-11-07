@@ -100,7 +100,7 @@ function createWindow(): void {
     backgroundColor: '#020202',
     minWidth: 760,
     minHeight: 520,
-    icon: join(__dirname, '../../resources/favicon.png'),
+    icon,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -233,7 +233,7 @@ async function refineSource(id: string, emit: (p: CrawlProgress) => void): Promi
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.yomi.reader') // its own taskbar entry and icon, not Electron's
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -1297,10 +1297,18 @@ app.whenReady().then(async () => {
         await click('.navitem', 'following')
         await wait(2500)
         await shot('05-following')
+        await click('.grid .card')
+        await wait(5000)
+        console.log('FROMFOLLOW ' + (await js("document.querySelector('.head .back')?.textContent")))
+        await shot('05b-series-from-following')
+        await click('.head .back')
+        await wait(1500)
+        console.log('AFTERBACK ' + (await js("document.querySelector('.navitem.on')?.textContent")))
         await fresh()
         console.log('card', await click('.grid .card'))
         await wait(7000)
         await shot('06-series-page')
+        console.log('BACKLABEL ' + (await js("document.querySelector('.head .back')?.textContent")))
         console.log('chapter', await click('.chapter'))
         await wait(10000)
         await js("document.querySelector('.readerview').dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 10 }))")

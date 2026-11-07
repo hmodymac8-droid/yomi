@@ -17,8 +17,12 @@ type View =
   | { name: 'downloads' }
   | { name: 'following' }
   | { name: 'sites' }
-  | { name: 'series'; series: OpenSeries }
-  | { name: 'reader'; series: OpenSeries; chapter: OpenChapter }
+  | { name: 'series'; series: OpenSeries; from: Tab }
+  | { name: 'reader'; series: OpenSeries; chapter: OpenChapter; from: Tab }
+
+/** The screens in the top bar. A series remembers which one it was opened from, and Back returns there. */
+type Tab = 'browse' | 'added' | 'following' | 'downloads' | 'sites'
+const TAB_LABEL: Record<Tab, string> = { browse: 'Discover', added: 'Added by me', following: 'Following', downloads: 'Downloads', sites: 'Sites' }
 
 /** If a screen ever crashes while drawing, show a message and a way back instead of a blank window. */
 class Boundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -70,6 +74,8 @@ function TitleBar(): React.JSX.Element {
 
 function AppInner(): React.JSX.Element {
   const [view, setView] = useState<View>({ name: 'browse' })
+  // the top-bar screen we are on, or the one the open series / chapter was opened from
+  const here: Tab = view.name === 'series' || view.name === 'reader' ? view.from : view.name
   // The search box lives in the top bar; Discover (always mounted) does the searching.
   const [q, setQ] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -173,13 +179,13 @@ function AppInner(): React.JSX.Element {
             active={onBrowse}
             shelf={view.name === 'added' ? 'added' : 'all'}
             q={q}
-            onRead={(series, chapter) => setView({ name: 'reader', series, chapter })}
-            onOpen={(series) => setView({ name: 'series', series })}
+            onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: here })}
+            onOpen={(series) => setView({ name: 'series', series, from: here })}
           />
         </div>
         {view.name === 'following' && (
           <div className="pane">
-            <Following onBack={() => setView({ name: 'browse' })} onOpen={(series) => setView({ name: 'series', series })} />
+            <Following onBack={() => setView({ name: 'browse' })} onOpen={(series) => setView({ name: 'series', series, from: 'following' })} />
           </div>
         )}
         {view.name === 'sites' && (
@@ -196,8 +202,9 @@ function AppInner(): React.JSX.Element {
           <div className="pane">
             <Series
               series={view.series}
-              onBack={() => setView({ name: 'browse' })}
-              onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter })}
+              backLabel={TAB_LABEL[view.from]}
+              onBack={() => setView({ name: view.from } as View)}
+              onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
             />
           </div>
         )}
@@ -206,8 +213,8 @@ function AppInner(): React.JSX.Element {
             <Reader
               chapter={view.chapter}
               series={view.series}
-              onBack={() => setView({ name: 'series', series: view.series })}
-              onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter })}
+              onBack={() => setView({ name: 'series', series: view.series, from: view.from })}
+              onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
             />
           </div>
         )}

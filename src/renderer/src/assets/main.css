@@ -500,3 +500,12 @@ select { cursor: pointer; }
 .sechead.gridtop { text-transform: none; letter-spacing: normal; color: var(--foreground); font-size: 14px; font-weight: 400; }
 
 .genrestat { flex-basis: 100%; padding-left: 20px; font-size: 11px; }
+
+/* Back: a real button you can see, saying where it goes */
+.head .back {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; padding: 9px 16px 9px 12px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--paper); color: var(--foreground);
+  font-size: 13px; font-weight: 500; transition: border-color 0.3s, color 0.3s;
+}
+.head .back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.head .back:hover { background: var(--paper); border-color: var(--primary); color: var(--primary-text); }
