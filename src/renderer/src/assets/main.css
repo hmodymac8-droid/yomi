@@ -169,3 +169,9 @@ button:disabled { opacity: .5; cursor: default; }
 .reader.bg-black { background: #000; }
 .reader.bg-sepia { background: #f1e4c8; }
 .reader.bg-sepia .title { color: #5b4a2b; }
+
+/* the top bar floats over the page and slides away while reading */
+.readerview { position: relative; overflow: hidden; }
+.readerview .bar { position: absolute; top: 0; left: 0; right: 0; z-index: 10; transition: transform .2s ease, opacity .2s ease; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+.readerview .bar.hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+.reader .title { padding-top: 64px; }

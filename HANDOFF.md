@@ -92,3 +92,5 @@ Following screen by hand (built, never opened). Everything above was verified wi
   (Dark/Black/Sepia), page width zoom (− / +). Paged mode: click left/right third to turn (direction aware), preloads the
   next 3 pages + previous one, arrows/Space/PageUp/PageDown. Shortcuts: M mode, F fit, D direction, +/- zoom, Esc back.
   Written and typechecked, never tried in the window.
+- Reader top bar floats and auto-hides (hides 2.2 s after it shows, at once when scrolling down; shows when the mouse
+  is within 60 px of the top). Ctrl + mouse wheel / pinch changes page size (width fit: page width; height fit: page height).

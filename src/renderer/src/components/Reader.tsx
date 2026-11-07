@@ -51,9 +51,43 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const [index, setIndex] = useState(0)
   const [eager, setEager] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
+  const root = useRef<HTMLDivElement>(null)
+
+  // The top bar is out of the way while you read: it shows when the mouse goes to the top edge (or when a chapter opens),
+  // and hides again by itself after a moment, or at once when you scroll down.
+  const [barVisible, setBarVisible] = useState(true)
+  const barHover = useRef(false)
+  const hideTimer = useRef<number | undefined>(undefined)
+  const lastTop = useRef(0)
+  const showBar = (): void => {
+    setBarVisible(true)
+    window.clearTimeout(hideTimer.current)
+    hideTimer.current = window.setTimeout(() => {
+      if (!barHover.current) setBarVisible(false)
+    }, 2200)
+  }
   const restoring = useRef(true) // true while we jump back to the saved position: don't overwrite it
   const lastSave = useRef(0)
   const finished = useRef(false)
+
+  useEffect(() => {
+    showBar()
+    return () => window.clearTimeout(hideTimer.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapter.url])
+
+  // Ctrl + mouse wheel (or a trackpad pinch) makes the pages smaller or bigger, like a browser would.
+  useEffect(() => {
+    const el = root.current
+    if (!el) return
+    const onWheel = (e: WheelEvent): void => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      setZoom((z) => Math.max(400, Math.min(2000, z + (e.deltaY < 0 ? 50 : -50))))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   useEffect(() => remember('mode', mode), [mode])
   useEffect(() => remember('fit', fit), [fit])
@@ -166,6 +200,13 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   // Webtoon mode: save the scroll position (throttled) and mark the chapter read near the end.
   const onScroll = (): void => {
     const el = scroller.current
+    if (el) {
+      if (el.scrollTop > lastTop.current + 8 && !barHover.current) {
+        window.clearTimeout(hideTimer.current)
+        setBarVisible(false)
+      }
+      lastTop.current = el.scrollTop
+    }
     if (!el || restoring.current || mode !== 'webtoon' || pages.length === 0) return
     const max = el.scrollHeight - el.clientHeight
     if (max <= 0) return
@@ -235,8 +276,24 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   })
 
   return (
-    <div className="readerview">
-      <header className="bar">
+    <div
+      className="readerview"
+      ref={root}
+      onMouseMove={(e) => {
+        if (e.clientY < 60) showBar()
+      }}
+    >
+      <header
+        className={`bar${barVisible ? '' : ' hidden'}`}
+        onMouseEnter={() => {
+          barHover.current = true
+          showBar()
+        }}
+        onMouseLeave={() => {
+          barHover.current = false
+          showBar() // starts the countdown to hide again
+        }}
+      >
         <button onClick={onBack}>← Back</button>
         <button onClick={() => go(prevCh)} disabled={!prevCh}>
           ‹ Prev
@@ -251,12 +308,12 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
         <button onClick={() => setFit(fit === 'width' ? 'height' : 'width')} title="Shortcut: F">
           Fit {fit}
         </button>
-        {fit === 'width' && mode === 'webtoon' && (
+        {(
           <>
-            <button onClick={() => setZoom((z) => Math.max(400, z - 100))} title="Smaller pages (-)">
+            <button onClick={() => setZoom((z) => Math.max(400, z - 100))} title="Smaller pages (- or Ctrl + wheel down)">
               −
             </button>
-            <button onClick={() => setZoom((z) => Math.min(2000, z + 100))} title="Bigger pages (+)">
+            <button onClick={() => setZoom((z) => Math.min(2000, z + 100))} title="Bigger pages (+ or Ctrl + wheel up)">
               +
             </button>
           </>
@@ -284,7 +341,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                 <img
                   key={p}
                   className={`page fit-${fit}`}
-                  style={fit === 'width' ? { width: `min(100%, ${zoom}px)` } : undefined}
+                  style={fit === 'width' ? { width: `min(100%, ${zoom}px)` } : { height: `calc((100vh - 56px) * ${zoom / 900})` }}
                   src={pageSrc(p, chapter.referer)}
                   loading={eager || i < 3 ? 'eager' : 'lazy'}
                 />
@@ -299,6 +356,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
             <img
               key={pages[index]}
               className={`page fit-${fit}`}
+              style={fit === 'width' ? { width: `min(100%, ${zoom}px)` } : { height: `calc((100vh - 56px) * ${zoom / 900})` }}
               src={pageSrc(pages[index], chapter.referer)}
               // click the left or right third to turn the page (which side is "next" depends on the direction)
               onClick={(e) => {
