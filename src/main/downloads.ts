@@ -2,7 +2,7 @@ import { app, session } from 'electron'
 import { join } from 'path'
 import { createHash } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
-import { writeFile } from 'fs/promises'
+import { rm, writeFile } from 'fs/promises'
 import type { DownloadItem, DownloadRequest } from '../preload/index.d'
 import { grabChapterFast } from './fastgrab'
 import { ensureSession, refererHints } from './grabber'
@@ -115,6 +115,7 @@ export function enqueueDownloads(reqs: DownloadRequest[]): void {
       bytes: 0,
       queuedAt: now + n // keeps the order the caller gave
     }
+    if (!active.has(r.chapterUrl)) cancelled.delete(r.chapterUrl) // a leftover flag must not cancel a fresh download
     all[r.chapterUrl] = item
     emitter({ ...item })
   })
@@ -133,7 +134,7 @@ export function removeDownload(id: string): void {
   const all = load()
   const i = all[id]
   if (!i) return
-  cancelled.add(id)
+  if (active.has(id)) cancelled.add(id)
   try {
     rmSync(join(downloadsRoot(), i.dir), { recursive: true, force: true })
   } catch {
@@ -145,6 +146,36 @@ export function removeDownload(id: string): void {
 }
 
 /** Starts queued chapters until as many are running as you allowed; each one starts the next when it ends. */
+/**
+ * Deletes many downloads at once without freezing the app: they leave the saved list in one step (one file write, no
+ * per-item messages), then their folders are removed in the background, a few at a time, without blocking anything.
+ */
+export async function removeDownloads(ids: string[]): Promise<void> {
+  const all = load()
+  const dirs: string[] = []
+  for (const id of ids) {
+    const i = all[id]
+    if (!i) continue
+    if (active.has(id)) cancelled.add(id) // a running download stops itself (and clears this flag when it ends)
+    dirs.push(join(downloadsRoot(), i.dir))
+    delete all[id]
+  }
+  saveSoon(true)
+  let next = 0
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const d = dirs[next++]
+      if (d === undefined) return
+      try {
+        await rm(d, { recursive: true, force: true })
+      } catch {
+        /* already gone */
+      }
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()])
+}
+
 async function pump(): Promise<void> {
   for (;;) {
     if (active.size >= getConcurrency()) return

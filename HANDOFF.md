@@ -106,3 +106,6 @@ Following screen by hand (built, never opened). Everything above was verified wi
 - **Parallel downloads**: Downloads screen has "Download at the same time: 1-8 chapters" (default 3, saved in
   download-settings.json). `pump` in downloads.ts starts queued chapters until the limit is reached. Dev test:
   MR_DLPAR=<n>,<url>,<url>... (12 olympustaff chapters: 14.6 s at 1, 9.5 s at 6).
+- Bulk delete no longer freezes the app: `removeDownloads` (downloads.ts) updates the saved list once and removes folders
+  in the background (async, 4 at a time); the screen drops the rows in one step. Also fixed: a deleted chapter could not
+  be downloaded again (a leftover "cancelled" flag). Test: MR_DLPAR prints DLDEL / DLAGAIN.

@@ -54,6 +54,7 @@ import {
   getDownload,
   listDownloads,
   removeDownload,
+  removeDownloads,
   resumeDownloads,
   setConcurrency,
   setDownloadEmitter
@@ -322,9 +323,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('enrich', (_e, urls: string[]) => enrichEntries(urls))
   ipcMain.handle('download-get-concurrency', () => getConcurrency())
   ipcMain.handle('download-set-concurrency', (_e, n: number) => setConcurrency(n))
-  ipcMain.handle('download-remove-many', (_e, ids: string[]) => {
-    for (const id of ids) removeDownload(id)
-  })
+  ipcMain.handle('download-remove-many', (_e, ids: string[]) => removeDownloads(ids))
   ipcMain.handle('prefetch-chapter', (_e, url: string) => prefetchChapter(url))
 
   ipcMain.handle('grab-chapter', async (_e, url: string) => {
@@ -429,7 +428,21 @@ app.whenReady().then(async () => {
         }
         await new Promise((r) => setTimeout(r, 200))
       }
-      for (const u of urls) removeDownload(u)
+      const tr = Date.now()
+      let ticks = 0
+      const iv = setInterval(() => ticks++, 10) // counts how often the app got to run while the delete was going on
+      await removeDownloads(urls)
+      clearInterval(iv)
+      console.log('DLDEL ' + JSON.stringify({ ms: Date.now() - tr, ticks, left: listDownloads().filter((i) => urls.includes(i.id)).length }))
+      // downloading the same chapter again after deleting it must work
+      enqueueDownloads([{ chapterUrl: urls[0], chapterTitle: 'again', seriesUrl: origin + 'x', seriesTitle: 'par', sourceId: 't', referer: origin }])
+      for (let k = 0; k < 150; k++) {
+        const it = listDownloads().find((i) => i.id === urls[0])
+        if (it && (it.status === 'done' || it.status === 'error')) break
+        await new Promise((r) => setTimeout(r, 200))
+      }
+      console.log('DLAGAIN ' + listDownloads().find((i) => i.id === urls[0])?.status)
+      await removeDownloads([urls[0]])
     })()
       .catch((e) => console.log('DLPAR_ERROR ' + (e instanceof Error ? e.message : String(e))))
       .finally(() => app.quit())

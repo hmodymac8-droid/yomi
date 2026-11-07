@@ -17,6 +17,7 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
   const area = useRef<HTMLDivElement>(null)
   const lastClicked = useRef<string | null>(null)
   const [concurrency, setConcurrencyState] = useState(3)
+  const [deleting, setDeleting] = useState(false)
   const suppressClick = useRef(false) // a drag ends with a click event: ignore that one
 
   useEffect(() => {
@@ -64,8 +65,16 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
       `Delete ${what}?\n\n${ids.length} chapter${ids.length === 1 ? '' : 's'}${size > 0 ? ` · ${mb(size)}` : ''} will be removed from this computer. This cannot be undone.`
     )
     if (!ok) return
-    await window.api.downloadRemoveMany(ids)
-    setSelected(new Set())
+    setDeleting(true)
+    try {
+      await window.api.downloadRemoveMany(ids)
+      // take them off the screen in one step (no message per chapter)
+      const gone = new Set(ids)
+      setItems((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => !gone.has(id))))
+      setSelected(new Set())
+    } finally {
+      setDeleting(false)
+    }
   }
 
   // ---- selecting -------------------------------------------------------------------------------------------------
@@ -246,7 +255,7 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
           {selected.size > 0 && (
             <>
               <span className="sub">{selected.size} selected</span>
-              <button className="mini big danger" onClick={() => void deleteIds([...selected], 'the selected downloads')}>
+              <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds([...selected], 'the selected downloads')}>
                 Delete selected
               </button>
               <button className="mini big" onClick={() => setSelected(new Set())}>
@@ -255,8 +264,8 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
             </>
           )}
           <span className="grow" />
-          <button className="mini big danger" onClick={() => void deleteIds(all.map((i) => i.id), 'ALL downloads')}>
-            Delete all
+          <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds(all.map((i) => i.id), 'ALL downloads')}>
+            {deleting ? 'Deleting…' : 'Delete all'}
           </button>
         </div>
       )}
