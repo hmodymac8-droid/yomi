@@ -254,6 +254,8 @@ export function sourcesWithChapterTitles(): string[] {
   const out: string[] = []
   for (const src of s.sources) {
     const list = s.series[src.id] ?? []
+    // a site that was set up but has no titles and no way to list them (older detection picked a page the site forbids): redo it
+    if (list.length === 0 && src.maxPages === 0 && !(src.sitemaps && src.sitemaps.length)) out.push(src.id)
     if (list.length === 0) continue
     const bad = list.filter((e) => {
       try {

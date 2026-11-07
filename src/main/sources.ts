@@ -403,21 +403,21 @@ export async function detectSource(
       const cands = [...(derived ? [derived] : []), ...listCandidates(pick.links, u.hostname, input).filter((c) => c !== derived)].slice(0, 3)
       const analyses = await Promise.all(cands.map((c) => pool.use((w) => analyze(w, c)).catch(() => null)))
       T('candidates read: ' + JSON.stringify(cands.map((c, i) => ({ c: c.slice(-28), cards: analyses[i]?.cards ?? null, paged: analyses[i]?.paged ?? null }))))
-      // The best candidate (ignoring the home page) is the one that gets the slower "does page 2 exist?" check.
-      let winner: { a: Analysis; url: string } | null = null
-      analyses.forEach((a, i) => {
-        if (a && a.cards >= 5 && (!winner || score(a) > score(winner.a))) winner = { a, url: cands[i] }
-      })
-      const best = winner as { a: Analysis; url: string } | null
-      if (best) {
-        if (!best.a.paged) {
-          onStage('Checking how the list is paged…')
-          const t = await probePagination(pool, best.url, best.a)
-          T('page-2 check done: ' + (t ?? 'no pagination found'))
-          if (t) Object.assign(best.a, { listTemplate: t, paged: true })
-        }
-        if (score(best.a) > score(pick)) pick = best.a
-      }
+      // Every candidate that shows series gets the "does page 2 exist?" check (side by side). The first guess is not always
+      // the real list: /book/<id> pages give no list at all, while /browse does (Projectsuki).
+      const found = analyses
+        .map((a, i) => ({ a, url: cands[i] }))
+        .filter((x): x is { a: Analysis; url: string } => !!x.a && x.a.cards >= 5)
+      if (found.some((x) => !x.a.paged)) onStage('Checking how the list is paged…')
+      await Promise.all(
+        found.map(async (x) => {
+          if (x.a.paged) return
+          const t = await probePagination(pool, x.url, x.a)
+          T('page-2 check done for ' + x.url.slice(-24) + ': ' + (t ?? 'no pagination found'))
+          if (t) Object.assign(x.a, { listTemplate: t, paged: true })
+        })
+      )
+      for (const x of found) if (score(x.a) > score(pick)) pick = x.a
 
       // Some sites can only be listed through their search: an empty search shows nothing, but a search for "a"
       // lists 50 series per page over many pages. If no real paged list turned up, try that. One search per letter
