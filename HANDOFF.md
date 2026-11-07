@@ -88,3 +88,7 @@ Following screen by hand (built, never opened). Everything above was verified wi
 - Order of work agreed with the user: self-checking lists (done), Sites screen (done), MangaK (done), auto scans (done),
   then reading features, library, downloads (CBZ/queue), preload followed series, Arabic display, settings,
   teach-a-site builder, and the INSTALLER LAST (user said so).
+- **Reader upgrades**: settings remembered (localStorage `reader.*`): mode, fit, direction (Left→Right / Right→Left), background
+  (Dark/Black/Sepia), page width zoom (− / +). Paged mode: click left/right third to turn (direction aware), preloads the
+  next 3 pages + previous one, arrows/Space/PageUp/PageDown. Shortcuts: M mode, F fit, D direction, +/- zoom, Esc back.
+  Written and typechecked, never tried in the window.

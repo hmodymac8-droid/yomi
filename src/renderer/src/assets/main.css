@@ -163,3 +163,9 @@ button:disabled { opacity: .5; cursor: default; }
 .step { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .stepname { width: 110px; flex: none; }
 .stepdetail { flex: 1; color: var(--text); }
+
+/* reader background themes */
+.reader.bg-dark { background: var(--bg); }
+.reader.bg-black { background: #000; }
+.reader.bg-sepia { background: #f1e4c8; }
+.reader.bg-sepia .title { color: #5b4a2b; }
