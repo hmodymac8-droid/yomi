@@ -1,3 +1,4 @@
+import { Tags } from './Tags'
 import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, proxied } from '../lib'
@@ -266,6 +267,7 @@ export default function Series({ series, onBack, onRead }: Props): React.JSX.Ele
           <button className="back" onClick={onBack}>
             ← Back to Discover
           </button>
+          <Tags detail={detail} />
           <h2>{series.title}</h2>
           {series.entries.length > 1 && (
             <div className="srcs">

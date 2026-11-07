@@ -66,6 +66,10 @@ export interface SeriesDetail {
   title: string
   cover: string
   description: string
+  /** What the series page says about itself, when it says it (read from the page, never guessed). */
+  type?: 'manga' | 'manhwa' | 'manhua'
+  genres?: string[]
+  status?: 'ongoing' | 'completed' | 'hiatus' | 'cancelled'
   /** `alts` are other links to the same chapter (other providers), tried if the main one fails. */
   chapters: { title: string; url: string; alts?: string[] }[]
   /** The list looks too short for the newest chapter number (e.g. 2 chapters but the latest is Chapter 66). */

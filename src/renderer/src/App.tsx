@@ -1,4 +1,4 @@
-import { Component, useEffect, useState, type ReactNode } from 'react'
+import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import Browse from './components/Browse'
 import Series from './components/Series'
 import Reader from './components/Reader'
@@ -70,6 +70,20 @@ function TitleBar(): React.JSX.Element {
 
 function AppInner(): React.JSX.Element {
   const [view, setView] = useState<View>({ name: 'browse' })
+  // The search box lives in the top bar; Discover (always mounted) does the searching.
+  const [q, setQ] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const h = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchRef.current?.focus()
+        searchRef.current?.select()
+      }
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [])
   const [upd, setUpd] = useState<UpdateStatus | null>(null)
   const [addedCount, setAddedCount] = useState(0)
   const [queued, setQueued] = useState(0)
@@ -133,7 +147,22 @@ function AppInner(): React.JSX.Element {
               </button>
             ))}
           </nav>
-          <span className="spacer" />
+          <label className="searchfield">
+            <Icon name="search" />
+            <input
+              ref={searchRef}
+              aria-label="Search catalog"
+              placeholder={`Search ${totalTitles.toLocaleString()} titles across all your sites…`}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value)
+                // searching from another screen brings you to the results
+                if (view.name !== 'browse' && view.name !== 'added') setView({ name: 'browse' })
+              }}
+              onKeyDown={(e) => e.key === 'Escape' && setQ('')}
+            />
+            <kbd>Ctrl K</kbd>
+          </label>
           <ThemeToggle />
         </header>
       )}
@@ -143,6 +172,8 @@ function AppInner(): React.JSX.Element {
           <Browse
             active={onBrowse}
             shelf={view.name === 'added' ? 'added' : 'all'}
+            q={q}
+            onRead={(series, chapter) => setView({ name: 'reader', series, chapter })}
             onOpen={(series) => setView({ name: 'series', series })}
           />
         </div>

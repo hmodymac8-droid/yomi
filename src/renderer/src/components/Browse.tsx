@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CrawlProgress, FollowInfo, ProgressRecord, SearchHit, SourceInfo, UpdateStatus } from '../../../preload/index.d'
-import { OpenSeries, fallbackCover, proxied, timeAgo } from '../lib'
+import { OpenChapter, OpenSeries, fallbackCover, proxied, timeAgo } from '../lib'
+import Featured from './Featured'
 import { Icon } from './Icon'
 
 const PAGE = 60
@@ -11,6 +12,9 @@ interface Props {
   active: boolean
   /** "all" is Discover; "added" shows only the titles you saved by address. */
   shelf: 'all' | 'added'
+  /** The search text (the box lives in the top bar). */
+  q: string
+  onRead: (s: OpenSeries, c: OpenChapter) => void
 }
 
 interface AddedTitle {
@@ -22,7 +26,7 @@ interface AddedTitle {
   chapters: number
 }
 
-export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Element {
+export default function Browse({ onOpen, active, shelf, q, onRead }: Props): React.JSX.Element {
   // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
   const [sitesOpen, setSitesOpen] = useState<boolean>(() => {
     try {
@@ -43,7 +47,6 @@ export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Elem
   const [recent, setRecent] = useState<ProgressRecord[]>([])
   const [follows, setFollows] = useState<FollowInfo[]>([])
   const [upd, setUpd] = useState<UpdateStatus | null>(null)
-  const [q, setQ] = useState('')
   const [added, setAdded] = useState<AddedTitle[]>([])
   // Which sites are searched. null means all of them; otherwise the chosen ones (remembered between launches).
   const [picked, setPicked] = useState<string[] | null>(() => {
@@ -84,7 +87,6 @@ export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Elem
       void window.api.prefetchSeries(h.entries[0].sourceId, h.entries[0].url)
     }, 350)
   }
-  const searchRef = useRef<HTMLInputElement>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
   const gridTop = useRef<HTMLDivElement>(null)
   // Every search is a new "generation". Anything that comes back from an older one is dropped, so rows of the
@@ -391,19 +393,6 @@ export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Elem
     })
   }, [hits])
 
-  // Ctrl+K focuses the search bar.
-  useEffect(() => {
-    const h = (e: KeyboardEvent): void => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        searchRef.current?.focus()
-        searchRef.current?.select()
-      }
-    }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [])
-
   const addSite = async (): Promise<void> => {
     if (!siteUrl.trim()) return
     setAdding(true)
@@ -460,67 +449,24 @@ export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Elem
           </div>
         </div>
       )}
-      <div className="toolbar">
-        <input
-          ref={searchRef}
-          className="search"
-          placeholder="Search manga & manhwa across all your sites…  (Ctrl+K)"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <div className="picker">
-          <button className="pickbtn" onClick={() => setPickerOpen((o) => !o)} title="Choose which sites to search">
-            {sourceIds.length === 0 || sourceIds.length === sources.length
-              ? `All sites (${sources.length})`
-              : `${sourceIds.length} of ${sources.length} sites`}{' '}
-            ▾
-          </button>
-          {pickerOpen && (
-            <>
-              <div className="pickshade" onClick={() => setPickerOpen(false)} />
-              <div className="pickmenu">
-                <div className="pickhead">
-                  <button className="mini" onClick={() => choose(null)}>
-                    all
-                  </button>
-                  <span>tick the sites to search</span>
-                </div>
-                {sources.map((s) => {
-                  const on = sourceIds.length === 0 || sourceIds.includes(s.id)
-                  return (
-                    <div key={s.id} className="pickrow">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={() => {
-                            // from "all" the first click unticks that one site; always keep at least one ticked
-                            const current = sourceIds.length === 0 ? sources.map((x) => x.id) : sourceIds
-                            const next = on ? current.filter((id) => id !== s.id) : [...current, s.id]
-                            if (next.length === 0) return
-                            choose(next.length === sources.length ? null : next)
-                          }}
-                        />{' '}
-                        {s.name} <em>{s.count.toLocaleString()}</em>
-                      </label>
-                      <button className="mini" title="Search only this site" onClick={() => { choose([s.id]); setPickerOpen(false) }}>
-                        only
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-        </div>
-        <select value={sort} onChange={(e) => setSort(e.target.value as 'site' | 'az')}>
-          <option value="site">Site order</option>
-          <option value="az">A – Z</option>
-        </select>
-      </div>
-
       {shelf === 'all' && (
       <>
+      <div className="addsite">
+        <p>
+          <b>Add a site</b> — paste any manga site&apos;s address and it joins your catalog.
+        </p>
+        <span className="add">
+          <input
+            placeholder="https://"
+            value={siteUrl}
+            onChange={(e) => setSiteUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addSite()}
+          />
+          <button onClick={addSite} disabled={adding}>
+            {adding ? 'Detecting…' : '+ Add'}
+          </button>
+        </span>
+      </div>
       <div className="sitesbar">
         <button className="mini big" onClick={toggleSites} title={sitesOpen ? 'Hide the site list' : 'Show the site list'}>
           {sitesOpen || sources.length === 0 ? '▾' : '▸'} {sources.length} {sources.length === 1 ? 'site' : 'sites'}
@@ -528,17 +474,6 @@ export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Elem
         <span className="sub">
           {sources.reduce((n, x) => n + x.count, 0).toLocaleString()} titles
           {sources.some((x) => x.crawling) && ' · scanning…'}
-        </span>
-        <span className="add">
-          <input
-            placeholder="Add a site: paste its URL"
-            value={siteUrl}
-            onChange={(e) => setSiteUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addSite()}
-          />
-          <button onClick={addSite} disabled={adding}>
-            {adding ? 'Detecting…' : 'Add site'}
-          </button>
         </span>
       </div>
       <div className="sites" style={{ display: sitesOpen || sources.length === 0 ? undefined : 'none' }}>
@@ -658,6 +593,7 @@ export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Elem
           </>
         ) : (
         <>
+          {!q && <Featured recent={recent} follows={follows} sources={sources} onOpen={onOpen} onRead={onRead} />}
           {withNew.length > 0 && !q && (
             <section className="continue">
               <div className="meta">New chapters</div>
@@ -720,9 +656,65 @@ export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Elem
               </div>
             </section>
           )}
-          <div className="meta gridtop" ref={gridTop}>
-            {total.toLocaleString()} titles
-            {pages > 1 && ` · page ${(page + 1).toLocaleString()} of ${pages.toLocaleString()}`}
+          <div className="sechead gridtop" ref={gridTop}>
+            <div>
+              <div className="eyebrow">
+                {total.toLocaleString()} titles
+                {pages > 1 && ` · page ${(page + 1).toLocaleString()} of ${pages.toLocaleString()}`}
+              </div>
+              <h2>{q.trim() ? `Results for “${q.trim()}”` : 'All titles'}</h2>
+            </div>
+            <div className="secact">
+              <div className="picker">
+                <button className="pickbtn" onClick={() => setPickerOpen((o) => !o)} title="Choose which sites to search">
+                  {sourceIds.length === 0 || sourceIds.length === sources.length
+                    ? `All sites (${sources.length})`
+                    : `${sourceIds.length} of ${sources.length} sites`}{' '}
+                  ▾
+                </button>
+                {pickerOpen && (
+                  <>
+                    <div className="pickshade" onClick={() => setPickerOpen(false)} />
+                    <div className="pickmenu">
+                      <div className="pickhead">
+                        <button className="mini" onClick={() => choose(null)}>
+                          all
+                        </button>
+                        <span>tick the sites to search</span>
+                      </div>
+                      {sources.map((s) => {
+                        const on = sourceIds.length === 0 || sourceIds.includes(s.id)
+                        return (
+                          <div key={s.id} className="pickrow">
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={on}
+                                onChange={() => {
+                                  // from "all" the first click unticks that one site; always keep at least one ticked
+                                  const current = sourceIds.length === 0 ? sources.map((x) => x.id) : sourceIds
+                                  const next = on ? current.filter((id) => id !== s.id) : [...current, s.id]
+                                  if (next.length === 0) return
+                                  choose(next.length === sources.length ? null : next)
+                                }}
+                              />{' '}
+                              {s.name} <em>{s.count.toLocaleString()}</em>
+                            </label>
+                            <button className="mini" title="Search only this site" onClick={() => { choose([s.id]); setPickerOpen(false) }}>
+                              only
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+              <select value={sort} onChange={(e) => setSort(e.target.value as 'site' | 'az')}>
+                <option value="site">Site order</option>
+                <option value="az">A – Z</option>
+              </select>
+            </div>
           </div>
           {pager()}
           <div className="grid">
