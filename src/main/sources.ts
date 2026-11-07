@@ -163,7 +163,12 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
     if (!groups.has(key)) groups.set(key, new Set())
     groups.get(key)!.add(p.origin + p.pathname)
   }
-  const best = [...groups.entries()].sort((a, b) => b[1].size - a[1].size)[0]
+  // Home pages are full of "latest chapters" cards. Those are chapter pages, not series: skip any group whose
+  // links look like chapters (…/chapter-893, …/chapters/<id>/…), or the app would list chapters as titles.
+  const chapterish = /(chapter|chap|episode|ep|read)[-_/ ]?\d|\/chapters?\//i
+  const isChapterGroup = (set: Set<string>): boolean =>
+    [...set].filter((u) => chapterish.test(new URL(u).pathname)).length > set.size * 0.4
+  const best = [...groups.entries()].filter(([, set]) => !isChapterGroup(set)).sort((a, b) => b[1].size - a[1].size)[0]
   const empty: Analysis = { cards: 0, cardUrls: [], seriesRe: '', listTemplate: pageUrl, paged: false, links: snap.all, searchForm: snap.search }
   if (!best) return empty
 

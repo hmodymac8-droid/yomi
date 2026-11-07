@@ -37,39 +37,154 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
     }, 350)
   }
   const searchRef = useRef<HTMLInputElement>(null)
-  const sentinel = useRef<HTMLDivElement>(null)
-  // Every change of query / site / sort starts a new "generation" of the list. Anything that comes back from an
-  // older generation is dropped, so rows of the previous site can never end up in front of the new one.
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const gridTop = useRef<HTMLDivElement>(null)
+  // Every search is a new "generation". Anything that comes back from an older one is dropped, so rows of the
+  // previous site or page can never end up in front of the new ones.
   const gen = useRef(0)
-  const resetting = useRef(false) // a brand-new list is still being fetched
-  const loadingMore = useRef(false)
   const lastRefresh = useRef(0)
+  const searchDelay = useRef(150) // typing is debounced; clicking a page is immediate
+
+  // Pages: the grid shows PAGE titles at a time.
+  const [page, setPage] = useState(0)
+  const pages = Math.max(1, Math.ceil(total / PAGE))
+  // Scrolling past the end of a page turns to the next one (can be switched off; remembered).
+  const [autoNext, setAutoNext] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('autoNextPage') !== '0'
+    } catch {
+      return true
+    }
+  })
+  const [pull, setPull] = useState(0) // 0..1: how far the scroll-past-the-end gesture has got
+  const pullAcc = useRef(0)
+  const pullTimer = useRef<number | undefined>(undefined)
+  const bottomSince = useRef(0)
 
   const refreshSources = useCallback(async () => setSources(await window.api.listSources()), [])
 
-  const runSearch = useCallback(
-    async (reset: boolean, offset = 0) => {
-      if (reset) {
-        gen.current++
-        resetting.current = true
-      } else if (resetting.current || loadingMore.current) {
-        return // "load more" must not start while the new list is loading, or run twice at once
-      } else {
-        loadingMore.current = true
+  const runSearch = useCallback(async () => {
+    const myGen = ++gen.current
+    const res = await window.api.search(q, sourceId, sort, page * PAGE, PAGE)
+    if (myGen !== gen.current) return // replaced while we waited
+    setTotal(res.total)
+    setHits(res.hits)
+    // the list got shorter (a site was removed, a filter changed): don't sit on a page that no longer exists
+    const last = Math.max(0, Math.ceil(res.total / PAGE) - 1)
+    if (page > last) setPage(last)
+  }, [q, sourceId, sort, page])
+
+  const goPage = (n: number): void => {
+    const target = Math.min(Math.max(0, n), pages - 1)
+    if (target === page) return
+    searchDelay.current = 0
+    setPage(target)
+    gridTop.current?.scrollIntoView({ block: 'start' })
+  }
+
+  // A new query / site / sort starts again from page 1.
+  useEffect(() => {
+    setPage(0)
+  }, [q, sourceId, sort])
+
+  // Mouse wheel past the bottom of the page: keep scrolling and the next page opens. A short pause after reaching
+  // the bottom keeps the momentum of getting there from flipping the page by accident.
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>): void => {
+    const el = e.currentTarget
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+    if (!autoNext || !atBottom || e.deltaY <= 0 || page >= pages - 1) {
+      bottomSince.current = 0
+      if (pullAcc.current !== 0) {
+        pullAcc.current = 0
+        setPull(0)
       }
-      const myGen = gen.current
-      try {
-        const res = await window.api.search(q, sourceId, sort, offset, PAGE)
-        if (myGen !== gen.current) return // the list was replaced while we waited
-        setTotal(res.total)
-        setHits((prev) => (reset ? res.hits : [...prev, ...res.hits]))
-      } finally {
-        if (myGen === gen.current) resetting.current = false
-        if (!reset) loadingMore.current = false
-      }
-    },
-    [q, sourceId, sort]
-  )
+      return
+    }
+    const now = Date.now()
+    if (bottomSince.current === 0) bottomSince.current = now
+    if (now - bottomSince.current < 450) return
+    pullAcc.current += e.deltaY
+    setPull(Math.min(1, pullAcc.current / 500))
+    window.clearTimeout(pullTimer.current)
+    pullTimer.current = window.setTimeout(() => {
+      pullAcc.current = 0
+      setPull(0)
+    }, 700)
+    if (pullAcc.current >= 500) {
+      pullAcc.current = 0
+      bottomSince.current = 0
+      setPull(0)
+      goPage(page + 1)
+    }
+  }
+
+  const setAuto = (on: boolean): void => {
+    setAutoNext(on)
+    try {
+      localStorage.setItem('autoNextPage', on ? '1' : '0')
+    } catch {
+      /* not critical */
+    }
+  }
+
+  /** Page bar: « ‹ 1 … 4 5 [6] 7 8 … 120 › » plus a "go to" box. */
+  const pager = (): React.JSX.Element | null => {
+    if (pages <= 1) return null
+    const nums: (number | '…')[] = []
+    const want = new Set([0, pages - 1, page - 2, page - 1, page, page + 1, page + 2])
+    const sorted = [...want].filter((n) => n >= 0 && n < pages).sort((a, b) => a - b)
+    sorted.forEach((n, i) => {
+      if (i > 0 && n - sorted[i - 1] > 1) nums.push('…')
+      nums.push(n)
+    })
+    return (
+      <div className="pager">
+        <button className="pg" disabled={page === 0} onClick={() => goPage(0)} title="First page">
+          «
+        </button>
+        <button className="pg" disabled={page === 0} onClick={() => goPage(page - 1)}>
+          ‹ Prev
+        </button>
+        {nums.map((n, i) =>
+          n === '…' ? (
+            <span key={`gap${i}`} className="gap">
+              …
+            </span>
+          ) : (
+            <button key={n} className={`pg${n === page ? ' on' : ''}`} onClick={() => goPage(n)}>
+              {n + 1}
+            </button>
+          )
+        )}
+        <button className="pg" disabled={page >= pages - 1} onClick={() => goPage(page + 1)}>
+          Next ›
+        </button>
+        <button className="pg" disabled={page >= pages - 1} onClick={() => goPage(pages - 1)} title="Last page">
+          »
+        </button>
+        <span className="goto">
+          go to{' '}
+          <input
+            type="number"
+            min={1}
+            max={pages}
+            placeholder={String(page + 1)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const v = Number((e.target as HTMLInputElement).value)
+                if (v >= 1) goPage(v - 1)
+                ;(e.target as HTMLInputElement).value = ''
+              }
+            }}
+          />{' '}
+          of {pages.toLocaleString()}
+        </span>
+        <label className="auto" title="Keep scrolling past the bottom of a page to open the next one">
+          <input type="checkbox" checked={autoNext} onChange={(e) => setAuto(e.target.checked)} /> scroll down for next page
+        </label>
+      </div>
+    )
+  }
 
   useEffect(() => {
     refreshSources()
@@ -112,9 +227,10 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
     })
   }
 
-  // Debounced search whenever the query/filters change.
+  // Search whenever the query / filters / page change (typing is debounced, clicking a page is immediate).
   useEffect(() => {
-    const t = setTimeout(() => runSearch(true), 150)
+    const t = setTimeout(() => runSearch(), searchDelay.current)
+    searchDelay.current = 150
     return () => clearTimeout(t)
   }, [runSearch])
 
@@ -126,7 +242,7 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
       if (p.done || now - lastRefresh.current > 2500) {
         lastRefresh.current = now
         refreshSources()
-        runSearch(true)
+        runSearch()
       }
     })
   }, [refreshSources, runSearch])
@@ -166,20 +282,6 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
     return () => window.removeEventListener('keydown', h)
   }, [])
 
-  // Infinite scroll.
-  useEffect(() => {
-    const el = sentinel.current
-    if (!el) return
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hits.length < total) runSearch(false, hits.length)
-      },
-      { rootMargin: '600px' }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [hits.length, total, runSearch])
-
   const addSite = async (): Promise<void> => {
     if (!siteUrl.trim()) return
     setAdding(true)
@@ -201,11 +303,11 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
     await window.api.removeSite(s.id)
     if (sourceId === s.id) setSourceId('all')
     refreshSources()
-    runSearch(true)
+    runSearch()
   }
 
   return (
-    <div className="browse">
+    <div className="browse" ref={scrollerRef} onWheel={onWheel}>
       <div className="toolbar">
         <input
           ref={searchRef}
@@ -344,7 +446,11 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
               </div>
             </section>
           )}
-          <div className="meta">{total.toLocaleString()} titles</div>
+          <div className="meta gridtop" ref={gridTop}>
+            {total.toLocaleString()} titles
+            {pages > 1 && ` · page ${(page + 1).toLocaleString()} of ${pages.toLocaleString()}`}
+          </div>
+          {pager()}
           <div className="grid">
             {hits.map((h) => (
               <button
@@ -372,7 +478,22 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
               </button>
             ))}
           </div>
-          <div ref={sentinel} style={{ height: 1 }} />
+          {pager()}
+          {page < pages - 1 && (
+            <div className="nextbar">
+              <button className="nextpage" onClick={() => goPage(page + 1)}>
+                Next page ›
+              </button>
+              {autoNext && (
+                <div className="hint2">
+                  or keep scrolling down
+                  <span className="pullbar">
+                    <span style={{ width: `${pull * 100}%` }} />
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

@@ -43,7 +43,45 @@ function load(): Store {
   }
   if (!store) store = { sources: [], series: {}, scan: {} }
   store.scan ??= {} // catalogs saved by older versions have no scan state
+  pruneForeignEntries(store)
   return store
+}
+
+/**
+ * Drops saved entries that don't fit their site's own idea of a series page. This clears out leftovers from an
+ * earlier, wrong way of listing a site (e.g. a home page's "latest chapters" cards that were mistaken for series).
+ */
+function pruneForeignEntries(s: Store): void {
+  let changed = false
+  for (const src of s.sources) {
+    const list = s.series[src.id]
+    if (!list || list.length === 0) continue
+    let re: RegExp
+    try {
+      re = new RegExp(src.seriesRe)
+    } catch {
+      continue
+    }
+    const keep = list.filter((e) => re.test(e.url))
+    if (keep.length !== list.length) {
+      s.series[src.id] = keep
+      changed = true
+    }
+    for (const e of keep) {
+      const t = fixTitle(e.title)
+      if (t !== e.title) {
+        e.title = t
+        changed = true
+      }
+    }
+  }
+  if (changed) saveSoon()
+}
+
+/** A card that prints the name twice ("Kingdom Kingdom") is the same name once. */
+export function fixTitle(t: string): string {
+  const m = t.trim().match(/^(.{2,}?)\s+\1$/)
+  return m ? m[1] : t
 }
 
 function saveSoon(immediate = false): void {
@@ -471,7 +509,7 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
           if (old) {
             // a sitemap only knows the URL: the real title / cover from the page replaces the guess (counts as progress)
             if (old.slugTitle && it.title) {
-              old.title = it.title
+              old.title = fixTitle(it.title)
               delete old.slugTitle
               added++
             }
@@ -481,7 +519,7 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
             }
             continue
           }
-          known.set(it.url, { sourceId: id, url: it.url, title: it.title || titleFromUrl(it.url), cover: it.cover })
+          known.set(it.url, { sourceId: id, url: it.url, title: fixTitle(it.title) || titleFromUrl(it.url), cover: it.cover })
           added++
         }
         pages = nums[i]

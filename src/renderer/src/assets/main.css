@@ -62,6 +62,22 @@ button:disabled { opacity: .5; cursor: default; }
 
 .newcard.wide { flex: initial; }
 .newcard.wide .card { width: 100%; }
+/* pages */
+.gridtop { scroll-margin-top: 84px; }
+.pager { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0 14px; font-size: 13px; color: var(--muted); }
+.pager .pg { padding: 6px 11px; border-radius: 8px; border: 0; background: var(--panel); color: var(--text); cursor: pointer; min-width: 34px; }
+.pager .pg:hover:not(:disabled) { background: #2a2a31; }
+.pager .pg.on { background: var(--accent); color: #fff; font-weight: 700; }
+.pager .pg:disabled { opacity: .35; cursor: default; }
+.pager .gap { padding: 0 4px; }
+.pager .goto { margin-left: 10px; }
+.pager .goto input { width: 64px; padding: 5px 8px; }
+.pager .auto { margin-left: 10px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.nextbar { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 0 60px; }
+.nextpage { padding: 12px 34px; font-size: 15px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; cursor: pointer; font-weight: 600; }
+.hint2 { color: var(--muted); font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pullbar { width: 180px; height: 4px; background: #26262c; border-radius: 2px; overflow: hidden; }
+.pullbar span { display: block; height: 100%; background: var(--accent); transition: width .12s; }
 .stage { color: var(--accent); font-size: 13px; margin: 0 0 8px; }
 
 /* updates */
