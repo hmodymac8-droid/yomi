@@ -225,6 +225,29 @@ export function addSource(def: SourceDef): SourceInfo {
   return listSources().find((x) => x.id === def.id)!
 }
 
+/**
+ * Sites added before chapter-link detection was fixed hold chapter links (…/reader/<series>/138) as if they were
+ * series. Returns the sites where most saved "series" look like that, so they can be rebuilt.
+ */
+export function sourcesWithChapterTitles(): string[] {
+  const s = load()
+  const out: string[] = []
+  for (const src of s.sources) {
+    const list = s.series[src.id] ?? []
+    if (list.length === 0) continue
+    const bad = list.filter((e) => {
+      try {
+        const segs = new URL(e.url).pathname.split('/').filter(Boolean)
+        return segs.length >= 3 && /^\d+(?:[._-]\d+)?$/.test(segs[segs.length - 1]) && !/^\d+$/.test(segs[segs.length - 2])
+      } catch {
+        return false
+      }
+    }).length
+    if (bad > list.length * 0.4) out.push(src.id)
+  }
+  return out
+}
+
 export function removeSource(id: string): void {
   const s = load()
   crawling.get(id) && (crawling.get(id)!.cancel = true)
@@ -706,7 +729,7 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
     const sn = slugNum(href);
     if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t) || seen.has(href)) continue;
     // a whole card of text is no title: name it by its number
-    if (sn !== null && (!byText(t) || t.length > 60)) t = 'Chapter ' + sn.replace(/[_-]/g, '.');
+    if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.');
     seen.add(href);
     chapters.push({ title: t.slice(0, 80), url: href });
   }
@@ -1113,7 +1136,7 @@ let seriesCache: Record<string, SeriesCacheEntry> | null = null
 let seriesTimer: NodeJS.Timeout | undefined
 const seriesCachePath = (): string => join(app.getPath('userData'), 'series-cache.json')
 
-const SERIES_CACHE_VERSION = 5
+const SERIES_CACHE_VERSION = 6
 
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   if (seriesCache) return seriesCache

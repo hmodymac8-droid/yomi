@@ -165,7 +165,7 @@ export function parseSeries(
     let t = textOf(a).slice(0, 80)
     const sn = slugNum(href)
     if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t)) return
-    if (sn !== null && (!byText(t) || t.length > 60)) t = 'Chapter ' + sn.replace(/[_-]/g, '.')
+    if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.')
     seen.add(href)
     chapters.push({ title: t, url: href })
   })

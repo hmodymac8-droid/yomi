@@ -21,7 +21,8 @@ import {
   setSeriesPartialEmitter,
   primeNetwork,
   removeSource,
-  search
+  search,
+  sourcesWithChapterTitles
 } from './catalog'
 import { grabChapterFast, prefetchChapter, settleVerifications } from './fastgrab'
 import { flushModes } from './hostmode'
@@ -945,6 +946,23 @@ app.whenReady().then(async () => {
   createWindow()
   warmUp()
   primeNetwork()
+  // Sites saved with chapter links as titles (older detection) are rebuilt from scratch in the background.
+  setTimeout(async () => {
+    for (const id of sourcesWithChapterTitles()) {
+      try {
+        const old = getSource(id)
+        if (!old) continue
+        console.log('HEAL rebuilding', id, old.baseUrl)
+        const def = await detectSource(old.baseUrl)
+        removeSource(id)
+        def.id = id
+        addSource(def)
+        void crawlSource(id, emit)
+      } catch (e) {
+        console.log('HEAL failed', id, e instanceof Error ? e.message : String(e))
+      }
+    }
+  }, 3000)
   // Build the title index in the background while the app is idle, so the first search you type is quick.
   setTimeout(() => {
     try {
