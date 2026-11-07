@@ -448,7 +448,9 @@ const CANON: Record<string, string[]> = {
   'One Shot': ['one shot', 'oneshot'],
   Doujinshi: ['doujinshi'],
   'Full Color': ['full color', 'colored', 'full colour', 'ملون'],
-  Hentai: ['hentai']
+  Hentai: ['hentai'],
+  'Award Winning': ['award winning', 'حائز على جوائز', 'حائز علي جوائز'],
+  Adaptation: ['adaptation', 'adapted', 'مقتبس']
 }
 const CANON_BY_KEY = new Map<string, string>()
 for (const [name, words] of Object.entries(CANON)) for (const w of [name, ...words]) CANON_BY_KEY.set(genreKey(w), name)
@@ -456,7 +458,7 @@ for (const [name, words] of Object.entries(CANON)) for (const w of [name, ...wor
 /** Words sites put among genres that are not genres. */
 const NOT_GENRE = new Set(
   ['manga', 'manhwa', 'manhua', 'webtoon', 'webtoons', 'comic', 'comics', 'novel', 'raw', 'english', 'hot', 'new', 'latest',
-    'popular', 'trending', 'updated', 'completed', 'ongoing', 'other', 'others', 'misc', 'unknown', 'genre', 'genres',
+    'popular', 'trending', 'updated', 'completed', 'ongoing', 'other', 'others', 'misc', 'unknown', 'genre', 'genres', 'add', 'all', 'long strip', 'web comic', 'webcomic', 'official colored', 'oneshot collection',
     'مانجا', 'مانهوا', 'مانها', 'ويبتون', 'مكتمل', 'مستمر', 'جديد', 'رائج'].map(genreKey)
 )
 
@@ -469,6 +471,12 @@ export function canonGenre(raw: string): string | null {
   // keep the site's own word, tidied: "slow  burn" → "Slow Burn" (Arabic and other scripts kept as written)
   const t = raw.replace(/\s+/g, ' ').trim()
   return /^[\x20-\x7e]+$/.test(t) ? t.replace(/\b[a-z]/g, (c) => c.toUpperCase()) : t
+}
+
+/** The standard name only when the word is a known genre (no tidied-up fallback). */
+export function knownGenre(raw: string): string | null {
+  const k = genreKey(raw)
+  return CANON_BY_KEY.get(k) ?? CANON_BY_KEY.get(k.replace(/s$/, '')) ?? null
 }
 
 export function canonGenres(list: string[]): string[] {

@@ -251,6 +251,9 @@ export interface MangaApi {
   titleRemove: (url: string) => Promise<void>
   titleImport: (list: { sourceId: string; sourceName: string; url: string; title: string; cover: string; chapters: number }[]) => Promise<void>
   windowControl: (action: 'minimize' | 'maximize' | 'close') => void
+  /** How far the genre scan of each site has got. */
+  genreStatus: () => Promise<{ sites: Record<string, { at: number; genres: number; titles: number; note?: string; running?: boolean }>; progress: Record<string, string> }>
+  genreScanNow: (id: string) => Promise<boolean>
   downloadGetPaused: () => Promise<boolean>
   downloadSetPaused: (on: boolean) => Promise<boolean>
   offlineGet: () => Promise<boolean>

@@ -18,6 +18,7 @@ import { readSitemapFile } from './sitemap'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
+import { crawledMeta, genreIndexVersion, urlKey } from './genres'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const hostOf = (url: string): string => new URL(url).hostname
@@ -361,6 +362,11 @@ export function importAdded(list: AddedRec[]): void {
   if (more.length === 0) return
   s.added = [...(s.added ?? []), ...more]
   saveSoon(true)
+}
+
+/** Every series address the catalog holds for one site. */
+export function catalogUrls(id: string): string[] {
+  return (load().series[id] ?? []).map((e) => e.url)
 }
 
 export function getSource(id: string): SourceDef | undefined {
@@ -867,7 +873,7 @@ export function search(
   kind?: SeriesType,
   genre?: string
 ): SearchResult {
-  const sig = `${catalogVersion}|${metaVersion}|${q}|${sourceIds.join(',')}|${sort}`
+  const sig = `${catalogVersion}|${metaVersion}|${genreIndexVersion()}|${q}|${sourceIds.join(',')}|${sort}`
   if (lastSearch && lastSearch.sig === sig) return pick(lastSearch.groups, kind, genre, offset, limit)
   const s = load()
   const tokens = norm(q).split(' ').filter(Boolean)
@@ -952,6 +958,7 @@ function loadMeta(): Record<string, SeriesMeta> {
   } catch {
     metaStore = {}
   }
+  for (const m of Object.values(metaStore!)) if (m.genres) m.genres = canonGenres(m.genres)
   return metaStore!
 }
 function rememberMeta(url: string, d: SeriesMeta): void {
@@ -974,7 +981,18 @@ function rememberMeta(url: string, d: SeriesMeta): void {
 /** A saved series with what its page said about it last time (lists saved before this was read have none). */
 function withMeta(d: SeriesDetail): SeriesDetail {
   const m = loadMeta()[d.url]
-  return m ? { ...d, type: d.type ?? m.type, genres: d.genres ?? m.genres, status: d.status ?? m.status } : d
+  const c = crawledMeta(urlKey(d.url))
+  return { ...d, type: d.type ?? m?.type ?? c?.t, genres: d.genres ?? m?.genres ?? c?.g, status: d.status ?? m?.status }
+}
+/** Each catalog entry's address in the form the genre scan uses (worked out once per entry). */
+const keyOfEntry = new WeakMap<SeriesEntry, string>()
+function entryKey(e: SeriesEntry): string {
+  let k = keyOfEntry.get(e)
+  if (k === undefined) {
+    k = urlKey(e.url)
+    keyOfEntry.set(e, k)
+  }
+  return k
 }
 export function seriesMeta(url: string): SeriesMeta | undefined {
   return loadMeta()[url]
@@ -998,8 +1016,14 @@ function siteKind(src: SourceDef): SeriesType | null {
 }
 function kindOf(g: Grp): SeriesType | null {
   const m = loadMeta()
-  for (const x of [{ e: g.e, src: g.src }, ...(g.more ?? [])]) {
-    const t = m[x.e.url]?.type ?? siteKind(x.src)
+  const all = [{ e: g.e, src: g.src }, ...(g.more ?? [])]
+  for (const x of all) if (m[x.e.url]?.type) return m[x.e.url].type!
+  for (const x of all) {
+    const t = crawledMeta(entryKey(x.e))?.t
+    if (t) return t
+  }
+  for (const x of all) {
+    const t = siteKind(x.src)
     if (t) return t
   }
   return null
@@ -1008,14 +1032,17 @@ function kindOf(g: Grp): SeriesType | null {
 function genresOf(g: Grp): string[] {
   const m = loadMeta()
   const out = new Set<string>()
-  for (const x of [g.e, ...(g.more ?? []).map((y) => y.e)]) for (const n of canonGenres(m[x.url]?.genres ?? [])) out.add(n)
+  const entries = [g.e, ...(g.more ?? []).map((y) => y.e)]
+  for (const x of entries) for (const n of m[x.url]?.genres ?? []) out.add(n)
+  if (out.size === 0) for (const x of entries) for (const n of crawledMeta(entryKey(x))?.g ?? []) out.add(n)
   return [...out]
 }
-const kindMemo = new WeakMap<Grp[], { v: number; kinds: (SeriesType | null)[]; genres: string[][] }>()
+const kindMemo = new WeakMap<Grp[], { v: string; kinds: (SeriesType | null)[]; genres: string[][] }>()
 function pick(groups: Grp[], kind: SeriesType | undefined, genre: string | undefined, offset: number, limit: number): SearchResult {
   let memo = kindMemo.get(groups)
-  if (!memo || memo.v !== metaVersion) {
-    memo = { v: metaVersion, kinds: groups.map(kindOf), genres: groups.map(genresOf) }
+  const v = metaVersion + ':' + genreIndexVersion()
+  if (!memo || memo.v !== v) {
+    memo = { v, kinds: groups.map(kindOf), genres: groups.map(genresOf) }
     kindMemo.set(groups, memo)
   }
   const g = genre ? canonGenres([genre])[0] : undefined

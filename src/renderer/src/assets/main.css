@@ -498,3 +498,5 @@ select { cursor: pointer; }
 .kindtabs button.on { border-bottom-color: var(--primary); color: var(--primary-text); }
 
 .sechead.gridtop { text-transform: none; letter-spacing: normal; color: var(--foreground); font-size: 14px; font-weight: 400; }
+
+.genrestat { flex-basis: 100%; padding-left: 20px; font-size: 11px; }

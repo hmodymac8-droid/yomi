@@ -60,6 +60,14 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
     }
   }
 
+  const [gstat, setGstat] = useState<Awaited<ReturnType<typeof window.api.genreStatus>> | null>(null)
+  const refreshGenres = (): void => void window.api.genreStatus().then(setGstat)
+  useEffect(() => {
+    refreshGenres()
+    const t = setInterval(refreshGenres, 4000)
+    return () => clearInterval(t)
+  }, [])
+
   const checkAll = async (): Promise<void> => {
     // one after another: each check opens real pages on the site
     for (const s of sources) await check(s.id)
@@ -106,12 +114,30 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
               <span className="sub">
                 {s.count.toLocaleString()} titles{s.crawling ? ' · scanning…' : ''}
               </span>
+              <span className="sub genrestat">
+                {gstat?.progress[s.id] ??
+                  (gstat?.sites[s.id]?.running
+                    ? 'reading genres…'
+                    : gstat?.sites[s.id]
+                      ? gstat.sites[s.id].titles > 0
+                        ? `genres: ${gstat.sites[s.id].genres} · ${gstat.sites[s.id].titles.toLocaleString()} titles tagged · ${ago(gstat.sites[s.id].at)}`
+                        : 'no genre pages this site lets the app read'
+                      : 'genres: not read yet')}
+              </span>
               <span className="grow" />
               <button className="mini" onClick={() => setOpen((o) => ({ ...o, [s.id]: !o[s.id] }))}>
                 {open[s.id] ? 'Hide details' : 'Details'}
               </button>
               <button className="mini" disabled={s.crawling} onClick={() => void window.api.crawl(s.id)}>
                 Re-scan titles
+              </button>
+              <button
+                className="mini"
+                disabled={!!gstat && Object.values(gstat.sites).some((x) => x.running)}
+                title="Read this site's genre pages now, so its titles can be filtered by genre"
+                onClick={() => void window.api.genreScanNow(s.id).then(() => setTimeout(refreshGenres, 800))}
+              >
+                Read genres
               </button>
               <button className="mini on" disabled={!!busy[s.id]} onClick={() => void check(s.id)}>
                 {busy[s.id] ? 'Checking…' : 'Re-check'}

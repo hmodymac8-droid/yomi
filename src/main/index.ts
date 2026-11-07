@@ -1,6 +1,7 @@
 import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electron'
 import { join } from 'path'
 import { mkdirSync, writeFileSync } from 'fs'
+import { discoverGenres, genreProgress, genreScanStatus, scanGenresNow, scanSiteGenres, startGenreScheduler, urlKey } from './genres'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { closeWarm, ensureSession, hiddenWindow, loadPage, probeLinks, refererHints, warmUp } from './grabber'
@@ -20,6 +21,7 @@ import {
   type AddedRec,
   getSeries,
   getSource,
+  catalogUrls,
   getSeriesCached,
   listSources,
   openSeries,
@@ -298,6 +300,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('updates-status', () => updateStatus())
   ipcMain.handle('updates-auto-download', (_e, on: boolean) => setAutoDownload(on))
   startUpdateScheduler()
+  startGenreScheduler()
   ipcMain.handle('progress-recent', (_e, limit: number) => recentProgress(limit))
   ipcMain.handle('progress-hide', (_e, seriesUrl: string) => hideProgress(seriesUrl))
   ipcMain.handle('remove-site', (_e, id: string) => {
@@ -364,6 +367,8 @@ app.whenReady().then(async () => {
   ipcMain.handle('download-get-paused', () => isPaused())
   ipcMain.handle('download-set-paused', (_e, on: boolean) => setPaused(!!on))
   ipcMain.handle('offline-get', () => isOffline())
+  ipcMain.handle('genre-status', () => ({ sites: genreScanStatus(), progress: genreProgress() }))
+  ipcMain.handle('genre-scan-now', (_e, id: string) => scanGenresNow(id))
   ipcMain.handle('offline-set', (_e, on: boolean) => setOffline(!!on))
   ipcMain.handle('download-export-cbz', async (_e, ids: string[]) => {
     const r = await dialog.showOpenDialog({ title: 'Choose a folder for the .cbz files', properties: ['openDirectory', 'createDirectory'] })
@@ -920,6 +925,42 @@ app.whenReady().then(async () => {
       .finally(() => app.quit())
     return
   }
+  // Dev helper: MR_GENRETEST=<site id>,<site id>...;<genres>;<pages> reads a few genre pages of each site (nothing is
+  // saved) and reports what it found and how many of the site's catalog titles it matched.
+  if (process.env['MR_GENRETEST']) {
+    ;(async () => {
+      warmUp()
+      const [ids, ng, np] = process.env['MR_GENRETEST']!.split(';')
+      for (const id of ids.split(',')) {
+        const src = getSource(id)
+        if (!src) {
+          console.log('GENRETEST ' + id + ' unknown site')
+          continue
+        }
+        const t = Date.now()
+        try {
+          const found = await discoverGenres(src)
+          const r = await scanSiteGenres(src, { maxGenres: Number(ng || 3), maxPages: Number(np || 3), save: !!process.env['MR_GENRESAVE'] })
+          const known = new Set(catalogUrls(id).map(urlKey))
+          const all = new Set<string>()
+          // (the report keeps keys only for the top-tagged; count matches from a fresh run of the keys)
+          console.log('GENRETEST ' + JSON.stringify({ id, discovered: found.length, sample: found.slice(0, 8).map((g) => g.name + (g.type ? '(type)' : '') + ' ' + g.url), genres: r.genres, titles: r.titles, pages: r.pages, top: r.topTagged, catalog: known.size, secs: Math.round((Date.now() - t) / 1000) }))
+          const matched = r.matchKeys.filter((k) => known.has(k)).length
+          all.add('x')
+          console.log('GENRETEST_MATCH ' + JSON.stringify({ id, matched, of: r.matchKeys.length }))
+          if (process.env['MR_GENRESAVE']) {
+            const res = search('', [id], 'site', 0, 1, undefined, 'Action')
+            console.log('GENRESEARCH ' + JSON.stringify({ action: res.total, genres: res.genres?.slice(0, 8), byGenreFirst: search('', [id], 'genre', 0, 3).hits.map((h) => h.title) }))
+          }
+        } catch (e) {
+          console.log('GENRETEST ' + id + ' error ' + (e instanceof Error ? e.message : String(e)))
+        }
+      }
+    })()
+      .catch((e) => console.log('GENRETEST_ERROR ' + String(e)))
+      .finally(() => app.quit())
+    return
+  }
   // Dev helper: MR_PRELOAD=1 runs the background pre-load of chapter lists once and says how many series it read.
   if (process.env['MR_PRELOAD']) {
     ;(async () => {
@@ -1385,7 +1426,7 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_GENRETEST'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }
