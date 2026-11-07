@@ -253,9 +253,6 @@ export default function Series({ series, onBack, onRead }: Props): React.JSX.Ele
 
   return (
     <div className="series">
-      <button className="back" onClick={onBack}>
-        ← Back
-      </button>
       <div className="head">
         <div className="cover big">
           {(series.cover || detail?.cover) && (
@@ -266,6 +263,9 @@ export default function Series({ series, onBack, onRead }: Props): React.JSX.Ele
           )}
         </div>
         <div className="info">
+          <button className="back" onClick={onBack}>
+            ← Back to Discover
+          </button>
           <h2>{series.title}</h2>
           {series.entries.length > 1 && (
             <div className="srcs">

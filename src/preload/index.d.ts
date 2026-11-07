@@ -242,6 +242,7 @@ export interface MangaApi {
   titleList: () => Promise<{ sourceId: string; sourceName: string; url: string; title: string; cover: string; chapters: number }[]>
   titleRemove: (url: string) => Promise<void>
   titleImport: (list: { sourceId: string; sourceName: string; url: string; title: string; cover: string; chapters: number }[]) => Promise<void>
+  windowControl: (action: 'minimize' | 'maximize' | 'close') => void
   downloadGetPaused: () => Promise<boolean>
   downloadSetPaused: (on: boolean) => Promise<boolean>
   offlineGet: () => Promise<boolean>

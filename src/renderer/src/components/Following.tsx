@@ -19,7 +19,7 @@ const SHELVES: { id: FollowCategory; label: string }[] = [
 const shelfOf = (f: FollowInfo): FollowCategory => f.category ?? 'reading'
 
 /** Every series you follow (you follow a series by pressing Follow, or just by reading it), sorted onto shelves. */
-export default function Following({ onBack, onOpen }: Props): React.JSX.Element {
+export default function Following({ onOpen }: Props): React.JSX.Element {
   const [list, setList] = useState<FollowInfo[]>([])
   const [sources, setSources] = useState<SourceInfo[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -84,12 +84,14 @@ export default function Following({ onBack, onOpen }: Props): React.JSX.Element 
 
   return (
     <div className="series">
-      <button className="back" onClick={onBack}>
-        ← Back
-      </button>
-      <h2>Following</h2>
-      <div className="meta">
-        {list.length} series{withNew > 0 && ` · ${withNew} with new chapters`}
+      <div className="pagehead">
+        <div>
+          <div className="kicker">追跡中</div>
+          <h1>Following</h1>
+          <p>
+            {list.length} series{withNew > 0 && ` · ${withNew} with new chapters`}
+          </p>
+        </div>
       </div>
 
       {list.length > 0 && (

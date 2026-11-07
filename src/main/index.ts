@@ -89,10 +89,16 @@ registerImageScheme()
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1366,
+    height: 860,
     show: false,
     autoHideMenuBar: true,
+    frame: false,
+    title: 'Yomi',
+    backgroundColor: '#020202',
+    minWidth: 760,
+    minHeight: 520,
+    icon: join(__dirname, '../../resources/favicon.png'),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -344,6 +350,13 @@ app.whenReady().then(async () => {
   ipcMain.handle('download-get-concurrency', () => getConcurrency())
   ipcMain.handle('download-set-concurrency', (_e, n: number) => setConcurrency(n))
   ipcMain.handle('download-remove-many', (_e, ids: string[]) => removeDownloads(ids))
+  ipcMain.on('window-control', (e, action: string) => {
+    const w = BrowserWindow.fromWebContents(e.sender)
+    if (!w) return
+    if (action === 'minimize') w.minimize()
+    else if (action === 'maximize') (w.isMaximized() ? w.unmaximize() : w.maximize())
+    else if (action === 'close') w.close()
+  })
   ipcMain.handle('title-add', (_e, url: string) => wrap(() => addTitleByUrl(url)))
   ipcMain.handle('title-list', () => listAdded())
   ipcMain.handle('title-remove', (_e, url: string) => removeAdded(url))
@@ -1204,19 +1217,19 @@ app.whenReady().then(async () => {
         win.center()
         await wait(10000)
         await shot('01-main-page')
-        console.log('added', await click('button', 'added by me'))
+        console.log('added', await click('.navitem', 'added by me'))
         await wait(1500)
         await shot('02-added-by-me')
         await fresh()
-        console.log('sites', await js("[...document.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'Sites')?.click()"))
+        console.log('sites', await js("[...document.querySelectorAll('.navitem')].find((b) => (b.textContent || '').trim() === 'Sites')?.click()"))
         await wait(2500)
         await shot('03-sites-screen')
         await fresh()
-        await click('.bar button, .toolbar button', 'downloads')
+        await click('.navitem', 'downloads')
         await wait(2000)
         await shot('04-downloads')
         await fresh()
-        await click('.bar button, .toolbar button', 'follow')
+        await click('.navitem', 'following')
         await wait(2500)
         await shot('05-following')
         await fresh()
@@ -1226,6 +1239,15 @@ app.whenReady().then(async () => {
         console.log('chapter', await click('.chapter'))
         await wait(10000)
         await shot('07-reader')
+        if (process.env['MR_SHOTS_LIGHT']) {
+          await js("localStorage.setItem('yomi-theme', 'light')")
+          await fresh()
+          await shot('08-main-page-light')
+          await click('.grid .card')
+          await wait(7000)
+          await shot('09-series-page-light')
+          await js("localStorage.setItem('yomi-theme', 'dark')")
+        }
       } catch (e) {
         console.log('SHOTS_ERROR ' + (e instanceof Error ? e.message : String(e)))
       }

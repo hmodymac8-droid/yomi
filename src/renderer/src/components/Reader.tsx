@@ -211,6 +211,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     const max = el.scrollHeight - el.clientHeight
     if (max <= 0) return
     const f = Math.min(1, el.scrollTop / max)
+    root.current?.style.setProperty('--prog', String(f))
     const now = Date.now()
     if (f > 0.9 && !finished.current) {
       finished.current = true
@@ -328,6 +329,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
           <span className="count">{mode === 'paged' ? `${index + 1} / ${pages.length}` : `${pages.length} pages`}</span>
         )}
       </header>
+      <div className="progline">
+        <span />
+      </div>
 
       {loading && <div className="hint">Opening chapter and collecting pages…</div>}
       {error && <div className="error">{error}</div>}

@@ -1,0 +1,100 @@
+/* Yomi — design tokens. Copy this file verbatim into the real app.
+   oklch is authoritative; the hex column in YOMI_DESIGN_SPEC.md is the sRGB
+   approximation for toolkits that cannot do oklch. */
+
+/* ---------- DARK (default) : black canvas, manga-yellow accent ---------- */
+:root {
+  --radius: 0.375rem;            /* 6px base */
+  --background: oklch(0.08 0 0);          /* #020202 */
+  --foreground: oklch(0.95 0 0);          /* #eeeeee */
+  --chrome: oklch(0.05 0 0);              /* #000000  title bar + status bar */
+  --card: oklch(0.13 0 0);                /* #070707 */
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.13 0 0);
+  --popover-foreground: oklch(0.95 0 0);
+  --primary: oklch(0.8 0.15 95);          /* #dcbc33  fills, rings, progress */
+  --primary-foreground: oklch(0.12 0 0);  /* #060606  text on primary */
+  --primary-text: oklch(0.82 0.16 95);    /* #e5c226  accent TEXT */
+  --secondary: oklch(0.17 0 0);           /* #0f0f0f */
+  --secondary-foreground: oklch(0.9 0 0);
+  --muted: oklch(0.16 0 0);               /* #0d0d0d  progress troughs */
+  --muted-foreground: oklch(0.66 0 0);    /* #929292  secondary text */
+  --accent: oklch(0.24 0.05 102);         /* #242000  hover / selected fill */
+  --accent-foreground: oklch(0.82 0.11 95);
+  --destructive: oklch(0.65 0.14 25);     /* #d76963 */
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.24 0 0);              /* #1f1f1f  every hairline */
+  --input: oklch(0.24 0 0);
+  --ring: oklch(0.8 0.15 95);
+  --gold: oklch(0.78 0.14 95);            /* #d3b63b */
+  --success: oklch(0.7 0.09 155);         /* #6faf86  healthy */
+  --warning: oklch(0.75 0.09 70);         /* #d3a46e  slow */
+  --paper: oklch(0.12 0 0);               /* #060606  inputs, small panels */
+  --peach: oklch(0.78 0.14 95);           /* #d3b63b */
+  --peach-soft: oklch(0.26 0.05 102);     /* #292503  badge / tint fills */
+  --peach-foreground: oklch(0.78 0.13 95);/* #d1b64a  badge text */
+  --reader: oklch(0.04 0 0);              /* #000000  reader backdrop */
+  --shadow-cover: 0 10px 24px -14px oklch(0 0 0 / 0.6);
+}
+
+/* ---------- LIGHT : warm paper white, charcoal ink, deeper amber ---------- */
+.light {
+  --background: oklch(0.976 0.005 95);    /* #f8f7f3 */
+  --foreground: oklch(0.24 0.012 90);     /* #211f19 */
+  --chrome: oklch(0.945 0.008 95);        /* #eeede7 */
+  --card: oklch(0.995 0.004 95);          /* #fefdfa */
+  --card-foreground: oklch(0.24 0.012 90);
+  --popover: oklch(0.995 0.004 95);
+  --popover-foreground: oklch(0.24 0.012 90);
+  --primary: oklch(0.74 0.155 88);        /* #d3a300 */
+  --primary-foreground: oklch(0.18 0.02 90);
+  --primary-text: oklch(0.52 0.13 82);    /* #8d5f00  accent text on cream */
+  --secondary: oklch(0.94 0.01 95);       /* #edebe4 */
+  --secondary-foreground: oklch(0.28 0.012 90);
+  --muted: oklch(0.905 0.014 95);         /* #e2e0d5 */
+  --muted-foreground: oklch(0.46 0.015 90);/* #5b584f */
+  --accent: oklch(0.9 0.055 95);          /* #e9deb5 */
+  --accent-foreground: oklch(0.34 0.1 85);/* #4f3100 */
+  --destructive: oklch(0.55 0.19 25);     /* #c92f33 */
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.845 0.012 95);        /* #ceccc4 */
+  --input: oklch(0.845 0.012 95);
+  --ring: oklch(0.74 0.155 88);
+  --gold: oklch(0.56 0.13 82);            /* #9a6b00 */
+  --success: oklch(0.5 0.13 155);         /* #007840 */
+  --warning: oklch(0.58 0.13 75);         /* #a66d00 */
+  --paper: oklch(0.995 0.004 95);         /* #fefdfa */
+  --peach: oklch(0.7 0.15 88);            /* #c59700 */
+  --peach-soft: oklch(0.885 0.07 90);     /* #ebd8a4 */
+  --peach-foreground: oklch(0.32 0.09 82);/* #492c00 */
+  --reader: oklch(0.955 0.008 95);        /* #f2f0ea */
+  --shadow-cover: 0 10px 24px -14px oklch(0.25 0.02 90 / 0.35);
+}
+
+/* ---------- Radius scale (base 6px) ---------- */
+/* sm 4px · md 6px · lg 8px · xl 10px · 2xl 12px
+   In the reference build: rounded-sm (4px) for covers, badges, inputs and
+   small panels; rounded-md (6px) for buttons and icon buttons. */
+
+/* ---------- Typography ----------
+   display: "Newsreader", Georgia, serif      — 400 / 500 / 600
+   sans:    "DM Sans", system-ui, sans-serif  — 400 / 500 / 600 / 700
+   https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap
+*/
+
+/* ---------- Effects ---------- */
+/* shadow-cover  : 0 10px 24px -14px rgb(0 0 0 / 0.6)   every cover image
+   focus ring    : 2px solid var(--ring), offset 3px, keyboard-only
+   selection     : background var(--accent), text var(--accent-foreground)
+   scrollbar     : thin, thumb var(--border), track transparent
+   no-scrollbar  : scrollbar-width:none (the continue-reading rail) */
+
+/* ---------- Performance utilities (required, not cosmetic) ---------- */
+.cv {                      /* cover cards, big rows */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+.cv-sm {                   /* list rows: new chapters, following, downloads */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 96px;
+}

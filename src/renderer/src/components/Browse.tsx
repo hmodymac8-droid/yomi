@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CrawlProgress, FollowInfo, ProgressRecord, SearchHit, SourceInfo, UpdateStatus } from '../../../preload/index.d'
 import { OpenSeries, fallbackCover, proxied, timeAgo } from '../lib'
+import { Icon } from './Icon'
 
 const PAGE = 60
 
@@ -8,9 +9,8 @@ interface Props {
   onOpen: (s: OpenSeries) => void
   /** True while this screen is the visible one (it stays mounted behind the reader). */
   active: boolean
-  onDownloads: () => void
-  onFollowing: () => void
-  onSites: () => void
+  /** "all" is Discover; "added" shows only the titles you saved by address. */
+  shelf: 'all' | 'added'
 }
 
 interface AddedTitle {
@@ -22,7 +22,7 @@ interface AddedTitle {
   chapters: number
 }
 
-export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites }: Props): React.JSX.Element {
+export default function Browse({ onOpen, active, shelf }: Props): React.JSX.Element {
   // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
   const [sitesOpen, setSitesOpen] = useState<boolean>(() => {
     try {
@@ -44,8 +44,6 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
   const [follows, setFollows] = useState<FollowInfo[]>([])
   const [upd, setUpd] = useState<UpdateStatus | null>(null)
   const [q, setQ] = useState('')
-  // "All titles" or only the ones you added by address (the Add title tab)
-  const [shelf, setShelf] = useState<'all' | 'added'>('all')
   const [added, setAdded] = useState<AddedTitle[]>([])
   // Which sites are searched. null means all of them; otherwise the chosen ones (remembered between launches).
   const [picked, setPicked] = useState<string[] | null>(() => {
@@ -435,6 +433,33 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
 
   return (
     <div className="browse" ref={scrollerRef} onWheel={onWheel}>
+      {shelf === 'added' ? (
+        <div className="pagehead">
+          <div>
+            <div className="kicker">私の追加</div>
+            <h1>Added by me</h1>
+            <p>Single titles you saved by pasting their page address.</p>
+          </div>
+          <div className="pageact">
+            <span>
+              <b>{added.length}</b> {added.length === 1 ? 'title' : 'titles'}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="pagehead">
+          <div>
+            <div className="eyebrow">Your combined catalog</div>
+            <h1>Discover</h1>
+            <p>One quiet place for every series you follow.</p>
+          </div>
+          <div className="pageact">
+            <span>
+              <b>{sources.reduce((n, x) => n + x.count, 0).toLocaleString()}</b> titles · {sources.length} sites
+            </span>
+          </div>
+        </div>
+      )}
       <div className="toolbar">
         <input
           ref={searchRef}
@@ -492,13 +517,10 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
           <option value="site">Site order</option>
           <option value="az">A – Z</option>
         </select>
-        <button onClick={onFollowing}>
-          Following{upd && upd.following > 0 ? ` (${upd.following})` : ''}
-        </button>
-        <button onClick={onDownloads}>Downloads</button>
-        <button onClick={onSites}>Sites</button>
       </div>
 
+      {shelf === 'all' && (
+      <>
       <div className="sitesbar">
         <button className="mini big" onClick={toggleSites} title={sitesOpen ? 'Hide the site list' : 'Show the site list'}>
           {sitesOpen || sources.length === 0 ? '▾' : '▸'} {sources.length} {sources.length === 1 ? 'site' : 'sites'}
@@ -568,6 +590,8 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
           </label>
         </div>
       )}
+      </>
+      )}
 
       {sources.length === 0 ? (
         <div className="hint">
@@ -575,21 +599,17 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
         </div>
       ) : (
         <>
-        <div className="shelves">
-          <button className={`mini big${shelf === 'all' ? ' on' : ''}`} onClick={() => setShelf('all')}>
-            All titles
-          </button>
-          <button className={`mini big${shelf === 'added' ? ' on' : ''}`} onClick={() => setShelf('added')}>
-            Added by me ({added.length})
-          </button>
-        </div>
         {shelf === 'added' ? (
           <>
-            <div className="sitesbar">
-              <span className="add" style={{ flex: 1 }}>
+            <div className="invite">
+              <div className="kicker" style={{ color: 'var(--primary-text)' }}>
+                <Icon name="link" />
+              </div>
+              <h3>Save a single title</h3>
+              <p>Paste the address of a title&apos;s page from any site. It is saved here and opens like any other series.</p>
+              <span className="add">
                 <input
-                  style={{ flex: 1, minWidth: 260 }}
-                  placeholder="Add a title: paste the address of its page"
+                  placeholder="https://… the address of one title"
                   value={addUrl}
                   onChange={(e) => setAddUrl(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && void addTitle(false)}
@@ -670,7 +690,12 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
                   <div key={r.seriesUrl} className="cwrap">
                     <button className="card small" onClick={() => openRecent(r)}>
                       <div className="cover">
-                        {r.cover && <img loading="lazy" src={proxied(r.cover, r.coverReferer)} />}
+                        {r.cover && <img loading="lazy" decoding="async" src={proxied(r.cover, r.coverReferer)} />}
+                        {r.pos > 0.02 && !r.read.includes(r.chapterUrl) && (
+                          <div className="cprog">
+                            <span style={{ width: `${Math.round(r.pos * 100)}%` }} />
+                          </div>
+                        )}
                       </div>
                       <div className="name" title={r.title}>
                         {r.title}
@@ -713,6 +738,7 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
                   {h.cover ? (
                     <img
                       loading="lazy"
+                      decoding="async"
                       src={proxied(h.cover, h.coverReferer)}
                       onError={(e) => fallbackCover(e, h.coverFallback, h.coverReferer)}
                     />

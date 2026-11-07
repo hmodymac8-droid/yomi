@@ -2,11 +2,18 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Electron</title>
+    <title>Yomi</title>
+    <script>
+      try {
+        document.documentElement.classList.add(localStorage.getItem('yomi-theme') === 'light' ? 'light' : 'dark')
+      } catch (e) {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: mr-img:"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: mr-img:"
     />
   </head>
 

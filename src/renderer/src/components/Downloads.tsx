@@ -10,7 +10,7 @@ interface Box {
   y2: number
 }
 
-export default function Downloads({ onBack }: { onBack: () => void }): React.JSX.Element {
+export default function Downloads(_props: { onBack: () => void }): React.JSX.Element {
   const [items, setItems] = useState<Record<string, DownloadItem>>({})
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [box, setBox] = useState<Box | null>(null) // the drag rectangle, in the scrolling area's own coordinates
@@ -215,10 +215,12 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
 
   return (
     <div className="series dlarea" ref={area} onMouseDown={onMouseDown}>
-      <button className="back" onClick={onBack}>
-        ← Back
-      </button>
-      <h2>Downloads</h2>
+      <div className="pagehead">
+        <div>
+          <div className="kicker">ダウンロード</div>
+          <h1>Downloads</h1>
+        </div>
+      </div>
       <div className="meta">
         {all.filter((i) => i.status === 'done').length} saved · {mb(total)} on disk
         {active > 0 && ` · ${active} in progress`}

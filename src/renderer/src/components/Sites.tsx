@@ -12,7 +12,7 @@ const ago = (t: number): string => {
 type Level = 'ok' | 'warn' | 'fail' | 'unknown'
 
 /** One word for the site: the last Re-check if there is one, otherwise how your recent series opens went. */
-function levelOf(h: SiteHealth | undefined): Level {
+export function levelOf(h: SiteHealth | undefined): Level {
   if (!h) return 'unknown'
   const opens = h.ok + h.incomplete + h.failed
   if (h.check) {
@@ -71,16 +71,23 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
 
   return (
     <div className="series">
-      <button className="back" onClick={onBack}>
-        ← Back
-      </button>
-      <h2>Sites</h2>
-      <div className="meta">
-        How each of your sites is doing. <b>Re-check</b> tests a site like you would use it: title list, a chapter list, a
-        chapter&apos;s pages and one image.
-        <button className="mini big" onClick={() => void checkAll()} disabled={anyBusy || sources.length === 0}>
-          {anyBusy ? 'Checking…' : 'Re-check all'}
-        </button>
+      <div className="pagehead">
+        <div>
+          <div className="kicker">サイト</div>
+          <h1>Sites</h1>
+          <p>
+            {sources.length} sites · {sources.reduce((n, s) => n + s.count, 0).toLocaleString()} titles merged. Re-check tests a
+            site like you would use it: title list, a chapter list, a chapter&apos;s pages and one image.
+          </p>
+        </div>
+        <div className="pageact">
+          <button onClick={() => void checkAll()} disabled={anyBusy || sources.length === 0}>
+            {anyBusy ? 'Checking…' : 'Re-check all'}
+          </button>
+          <button className="primary" onClick={onBack}>
+            Add site
+          </button>
+        </div>
       </div>
       {sources.length === 0 && <div className="hint">No sites yet. Add one from the main screen.</div>}
       {rows.map((s) => {

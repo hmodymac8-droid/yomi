@@ -38,6 +38,7 @@ const api = {
   downloadSetConcurrency: (n: number) => ipcRenderer.invoke('download-set-concurrency', n),
   downloadRemoveMany: (ids: string[]) => ipcRenderer.invoke('download-remove-many', ids),
   titleAdd: (url: string) => ipcRenderer.invoke('title-add', url),
+  windowControl: (action: 'minimize' | 'maximize' | 'close') => ipcRenderer.send('window-control', action),
   titleList: () => ipcRenderer.invoke('title-list'),
   titleRemove: (url: string) => ipcRenderer.invoke('title-remove', url),
   titleImport: (list: unknown[]) => ipcRenderer.invoke('title-import', list),

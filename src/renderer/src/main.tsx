@@ -1,3 +1,5 @@
+import '@fontsource-variable/dm-sans'
+import '@fontsource-variable/newsreader/opsz.css'
 import './assets/main.css'
 
 import { StrictMode } from 'react'
