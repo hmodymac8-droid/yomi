@@ -2,9 +2,9 @@ import { app, BrowserWindow, Notification } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import type { DownloadRequest, FollowCategory, FollowInfo, FollowMeta, FollowRecord, NewChapter, UpdateStatus } from '../preload/index.d'
-import { getSeries, getSeriesCached, getSource, mergeNewest } from './catalog'
+import { getSeries, getSeriesCached, getSource, mergeNewest, openSeries } from './catalog'
 import { enqueueDownloads } from './downloads'
-import { getProgress } from './progress'
+import { getProgress, recentProgress } from './progress'
 
 interface State {
   follows: Record<string, FollowRecord>
@@ -222,12 +222,53 @@ export async function checkAll(manual: boolean): Promise<void> {
   if (!manual) notify(found)
 }
 
+let preloading = false
+
+/**
+ * Reads the full chapter list, once, of the series you follow or are reading and that have no saved list yet, so they
+ * open instantly. Quietly in the background: one series at a time with pauses, a few per run, and the sites that failed
+ * recently are left alone for a while.
+ */
+const preloadFailedAt = new Map<string, number>()
+export async function preloadLists(limit = 12): Promise<number> {
+  if (preloading) return 0
+  preloading = true
+  let done = 0
+  try {
+    const wanted = new Map<string, string>() // series url -> source id
+    for (const f of Object.values(load().follows)) {
+      if (f.following && f.category !== 'finished' && f.category !== 'dropped') wanted.set(f.seriesUrl, f.sourceId)
+    }
+    for (const r of recentProgress(30)) if (!wanted.has(r.seriesUrl)) wanted.set(r.seriesUrl, r.sourceId)
+    for (const [url, sourceId] of wanted) {
+      if (done >= limit) break
+      if (!getSource(sourceId) || getSeriesCached(url)) continue
+      if (Date.now() - (preloadFailedAt.get(url) ?? 0) < 6 * 3600_000) continue
+      try {
+        const d = await openSeries(sourceId, url, 'auto')
+        if (d.chapters.length === 0) preloadFailedAt.set(url, Date.now())
+        else done++
+      } catch {
+        preloadFailedAt.set(url, Date.now())
+      }
+      await sleep(3000) // be polite to the sites
+    }
+  } finally {
+    preloading = false
+  }
+  return done
+}
+
 /** Background checks: shortly after launch, then every 30 minutes while the app is open. */
 export function startUpdateScheduler(): void {
   if (schedulerStarted) return
   schedulerStarted = true
   setTimeout(() => void checkAll(false), 45_000)
   setInterval(() => void checkAll(false), 30 * 60_000)
+  if (!process.env['MR_NOPRELOAD']) {
+    setTimeout(() => void preloadLists(), 120_000)
+    setInterval(() => void preloadLists(), 2 * 3600_000)
+  }
 }
 
 /** Dev/test helper: pretend the newest `n` chapters of a series were never seen. */

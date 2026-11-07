@@ -39,6 +39,7 @@ import { flushProgress, getProgress, hideProgress, recentProgress, saveProgress 
 import type { CrawlProgress, DownloadRequest, FollowCategory, FollowMeta, ProgressPatch } from '../preload/index.d'
 import {
   autoFollow,
+  preloadLists,
   checkAll,
   debugForget,
   dismissNew,
@@ -905,6 +906,19 @@ app.whenReady().then(async () => {
       .finally(() => app.quit())
     return
   }
+  // Dev helper: MR_PRELOAD=1 runs the background pre-load of chapter lists once and says how many series it read.
+  if (process.env['MR_PRELOAD']) {
+    ;(async () => {
+      warmUp()
+      await new Promise((r) => setTimeout(r, 2500))
+      const t = Date.now()
+      const n = await preloadLists(30)
+      console.log('PRELOAD ' + JSON.stringify({ read: n, secs: Math.round((Date.now() - t) / 100) / 10 }))
+    })()
+      .catch((e) => console.log('PRELOAD_ERROR ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => app.quit())
+    return
+  }
   // Dev helper: MR_OPENTEST=<site>,<series url> checks that a series is read once and then only checked for new chapters.
   if (process.env['MR_OPENTEST']) {
     ;(async () => {
@@ -1259,7 +1273,7 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }
