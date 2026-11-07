@@ -1,0 +1,391 @@
+import { useEffect, useRef, useState } from 'react'
+import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
+import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, proxied } from '../lib'
+
+interface Props {
+  series: OpenSeries
+  onBack: () => void
+  onRead: (c: OpenChapter) => void
+}
+
+type Ch = SeriesDetail['chapters'][number]
+
+const chapterNumber = (t: string): number => {
+  const m = t.match(/(\d+(?:\.\d+)?)/)
+  return m ? Number(m[1]) : 0
+}
+
+export default function Series({ series, onBack, onRead }: Props): React.JSX.Element {
+  const [entryIdx, setEntryIdx] = useState(0)
+  const [detail, setDetail] = useState<SeriesDetail | null>(null)
+  const [error, setError] = useState('')
+  const [offline, setOffline] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  // why the latest refresh failed while an older saved list is being shown (empty when it worked)
+  const [refreshError, setRefreshError] = useState('')
+  // bumped by the buttons to run the loading again; `mode` says how much to re-read
+  const [attempt, setAttempt] = useState(0)
+  const [mode, setMode] = useState<'auto' | 'check' | 'full'>('auto')
+  const reload = (m: 'auto' | 'check' | 'full'): void => {
+    setMode(m)
+    setAttempt((a) => a + 1)
+  }
+  const [newestFirst, setNewestFirst] = useState(true)
+  const entry = series.entries[entryIdx]
+  const [progress, setProgress] = useState<ProgressRecord | null>(null)
+  const [dls, setDls] = useState<Record<string, DownloadItem>>({})
+  const [follow, setFollowInfo] = useState<FollowInfo | null>(null)
+
+  // Following state + which chapters are new, kept live while the background checker runs.
+  useEffect(() => {
+    let cancelled = false
+    const load = (): void => {
+      window.api.followGet(entry.url).then((f) => !cancelled && setFollowInfo(f))
+    }
+    load()
+    const off = window.api.onUpdates(load)
+    return () => {
+      cancelled = true
+      off()
+    }
+  }, [entry.url])
+
+  const toggleFollow = async (): Promise<void> => {
+    await window.api.followSet(
+      {
+        seriesUrl: entry.url,
+        sourceId: entry.sourceId,
+        title: series.title,
+        cover: series.cover,
+        coverReferer: series.coverReferer
+      },
+      !follow?.following
+    )
+    setFollowInfo(await window.api.followGet(entry.url))
+  }
+  const newKeys = new Set((follow?.unreadChapters ?? []).map((c) => chapterKey(c.title)))
+
+  // Reading progress for the selected source (re-read whenever we come back from the reader).
+  useEffect(() => {
+    let cancelled = false
+    window.api.progressGet(entry.url).then((p) => !cancelled && setProgress(p))
+    return () => {
+      cancelled = true
+    }
+  }, [entry.url])
+
+  // Download states for this series, kept live while jobs run.
+  useEffect(() => {
+    let cancelled = false
+    window.api.downloadList().then((list) => {
+      if (cancelled) return
+      setDls(Object.fromEntries(list.filter((i) => i.seriesUrl === entry.url).map((i) => [i.id, i])))
+    })
+    const off = window.api.onDownload((i) => {
+      if (i.seriesUrl !== entry.url) return
+      setDls((prev) => {
+        const next = { ...prev }
+        if (i.status === 'removed') delete next[i.id]
+        else next[i.id] = i
+        return next
+      })
+    })
+    return () => {
+      cancelled = true
+      off()
+    }
+  }, [entry.url])
+
+  useEffect(() => {
+    let cancelled = false
+    let gotFresh = false
+    let haveCached = false
+    setLoading(true)
+    setError('')
+    setOffline(false)
+    setDetail(null)
+    setRefreshing(false)
+    setRefreshError('')
+    // Show the last known chapter list instantly, then replace it with the fresh one when it arrives.
+    window.api.getSeriesCached(entry.url).then((cached) => {
+      if (cancelled || gotFresh || !cached) return
+      haveCached = true
+      setDetail(cached)
+      setLoading(false)
+      setRefreshing(true)
+    })
+    // Long lists (sites with a chapter pager) arrive in pieces: show each piece as soon as it's read.
+    const offPartial = window.api.onSeriesPartial((d) => {
+      if (cancelled || gotFresh || d.url !== entry.url) return
+      setDetail((prev) => (prev && prev.chapters.length >= d.chapters.length ? prev : d))
+      setLoading(false)
+      setRefreshing(true)
+    })
+    window.api.getSeries(entry.sourceId, entry.url, mode).then(async (res) => {
+      if (cancelled) return
+      gotFresh = true
+      setRefreshing(false)
+      if (res.ok) {
+        setDetail(res.data)
+        return setLoading(false)
+      }
+      if (haveCached) {
+        setRefreshError(res.error) // keep showing the saved list, but say why it couldn't be updated
+        return
+      }
+      // Couldn't reach the site: fall back to the chapters saved on this PC.
+      const saved = (await window.api.downloadList())
+        .filter((i) => i.seriesUrl === entry.url && i.status === 'done')
+        .sort((a, b) => chapterNumber(b.chapterTitle) - chapterNumber(a.chapterTitle))
+      if (cancelled) return
+      setLoading(false)
+      if (saved.length > 0) {
+        setOffline(true)
+        setDetail({
+          url: entry.url,
+          title: series.title,
+          cover: series.cover,
+          description: '',
+          chapters: saved.map((i) => ({ title: i.chapterTitle, url: i.id }))
+        })
+      } else setError(res.error)
+    })
+    return () => {
+      cancelled = true
+      offPartial()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.sourceId, entry.url, series.title, series.cover, attempt])
+
+  const referer = new URL(entry.url).origin + '/'
+  const chapters = detail ? (newestFirst ? detail.chapters : [...detail.chapters].reverse()) : []
+  const readSet = new Set(progress?.read ?? [])
+
+  const open = (c: Ch): void => {
+    if (!detail) return
+    onRead({
+      url: c.url,
+      title: c.title,
+      chapters: detail.chapters,
+      referer,
+      seriesUrl: entry.url,
+      sourceId: entry.sourceId
+    })
+  }
+
+  const request = (c: Ch): DownloadRequest => ({
+    chapterUrl: c.url,
+    alts: c.alts,
+    chapterTitle: c.title,
+    seriesUrl: entry.url,
+    seriesTitle: series.title,
+    sourceId: entry.sourceId,
+    referer
+  })
+
+  // Oldest first, so the queue fills in reading order.
+  const downloadMany = (list: Ch[], label: string): void => {
+    const todo = [...list].reverse().filter((c) => !['done', 'queued', 'downloading'].includes(dls[c.url]?.status ?? ''))
+    if (todo.length === 0) return
+    if (todo.length > 40 && !confirm(`Download ${todo.length} chapters (${label})? This can take a while and use disk space.`)) return
+    void window.api.downloadEnqueue(todo.map(request))
+  }
+
+  const dlButton = (c: Ch): React.JSX.Element | null => {
+    if (offline) return null
+    const d = dls[c.url]
+    if (!d) return (
+      <button className="dl" title="Download for offline" onClick={() => window.api.downloadEnqueue([request(c)])}>
+        ⬇
+      </button>
+    )
+    if (d.status === 'done') return (
+      <button className="dl done" title="Saved on this PC. Click to delete the download" onClick={() => window.api.downloadRemove(d.id)}>
+        ✓
+      </button>
+    )
+    if (d.status === 'error') return (
+      <button className="dl bad" title={`${d.error ?? 'Failed'}. Click to retry`} onClick={() => window.api.downloadEnqueue([request(c)])}>
+        ↻
+      </button>
+    )
+    return (
+      <button className="dl busy" title="Click to cancel" onClick={() => window.api.downloadCancel(d.id)}>
+        {d.status === 'queued' ? '…' : `${d.done}/${d.total || '?'}`}
+      </button>
+    )
+  }
+
+  // "Continue" resumes the last chapter you opened. If you had finished it, go to the next one.
+  // The list is stored newest-first, so "next" is the previous index.
+  const list = detail?.chapters ?? []
+  const lastIdx = progress ? list.findIndex((c) => c.url === progress.chapterUrl) : -1
+  let resume: Ch | undefined
+  let resumeNote = ''
+  if (lastIdx >= 0) {
+    const finished = readSet.has(list[lastIdx].url)
+    if (finished && lastIdx > 0) {
+      resume = list[lastIdx - 1]
+      resumeNote = 'next chapter'
+    } else if (!finished) {
+      resume = list[lastIdx]
+      resumeNote = progress && progress.pos > 0.02 ? `${Math.round(progress.pos * 100)}% in` : ''
+    }
+  }
+  const first = list.length > 0 ? list[list.length - 1] : undefined
+
+  // Get the chapter you're most likely to open (the Continue / Start one) ready before you click it:
+  // its page list, and its first images into the image cache.
+  const prefetched = useRef('')
+  const target = resume ?? first
+  useEffect(() => {
+    if (!target || offline || prefetched.current === target.url) return
+    prefetched.current = target.url
+    window.api.prefetchChapter(target.url).then((pages) =>
+      pages.forEach((p) => {
+        const img = new Image()
+        img.src = pageSrc(p, referer)
+      })
+    )
+  }, [target?.url, offline, referer])
+  const unread = list.filter((c) => !readSet.has(c.url))
+
+  return (
+    <div className="series">
+      <button className="back" onClick={onBack}>
+        ← Back
+      </button>
+      <div className="head">
+        <div className="cover big">
+          {(series.cover || detail?.cover) && (
+            <img
+              src={proxied(series.cover || detail!.cover, series.coverReferer)}
+              onError={(e) => fallbackCover(e, series.coverFallback || detail?.cover, series.coverReferer)}
+            />
+          )}
+        </div>
+        <div className="info">
+          <h2>{series.title}</h2>
+          {series.entries.length > 1 && (
+            <div className="srcs">
+              Read from:{' '}
+              {series.entries.map((e, i) => (
+                <button key={e.url} className={i === entryIdx ? 'on' : ''} onClick={() => setEntryIdx(i)}>
+                  {e.sourceName}
+                </button>
+              ))}
+            </div>
+          )}
+          {offline && <p className="desc">Can&apos;t reach the site, so this shows only the chapters saved on this PC.</p>}
+          {detail?.description && <p className="desc">{detail.description}</p>}
+          {detail && (resume || first) && (
+            <div className="resume">
+              {resume ? (
+                <button className="primary" onClick={() => open(resume!)}>
+                  ▶ Continue: {resume.title}
+                  {resumeNote && <small> ({resumeNote})</small>}
+                </button>
+              ) : (
+                first && (
+                  <button className="primary" onClick={() => open(first)}>
+                    ▶ Start: {first.title}
+                  </button>
+                )
+              )}
+              {readSet.size > 0 && (
+                <span className="count">
+                  {[...readSet].filter((u) => list.some((c) => c.url === u)).length} / {list.length} read
+                </span>
+              )}
+            </div>
+          )}
+          {detail && (
+            <div className="resume">
+              <button className={`mini big${follow?.following ? ' on' : ''}`} onClick={toggleFollow} title="Follow to be told about new chapters">
+                {follow?.following ? '✓ Following' : '☆ Follow'}
+              </button>
+              {follow && follow.unread > 0 && <span className="count">{follow.unread} new</span>}
+            </div>
+          )}
+          {detail && !offline && list.length > 0 && (
+            <div className="resume">
+              <button className="mini big" onClick={() => downloadMany(unread, 'unread')}>
+                ⬇ Download unread ({unread.length})
+              </button>
+              <button className="mini big" onClick={() => downloadMany(list, 'all')}>
+                ⬇ Download all ({list.length})
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {loading && <div className="hint">Loading chapters from {entry.sourceName}…</div>}
+      {error && (
+        <div className="error">
+          {error}{' '}
+          <button className="mini" onClick={() => reload('auto')}>
+            Try again
+          </button>
+        </div>
+      )}
+      {detail && (
+        <>
+          <div className="meta">
+            {detail.chapters.length} chapters{refreshing && ' · updating…'}{' '}
+            <button className="mini" onClick={() => setNewestFirst(!newestFirst)}>
+              {newestFirst ? 'newest first' : 'oldest first'}
+            </button>
+            {!offline && (
+              <>
+                <button className="mini" disabled={refreshing} onClick={() => reload('check')} title="Look for chapters added since the list was saved">
+                  Check for new chapters
+                </button>
+                <button
+                  className="mini"
+                  disabled={refreshing}
+                  onClick={() => confirm('Read the whole chapter list again? This takes longer and uses more of the site.') && reload('full')}
+                  title="Read the complete chapter list again"
+                >
+                  Reload full list
+                </button>
+              </>
+            )}
+          </div>
+          {refreshError && (
+            <div className="error small">
+              Showing the saved list. Couldn&apos;t check for new chapters: {refreshError}{' '}
+              <button className="mini" onClick={() => reload('check')}>
+                Try again
+              </button>
+            </div>
+          )}
+          {detail.chapters.length === 0 && !refreshing && (
+            <div className="hint">
+              No chapters found on this page. The site may load them in a way the app can&apos;t see yet.{' '}
+              <button className="mini" onClick={() => reload('full')}>
+                Try again
+              </button>
+            </div>
+          )}
+          <div className="chapters">
+            {chapters.map((c) => (
+              <div
+                key={c.url}
+                className={`chapterwrap${readSet.has(c.url) ? ' read' : ''}${progress?.chapterUrl === c.url ? ' current' : ''}`}
+              >
+                <button className="chapter" onClick={() => open(c)}>
+                  {readSet.has(c.url) ? '✓ ' : ''}
+                  {c.title}
+                  {newKeys.has(chapterKey(c.title)) && !readSet.has(c.url) && <span className="newtag">NEW</span>}
+                </button>
+                {dlButton(c)}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

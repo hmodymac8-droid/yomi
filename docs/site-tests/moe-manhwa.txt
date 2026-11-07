@@ -1,0 +1,43 @@
+﻿MOE_COUNT 42
+MOE {"slug":"webtoonclub","title":"WebtoonClub","url":"https://webtoonclub.com/","more":[]}
+MOE {"slug":"kagane","title":"Kagane","url":"https://kagane.moe/","more":["https://kagane.org/"]}
+MOE {"slug":"webtoon","title":"Webtoons","url":"https://webtoons.com/","more":["https://apps.apple.com/app/id894546091","https://play.google.com/store/apps/details?id=com.naver.linewebtoon"]}
+MOE {"slug":"baetoon","title":"BaeToon","url":"https://baetoon.com/","more":["https://manhwah.com/"]}
+MOE {"slug":"tapas","title":"Tapas","url":"https://tapas.io/","more":["https://apps.apple.com/app/id578836126","https://play.google.com/store/apps/details?id=com.tapastic"]}
+MOE {"slug":"tappytoon","title":"Tappytoon","url":"https://www.tappytoon.com/","more":["https://apps.apple.com/app/id985615352","https://play.google.com/store/apps/details?id=com.contentsfirst.tappytoon"]}
+MOE {"slug":"toomics","title":"Toomics","url":"https://toomics.com/","more":["https://toomics.in/"]}
+MOE {"slug":"toon18x","title":"Toon18x","url":"","more":[]}
+MOE {"slug":"manhwatop","title":"Manhwatop","url":"https://manhwatop.com/","more":[]}
+MOE {"slug":"toonily","title":"Toonily","url":"https://toonily.com/","more":[]}
+MOE {"slug":"kuramanga","title":"KuraManga","url":"https://kuramanga.com/","more":["https://kurahentai.com/"]}
+MOE {"slug":"lunaranimemanga","title":"Lunar","url":"https://lunarx.to/manga","more":[]}
+MOE {"slug":"projectsuki","title":"Projectsuki","url":"https://projectsuki.com/","more":[]}
+MOE {"slug":"topmanhua","title":"TopManhua","url":"https://manhuatop.org/","more":[]}
+MOE {"slug":"cocomic","title":"Cocomic","url":"https://cocomic.co/","more":[]}
+MOE {"slug":"mangagg","title":"MangaGG","url":"https://mangagg.com/","more":[]}
+MOE {"slug":"mangazin","title":"Mangazin","url":"https://mangazin.org/","more":[]}
+MOE {"slug":"lezhin","title":"Lehzin","url":"https://www.lezhinus.com/","more":["https://www.lezhin.com/"]}
+MOE {"slug":"manta","title":"Manta","url":"https://manta.net/","more":["https://apps.apple.com/us/app/manta-manhwa-comics-novels/id1536116642","https://play.google.com/store/apps/details?id=net.manta.comic"]}
+MOE {"slug":"nicelink22","title":"nicelink (wolftoon)","url":"https://a15c.com/","more":["https://wfwf999.com/","https://acloud15.com/"]}
+MOE {"slug":"goodtoon","title":"GoodToon","url":"https://goodtoon1.top/","more":["https://www.goodtoon008.com/"]}
+MOE {"slug":"toonkor","title":"ToonKor","url":"https://xn--yq5bv6mzmcca.org/","more":["https://001.toonkor.net/","https://toonkor.site/"]}
+MOE {"slug":"toonflix","title":"TOONFLIX (ntk01)","url":"https://newtoki1.org/","more":["https://sbxh9.com/","https://toki35.com/"]}
+MOE {"slug":"blacktoon","title":"Blacktoon","url":"https://blacktoon.cc/","more":["https://blacktoon426.com/","https://blacktoongo.com/"]}
+MOE {"slug":"pandatoons","title":"PandaToons","url":"https://pandatoons.com/","more":[]}
+MOE {"slug":"jjaptoon","title":"jjaptoon","url":"https://jjaptoon008.com/","more":["https://xn--kd6b44m.live/"]}
+MOE {"slug":"funbe512","title":"Funbe","url":"https://funbe.site/","more":["https://001.funbe.org/","https://funbe-juso.com/"]}
+MOE {"slug":"manhwatoonme","title":"Manhwatoon","url":"https://manhwatoon.me/","more":["https://www.manhwatoons.com/","https://doujinhq.club/"]}
+MOE {"slug":"manhuarmmtl","title":"ManhuaRMTL","url":"https://manhuarmtl.com/","more":["https://mtlmanga.org/","https://kr.manhuarmtl.com/"]}
+MOE {"slug":"kingofshojo","title":"Kingofshojo","url":"https://kingofshojo.com/","more":[]}
+MOE {"slug":"luacomic","title":"Lua Comic","url":"https://luacomic.org/","more":[]}
+MOE {"slug":"asuragg","title":"Asura Scans","url":"https://asurascans.com/","more":["https://beta.asurascans.com/","https://toraka.com/"]}
+MOE {"slug":"flamescans","title":"Flame Comics","url":"https://flamecomics.xyz/","more":[]}
+MOE {"slug":"hivescans","title":"Hive Scans","url":"https://hivescans.com/","more":[]}
+MOE {"slug":"templescan","title":"TempleScan","url":"https://templescan.net/","more":[]}
+MOE {"slug":"rokaricomics","title":"rokari comics","url":"https://rokaricomics.com/","more":[]}
+MOE {"slug":"divascans","title":"Diva Scans","url":"https://divascans.com/","more":[]}
+MOE {"slug":"nyxscans","title":"Nyx Scans","url":"https://nyxscans.com/","more":[]}
+MOE {"slug":"freemanhwanet","title":"FreeManhwa","url":"https://freemanhwa.net/","more":[]}
+MOE {"slug":"omanga","title":"Fropi","url":"https://fropi.net/","more":[]}
+MOE {"slug":"manhuaus","title":"Manhuaus","url":"https://manhuaus.club/","more":[]}
+MOE {"slug":"mangack","title":"mangack","url":"https://mangack.com/home/","more":[]}

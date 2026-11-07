@@ -1,0 +1,76 @@
+import { contextBridge, ipcRenderer } from 'electron'
+import { electronAPI } from '@electron-toolkit/preload'
+
+// Custom APIs for renderer
+const api = {
+  prefetchSeries: (sourceId: string, url: string) => ipcRenderer.invoke('prefetch-series', sourceId, url),
+  onSeriesPartial: (cb: (d: unknown) => void) => {
+    const h = (_e: unknown, d: unknown): void => cb(d)
+    ipcRenderer.on('series-partial', h)
+    return () => ipcRenderer.removeListener('series-partial', h)
+  },
+  onDetect: (cb: (msg: string) => void) => {
+    const h = (_e: unknown, m: string): void => cb(m)
+    ipcRenderer.on('detect-progress', h)
+    return () => ipcRenderer.removeListener('detect-progress', h)
+  },
+  enrich: (urls: string[]) => ipcRenderer.invoke('enrich', urls),
+  followList: () => ipcRenderer.invoke('follow-list'),
+  followGet: (seriesUrl: string) => ipcRenderer.invoke('follow-get', seriesUrl),
+  followSet: (meta: unknown, following: boolean) => ipcRenderer.invoke('follow-set', meta, following),
+  followDismiss: (seriesUrl: string) => ipcRenderer.invoke('follow-dismiss', seriesUrl),
+  updatesCheck: () => ipcRenderer.invoke('updates-check'),
+  updatesStatus: () => ipcRenderer.invoke('updates-status'),
+  updatesSetAutoDownload: (on: boolean) => ipcRenderer.invoke('updates-auto-download', on),
+  onUpdates: (cb: (s: unknown) => void) => {
+    const h = (_e: unknown, s: unknown): void => cb(s)
+    ipcRenderer.on('updates-changed', h)
+    return () => ipcRenderer.removeListener('updates-changed', h)
+  },
+  getSeriesCached: (url: string) => ipcRenderer.invoke('get-series-cached', url),
+  prefetchChapter: (url: string) => ipcRenderer.invoke('prefetch-chapter', url),
+  downloadEnqueue: (reqs: unknown) => ipcRenderer.invoke('dl-enqueue', reqs),
+  downloadList: () => ipcRenderer.invoke('dl-list'),
+  downloadGet: (chapterUrl: string) => ipcRenderer.invoke('dl-get', chapterUrl),
+  downloadCancel: (id: string) => ipcRenderer.invoke('dl-cancel', id),
+  downloadRemove: (id: string) => ipcRenderer.invoke('dl-remove', id),
+  onDownload: (cb: (i: unknown) => void) => {
+    const h = (_e: unknown, i: unknown): void => cb(i)
+    ipcRenderer.on('dl-progress', h)
+    return () => ipcRenderer.removeListener('dl-progress', h)
+  },
+  progressGet: (seriesUrl: string) => ipcRenderer.invoke('progress-get', seriesUrl),
+  progressSave: (p: unknown) => ipcRenderer.invoke('progress-save', p),
+  progressRecent: (limit: number) => ipcRenderer.invoke('progress-recent', limit),
+  grabChapter: (url: string) => ipcRenderer.invoke('grab-chapter', url),
+  listSources: () => ipcRenderer.invoke('list-sources'),
+  addSite: (url: string) => ipcRenderer.invoke('add-site', url),
+  removeSite: (id: string) => ipcRenderer.invoke('remove-site', id),
+  crawl: (id: string) => ipcRenderer.invoke('crawl', id),
+  cancelCrawl: (id: string) => ipcRenderer.invoke('cancel-crawl', id),
+  search: (q: string, sourceId: string, sort: string, offset: number, limit: number) =>
+    ipcRenderer.invoke('search', q, sourceId, sort, offset, limit),
+  getSeries: (sourceId: string, url: string, mode?: string) => ipcRenderer.invoke('get-series', sourceId, url, mode),
+  onProgress: (cb: (p: unknown) => void) => {
+    const h = (_e: unknown, p: unknown): void => cb(p)
+    ipcRenderer.on('crawl-progress', h)
+    return () => ipcRenderer.removeListener('crawl-progress', h)
+  }
+}
+
+// Use `contextBridge` APIs to expose Electron APIs to
+// renderer only if context isolation is enabled, otherwise
+// just add to the DOM global.
+if (process.contextIsolated) {
+  try {
+    contextBridge.exposeInMainWorld('electron', electronAPI)
+    contextBridge.exposeInMainWorld('api', api)
+  } catch (error) {
+    console.error(error)
+  }
+} else {
+  // @ts-ignore (define in dts)
+  window.electron = electronAPI
+  // @ts-ignore (define in dts)
+  window.api = api
+}

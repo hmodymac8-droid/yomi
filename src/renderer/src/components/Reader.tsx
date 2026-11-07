@@ -1,0 +1,231 @@
+import { useEffect, useRef, useState } from 'react'
+import { OpenChapter, OpenSeries, localPage, pageSrc } from '../lib'
+
+type Mode = 'webtoon' | 'paged'
+
+interface Props {
+  chapter: OpenChapter
+  series: OpenSeries
+  onBack: () => void
+  onNavigate: (c: OpenChapter) => void
+}
+
+export default function Reader({ chapter, series, onBack, onNavigate }: Props): React.JSX.Element {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [title, setTitle] = useState('')
+  const [pages, setPages] = useState<string[]>([])
+  const [mode, setMode] = useState<Mode>('webtoon')
+  const [fit, setFit] = useState<'width' | 'height'>('width')
+  const [index, setIndex] = useState(0)
+  const [eager, setEager] = useState(false)
+  const scroller = useRef<HTMLDivElement>(null)
+  const restoring = useRef(true) // true while we jump back to the saved position: don't overwrite it
+  const lastSave = useRef(0)
+  const finished = useRef(false)
+
+  // Saves where you are (pos 0..1) for this series; markRead flags the chapter as finished.
+  const persist = (pos: number, markRead = false): void => {
+    void window.api.progressSave({
+      seriesUrl: chapter.seriesUrl,
+      sourceId: chapter.sourceId,
+      title: series.title,
+      cover: series.cover,
+      coverReferer: series.coverReferer,
+      chapterUrl: chapter.url,
+      chapterTitle: chapter.title,
+      pos,
+      markRead: markRead ? chapter.url : undefined
+    })
+  }
+
+  // chapters are listed newest-first on most sites; "next" = the one before it in the list.
+  const pos = chapter.chapters.findIndex((c) => c.url === chapter.url)
+  const nextCh = pos > 0 ? chapter.chapters[pos - 1] : undefined
+  const prevCh = pos >= 0 && pos < chapter.chapters.length - 1 ? chapter.chapters[pos + 1] : undefined
+  const go = (c?: { title: string; url: string }): void => {
+    if (c) onNavigate({ ...chapter, url: c.url, title: c.title })
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    setPages([])
+    setIndex(0)
+    scroller.current?.scrollTo(0, 0)
+    // Try the main link first, then any other providers that host the same chapter.
+    const cur = chapter.chapters.find((c) => c.url === chapter.url)
+    const urls = [chapter.url, ...(cur?.alts ?? [])]
+    restoring.current = true
+    finished.current = false
+    setEager(false)
+    ;(async () => {
+      // Resume where you stopped if you are reopening the chapter you last read.
+      const rec = await window.api.progressGet(chapter.seriesUrl)
+      const startPos = rec && rec.chapterUrl === chapter.url && !rec.read.includes(chapter.url) ? rec.pos : 0
+      persist(startPos) // registers "last read" right away, before any scrolling
+      const show = (list: string[], ttl: string): void => {
+        const n = list.length
+        setLoading(false)
+        setTitle(ttl)
+        setPages(list)
+        // Get the neighbouring chapters ready while you read, so Next / Prev open instantly.
+        setTimeout(() => {
+          if (cancelled) return
+          for (const c of [nextCh, prevCh]) {
+            if (!c) continue
+            window.api.prefetchChapter(c.url).then((first) =>
+              first.forEach((p) => {
+                const img = new Image() // warms the image cache for the first pages
+                img.src = pageSrc(p, chapter.referer)
+              })
+            )
+          }
+        }, 600)
+        if (startPos > 0.02) {
+          setEager(true) // load every page so the scroll height is real before jumping
+          setIndex(Math.round(startPos * (n - 1)))
+          setTimeout(() => {
+            const el = scroller.current
+            if (el && !cancelled) el.scrollTop = startPos * (el.scrollHeight - el.clientHeight)
+            restoring.current = false
+          }, 1800)
+        } else {
+          restoring.current = false
+        }
+      }
+
+      // A downloaded chapter opens straight from disk: no network, no browser, works offline.
+      const dl = await window.api.downloadGet(chapter.url)
+      if (cancelled) return
+      if (dl && dl.files.length > 0) {
+        show(
+          dl.files.map((f) => localPage(dl, f)),
+          `${dl.seriesTitle} · ${dl.chapterTitle} (saved)`
+        )
+        return
+      }
+
+      let lastError = 'No manga pages found on that chapter page.'
+      for (const u of urls) {
+        const res = await window.api.grabChapter(u)
+        if (cancelled) return
+        if (res.ok && res.data.pages.length > 0) {
+          show(res.data.pages, res.data.title)
+          return
+        }
+        if (!res.ok) lastError = res.error
+      }
+      setLoading(false)
+      setError(lastError)
+      restoring.current = false
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [chapter.url])
+
+  // Webtoon mode: save the scroll position (throttled) and mark the chapter read near the end.
+  const onScroll = (): void => {
+    const el = scroller.current
+    if (!el || restoring.current || mode !== 'webtoon' || pages.length === 0) return
+    const max = el.scrollHeight - el.clientHeight
+    if (max <= 0) return
+    const f = Math.min(1, el.scrollTop / max)
+    const now = Date.now()
+    if (f > 0.9 && !finished.current) {
+      finished.current = true
+      lastSave.current = now
+      persist(f, true)
+    } else if (now - lastSave.current > 1500) {
+      lastSave.current = now
+      persist(f)
+    }
+  }
+
+  // Paged mode: save the page you are on; the last page counts as finished.
+  useEffect(() => {
+    if (mode !== 'paged' || pages.length === 0 || restoring.current) return
+    const f = pages.length > 1 ? index / (pages.length - 1) : 1
+    const done = index >= pages.length - 1
+    if (done) finished.current = true
+    persist(f, done)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, mode, pages.length])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') return onBack()
+      if (e.key === 'm') setMode((m) => (m === 'webtoon' ? 'paged' : 'webtoon'))
+      if (mode === 'paged') {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault()
+          if (index >= pages.length - 1) go(nextCh)
+          else setIndex((i) => i + 1)
+        }
+        if (e.key === 'ArrowLeft') setIndex((i) => Math.max(i - 1, 0))
+      } else {
+        if (e.key === 'ArrowRight') go(nextCh)
+        if (e.key === 'ArrowLeft') go(prevCh)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
+  return (
+    <div className="readerview">
+      <header className="bar">
+        <button onClick={onBack}>← Back</button>
+        <button onClick={() => go(prevCh)} disabled={!prevCh}>
+          ‹ Prev
+        </button>
+        <span className="count grow">{chapter.title}</span>
+        <button onClick={() => go(nextCh)} disabled={!nextCh}>
+          Next ›
+        </button>
+        <button onClick={() => setMode(mode === 'webtoon' ? 'paged' : 'webtoon')}>
+          {mode === 'webtoon' ? 'Webtoon' : 'Paged'}
+        </button>
+        <button onClick={() => setFit(fit === 'width' ? 'height' : 'width')}>Fit {fit}</button>
+        {pages.length > 0 && (
+          <span className="count">{mode === 'paged' ? `${index + 1} / ${pages.length}` : `${pages.length} pages`}</span>
+        )}
+      </header>
+
+      {loading && <div className="hint">Opening chapter and collecting pages…</div>}
+      {error && <div className="error">{error}</div>}
+
+      {pages.length > 0 && (
+        <div className="reader" ref={scroller} onScroll={onScroll}>
+          <div className="title">{title}</div>
+          {mode === 'webtoon' ? (
+            <>
+              {pages.map((p, i) => (
+                <img
+                  key={p}
+                  className={`page fit-${fit}`}
+                  src={pageSrc(p, chapter.referer)}
+                  loading={eager || i < 3 ? 'eager' : 'lazy'}
+                />
+              ))}
+              {nextCh && (
+                <button className="nextbig" onClick={() => go(nextCh)}>
+                  Next chapter: {nextCh.title} ›
+                </button>
+              )}
+            </>
+          ) : (
+            <img
+              key={pages[index]}
+              className={`page fit-${fit}`}
+              src={pageSrc(pages[index], chapter.referer)}
+              onClick={() => (index >= pages.length - 1 ? go(nextCh) : setIndex(index + 1))}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
