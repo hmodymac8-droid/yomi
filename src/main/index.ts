@@ -1254,7 +1254,10 @@ app.whenReady().then(async () => {
         await js("document.querySelector('.readerview').dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 10 }))")
         await wait(500)
         await shot('07-reader')
-        await js("(() => { const r = document.querySelector('.reader'); r.scrollTop = r.scrollHeight })()")
+        for (let i = 0; i < 8; i++) {
+          await js("(() => { const r = document.querySelector('.reader'); r.scrollTop = r.scrollHeight })()")
+          await wait(1500)
+        }
         await wait(2500)
         await shot('07b-reader-end')
         if (process.env['MR_SHOTS_LIGHT']) {
