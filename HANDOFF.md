@@ -43,9 +43,14 @@ Results of the big site survey are in `docs/site-tests/` (sc1 = cheap checks, ou
   Results: `docs/site-tests/strict0-3.txt` (31 sites): 13 WORKS, 16 CHECK, 2 FAILED.
 
 ## OPEN PROBLEMS NOW
-1. **Chapter lists still cut short on some sites** (strict test flagged `incomplete`): TopManhua (exactly 50), JustManga,
-   MangaK, XComic, Mangapill (4 chapters in the series tested). 50 looks like a page size: probably a "load more" /
-   pager the finder doesn't press. Look with MR_ANCH=`series url`.
+1. **Chapter lists cut short**: FIXED for TopManhua (935), JustManga (144), MangaK, XComic (72), Mangapill. Causes:
+   (a) scripted `.click()` is ignored by many sites -> now a real mouse click is sent to the window (`clickMarked`,
+   with click-through for ad overlays); (b) the page states its chapter count (`DECLARED_TOTAL`) -> keep trying and
+   mark incomplete if short; (c) slices with their own address (`?chapter_page=2`) -> `queryPaging`; (d) aggregator
+   pages with a list per source (`/source/xyz`) -> follow the biggest source; (e) addresses like
+   `vol-2-chapter-16-title` and titles "Vol.N Chapter M" -> `underBase`. Mangapill's "CHECK" is only the test's odd
+   134-page pick (a real chapter has 14 pages). Debug helpers: MR_PAGERDEBUG=1, MR_ANCH_CLICK=1 with MR_ANCH.
+   New: **Continue reading** cards have a hover x that removes them (read marks kept).
 2. **Odd page counts** (chapter page list may include non-page images): Manganato.gg 453, Manhuaus 238, mangageko 102,
    FreeManhwa 112, PandaToons 92, Weeb Central 141; Nyx/Toonz/Projectsuki only 3 pages. Compare with the real chapter.
 3. comix.to refuses chapter lists (HTTP 403) from this connection; titles work. mangadot.net needs a human check the

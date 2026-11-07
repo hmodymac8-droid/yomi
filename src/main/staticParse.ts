@@ -127,13 +127,31 @@ export function parseSeries(
   const chapters: { title: string; url: string }[] = []
   // A chapter is a link whose address looks like one OR whose visible text does ("Chapter 12"): some sites use
   // opaque addresses (/chapters/01J76X…). "Start Reading" / "Latest" buttons are not chapters themselves.
-  const byText = (t: string): boolean => /^(chapter|chap\.?|ch\.?|episode|ep\.?)\s*\d/i.test(t)
+  const byText = (t: string): boolean => /^(vol(ume)?\.?\s*\d+\s*[,:.-]?\s*)?(chapter|chap\.?|ch\.?|episode|ep\.?)\s*\d/i.test(t)
+  // A link below this series' own address with "chapter 12" / "vol-2" in its path is one of its chapters.
+  let basePath = ''
+  let baseOrigin = ''
+  try {
+    const pu = new URL(pageUrl)
+    basePath = pu.pathname.replace(/\/$/, '')
+    baseOrigin = pu.origin
+  } catch {
+    /* no base */
+  }
+  const underBase = (h: string): boolean => {
+    try {
+      const u = new URL(h)
+      return !!basePath && u.origin === baseOrigin && u.pathname.startsWith(basePath + '/') && /(chapter|chap|episode|ep|ch)[-_ ]?\d|vol[-_ ]?\d/i.test(u.pathname.slice(basePath.length))
+    } catch {
+      return false
+    }
+  }
   const junk = (t: string): boolean => /^(start|read|continue|first|last|latest|new)\b/i.test(t) && !/\d/.test(t)
   $('a[href]').each((_, a) => {
     const href = abs($(a).attr('href'), pageUrl).split('#')[0]
     if (!href || seen.has(href)) return
     const t = textOf(a).slice(0, 80)
-    if ((!re.test(href) && !byText(t)) || junk(t)) return
+    if ((!re.test(href) && !byText(t) && !underBase(href)) || junk(t)) return
     seen.add(href)
     chapters.push({ title: t, url: href })
   })

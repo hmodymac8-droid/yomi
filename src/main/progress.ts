@@ -39,13 +39,23 @@ export function saveProgress(p: ProgressPatch): void {
   const read = new Set(old?.read ?? [])
   if (p.markRead) read.add(p.markRead)
   const { markRead: _m, ...rest } = p
-  all[p.seriesUrl] = { ...rest, read: [...read], updatedAt: Date.now() }
+  all[p.seriesUrl] = { ...rest, read: [...read], updatedAt: Date.now(), hidden: false }
   if (timer) clearTimeout(timer)
   timer = setTimeout(flushProgress, 1000)
 }
 
+/** Take a title off "Continue reading" without losing which chapters are marked read. */
+export function hideProgress(seriesUrl: string): void {
+  const rec = load()[seriesUrl]
+  if (!rec) return
+  rec.hidden = true
+  if (timer) clearTimeout(timer)
+  timer = setTimeout(flushProgress, 300)
+}
+
 export function recentProgress(limit: number): ProgressRecord[] {
   return Object.values(load())
+    .filter((r) => !r.hidden)
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, limit)
 }

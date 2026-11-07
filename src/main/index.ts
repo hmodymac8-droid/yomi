@@ -26,7 +26,7 @@ import {
 import { grabChapterFast, prefetchChapter, settleVerifications } from './fastgrab'
 import { flushModes } from './hostmode'
 import { detectSource } from './sources'
-import { flushProgress, getProgress, recentProgress, saveProgress } from './progress'
+import { flushProgress, getProgress, hideProgress, recentProgress, saveProgress } from './progress'
 import type { CrawlProgress, DownloadRequest, FollowMeta, ProgressPatch } from '../preload/index.d'
 import {
   autoFollow,
@@ -191,6 +191,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('updates-auto-download', (_e, on: boolean) => setAutoDownload(on))
   startUpdateScheduler()
   ipcMain.handle('progress-recent', (_e, limit: number) => recentProgress(limit))
+  ipcMain.handle('progress-hide', (_e, seriesUrl: string) => hideProgress(seriesUrl))
   ipcMain.handle('remove-site', (_e, id: string) => removeSource(id))
   ipcMain.handle('crawl', (_e, id: string) => void crawlSource(id, emit))
   ipcMain.handle('cancel-crawl', (_e, id: string) => cancelCrawl(id))
@@ -446,7 +447,8 @@ app.whenReady().then(async () => {
   // Dev helper: MR_ANCH=<series url> loads the page, scrolls it, and reports which links look like chapters.
   if (process.env['MR_ANCH']) {
     ;(async () => {
-      const w = hiddenWindow({ light: true })
+      const w = hiddenWindow({ light: !process.env['MR_ANCH_FULL'] })
+      w.webContents.on('console-message', (_e, level, m) => { if (process.env['MR_ANCH_CLICK'] && level >= 2) console.log('ANCH_CONSOLE ' + m.slice(0, 200)) })
       await loadPage(w, process.env['MR_ANCH']!)
       const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
       await sleepMs(2500)
@@ -466,6 +468,24 @@ app.whenReady().then(async () => {
       w.webContents.session.webRequest.onCompleted((d) => {
         if (/\/api\//.test(d.url)) nets.push(d.statusCode + ' ' + d.url.replace(/^https?:\/\/[^/]+/, '').slice(0, 90))
       })
+      if (process.env['MR_ANCH_CLICK']) {
+        // press the "load more" button and list every request the page makes in response
+        const all: string[] = []
+        w.webContents.session.webRequest.onCompleted((d) => all.push(d.statusCode + ' ' + d.method + ' ' + d.url.slice(0, 110)))
+        w.webContents.session.webRequest.onErrorOccurred((d) => all.push('ERR ' + d.error + ' ' + d.url.slice(0, 110)))
+        const msg = await w.webContents.executeJavaScript(`(async () => { window.__l = []; const of = window.fetch; window.fetch = function () { window.__l.push('fetch ' + arguments[0]); return of.apply(this, arguments).then((r) => { window.__l.push('->' + r.status + ' ' + r.url); r.clone().text().then((t) => window.__l.push('BODY ' + t.slice(0, 300))); return r }, (e) => { window.__l.push('ERR ' + e); throw e }) }; window.addEventListener('error', (e) => window.__l.push('jserr ' + e.message)); [...document.querySelectorAll('[role=tab],button')].filter((x) => /^chapters?\b/i.test(x.textContent.trim())).forEach((x) => x.click()); await new Promise((r) => setTimeout(r, 800)); const bs = [...document.querySelectorAll('button')].filter((x) => /load more/i.test(x.textContent)); window.__l.push('buttons=' + bs.length + ' sizes=' + bs.map((x) => x.getBoundingClientRect().width).join(',')); const b = bs.find((x) => x.getBoundingClientRect().width > 0) || bs[0]; const n0 = document.querySelectorAll('a[href]').length; if (!b) return 'no button'; b.click(); await new Promise((r) => setTimeout(r, 3000)); const bb = document.querySelector('.detail-load-chapters'); window.__l.push('items2=' + document.querySelectorAll('.chapter-item').length + ' ' + (document.querySelector('.loaded-count')||{}).innerText); window.__l.push('react=' + (bb ? Object.keys(bb).filter((k) => k.startsWith('__react')).join(',') : 'nobtn') + ' scripts=' + [...document.scripts].filter((x) => x.src.includes('_next')).length + ' next=' + typeof window.next + ' ua=' + navigator.userAgent); return 'items=' + document.querySelectorAll('.chapter-item').length + ' links ' + n0 + ' -> ' + document.querySelectorAll('a[href]').length + ' LOG ' + window.__l.join(' ; ') + ' busy=' + document.querySelector('#detail-chapter-list')?.getAttribute('aria-busy') })()`)
+        {
+          const r = await w.webContents.executeJavaScript(`(() => { const b = [...document.querySelectorAll('button')].find((x) => /load more/i.test(x.textContent)); if (!b) return null; b.scrollIntoView({block:'center'}); const q = b.getBoundingClientRect(); return { x: Math.round(q.x + q.width / 2), y: Math.round(q.y + q.height / 2), vis: document.visibilityState, hasFocus: document.hasFocus() } })()`)
+          if (r) {
+            w.webContents.sendInputEvent({ type: 'mouseMove', x: r.x, y: r.y })
+            w.webContents.sendInputEvent({ type: 'mouseDown', x: r.x, y: r.y, button: 'left', clickCount: 1 })
+            w.webContents.sendInputEvent({ type: 'mouseUp', x: r.x, y: r.y, button: 'left', clickCount: 1 })
+            await new Promise((res) => setTimeout(res, 2500))
+            console.log('ANCH_REAL ' + JSON.stringify(r) + ' chapters now ' + (await w.webContents.executeJavaScript(`document.querySelectorAll('a[href*=chapter]').length`)))
+          }
+        }
+        console.log('ANCH_CLICK ' + msg + ' ' + JSON.stringify(all))
+      }
       await w.webContents.executeJavaScript(`[...document.querySelectorAll('div,ul,section')].filter((e) => e.scrollHeight > e.clientHeight + 40 && ['auto','scroll'].includes(getComputedStyle(e).overflowY)).forEach((e) => { e.scrollTop = e.scrollHeight })`)
       await sleepMs(1800)
       console.log('ANCH_NET_AFTER_INNER_SCROLL ' + JSON.stringify(nets))

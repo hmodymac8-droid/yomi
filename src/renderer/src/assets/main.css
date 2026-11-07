@@ -42,6 +42,10 @@ button:disabled { opacity: .5; cursor: default; }
 .continue { margin-bottom: 14px; }
 .strip { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; }
 .card.small { width: 120px; flex: none; }
+.cwrap { position: relative; flex: none; }
+.cremove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 15px; line-height: 20px; cursor: pointer; opacity: 0; transition: opacity .12s; }
+.cwrap:hover .cremove, .cremove:focus-visible { opacity: 1; }
+.cremove:hover { background: #c0392b; }
 
 /* series */
 .resume { display: flex; align-items: center; gap: 12px; margin-top: 12px; }

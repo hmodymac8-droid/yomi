@@ -42,6 +42,7 @@ const api = {
   progressGet: (seriesUrl: string) => ipcRenderer.invoke('progress-get', seriesUrl),
   progressSave: (p: unknown) => ipcRenderer.invoke('progress-save', p),
   progressRecent: (limit: number) => ipcRenderer.invoke('progress-recent', limit),
+  progressHide: (seriesUrl: string) => ipcRenderer.invoke('progress-hide', seriesUrl),
   grabChapter: (url: string) => ipcRenderer.invoke('grab-chapter', url),
   listSources: () => ipcRenderer.invoke('list-sources'),
   addSite: (url: string) => ipcRenderer.invoke('add-site', url),

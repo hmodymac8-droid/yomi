@@ -689,13 +689,17 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
   const text = (a) => (a.innerText || a.textContent || '').trim().replace(/\\s+/g, ' ');
   // A chapter is a link whose ADDRESS looks like one (…/chapter-12) OR whose visible text does ("Chapter 12"):
   // some sites use opaque addresses (…/chapters/01J76X…), so the address alone misses their whole list.
-  const byText = (t) => /^(chapter|chap\\.?|ch\\.?|episode|ep\\.?)\\s*\\d/i.test(t);
+  const byText = (t) => /^(vol(ume)?\\.?\\s*\\d+\\s*[,:.\\-]?\\s*)?(chapter|chap\\.?|ch\\.?|episode|ep\\.?)\\s*\\d/i.test(t);
+  // A link below this series' own address that has "chapter 12" / "vol-2" in its path is one of its chapters, even
+  // with a long title in the address (…/the-series/vol-2-chapter-16-power-of-the-darkness).
+  const base = location.pathname.replace(/\\/$/, '');
+  const underBase = (h) => { try { const u = new URL(h); return !!base && u.origin === location.origin && u.pathname.startsWith(base + '/') && /(chapter|chap|episode|ep|ch)[-_ ]?\\d|vol[-_ ]?\\d/i.test(u.pathname.slice(base.length)); } catch (e) { return false; } };
   // "Start Reading", "Read first", "Latest" buttons point at chapters but are not chapters themselves.
   const junk = (t) => /^(start|read|continue|first|last|latest|new)\\b/i.test(t) && !/\\d/.test(t);
   for (const a of document.querySelectorAll('a[href]')) {
     const href = a.href.split('#')[0];
     const t = text(a);
-    if ((!re.test(href) && !byText(t)) || junk(t) || seen.has(href)) continue;
+    if ((!re.test(href) && !byText(t) && !underBase(href)) || junk(t) || seen.has(href)) continue;
     seen.add(href);
     chapters.push({ title: t.slice(0, 80), url: href });
   }
@@ -717,6 +721,8 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
 // Clicks one "next page" pager button, or "show/view/load more" buttons. Returns true if it clicked.
 // Only real buttons (or href-less/"#" links) are clicked, so we never navigate away from the series page.
 const CLICK_MORE = `(() => {
+  // (the page script only marks what to press; the app then presses it with a real mouse click, see clickMarked)
+  const mark = (e) => e.setAttribute('data-mr-click', '1');
   const clickable = (el) => {
     // Only a real disabled state counts; utility classes like Tailwind's "disabled:opacity-50" must not.
     const cls = typeof el.className === 'string' ? el.className : '';
@@ -728,7 +734,7 @@ const CLICK_MORE = `(() => {
   // (whitespace inside a label, like "Show all 35 chapters   · 19", must not make it look too long)
   const label = (el) => (el.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase();
   const next = els.find((el) => { const t = label(el); return t.length < 12 && /^(next\\b|›$)/.test(t) && clickable(el); });
-  if (next) { next.click(); return true; }
+  if (next) { mark(next); return true; }
   // Numbered pager (1 2 3 4 ...): click the next number. Pages also contain other bare numbers (comment vote
   // counts, ratings), which must never be clicked. So the pager is identified once, strictly: a small group of
   // clickable numbers that starts at 1 and counts up (1 2 3 ...). After that, only that group is ever used.
@@ -754,15 +760,22 @@ const CLICK_MORE = `(() => {
       window.__mrPage = window.__mrPage || 1; // a fresh window per series: we start on page 1
       const want = String(window.__mrPage + 1);
       const target = els.find((el) => window.__mrPager.contains(el) && isNum(el) && numText(el) === want);
-      if (target) { window.__mrPage += 1; target.click(); return true; }
+      if (target) { window.__mrPage += 1; mark(target); return true; }
     }
   }
   let any = false;
   for (const el of els) {
     const t = label(el);
-    if (t.length < 45 && /^(show|view|load|see|expand)\\s+(all|more|the rest)/.test(t) && clickable(el)) { el.click(); any = true; }
+    if (t.length < 45 && /^(show|view|load|see|expand)\\s+(all|more|the rest)/.test(t) && clickable(el)) { mark(el); any = true; }
   }
   return any;
+})()`
+
+// The number of chapters the page says the series has ("Chapters (198)", "198 chapters", "Showing 50 of 198 chapters"), or 0.
+const DECLARED_TOTAL = `(() => {
+  const t = (document.body.innerText || '').replace(/\\s+/g, ' ');
+  const m = t.match(/showing\\s+\\d+\\s+of\\s+(\\d+)\\s+chapters?/i) || t.match(/chapters?\\s*\\(\\s*(\\d{1,5})\\s*\\)/i) || t.match(/\\b(\\d{1,5})\\s+chapters\\b/i) || t.match(/\\bchapters\\s+(\\d{1,5})\\b/i);
+  return m ? Number(m[1]) : 0;
 })()`
 
 // Many sites keep the chapter list in a box that scrolls by itself and load the next slice when you reach its
@@ -849,7 +862,81 @@ function finalizeChapters(list: { title: string; url: string }[], slug: string):
   return sortChapters(mergeProviders(own.length > 0 ? own : list))
 }
 
-async function browserSeries(src: SourceDef, url: string, slug: string, firstPageOnly = false): Promise<SeriesDetail> {
+/**
+ * Chapter lists split into slices that have their own plain address ("…/?tab=chapters&chapter_page=2"). Finds which
+ * address style works (page 2 must bring chapters we don't have yet), then walks the slices until the page's own
+ * chapter count is reached. Adds what it finds to `acc`.
+ */
+/**
+ * Presses what CLICK_MORE marked with a real (trusted) mouse click. Many sites ignore clicks made by page scripts
+ * (they check that a person did it), but react to the same click sent as input to the window.
+ */
+async function clickMarked(win: BrowserWindow): Promise<void> {
+  for (let i = 0; i < 4; i++) {
+    const scrolled: string | null = await win.webContents
+      .executeJavaScript(
+        `(() => { const e = document.querySelector('[data-mr-click]'); if (!e) return null; e.removeAttribute('data-mr-click'); window.__mrTarget = e; e.scrollIntoView({ block: 'center', behavior: 'instant' }); return 'scrolled'; })()`
+      )
+      .catch(() => null)
+    if (!scrolled) return
+    await sleep(150)
+    const r: { x: number; y: number } | null = await win.webContents
+      .executeJavaScript(
+        `(() => { const e = window.__mrTarget; const q = e.getBoundingClientRect();
+          // an ad overlay or sticky banner sitting on top of the button would swallow the click: let clicks pass through it
+          for (let k = 0; k < 4; k++) { const top = document.elementFromPoint(q.x + q.width / 2, q.y + q.height / 2); if (!top || top === e || e.contains(top) || top.contains(e)) break; top.style.setProperty('pointer-events', 'none', 'important'); } if (q.width < 1 || q.height < 1) { e.click(); return { x: -1, y: -1 }; } return { x: Math.round(q.x + q.width / 2), y: Math.round(q.y + q.height / 2) }; })()`
+      )
+      .catch(() => null)
+    if (process.env['MR_PAGERDEBUG']) console.log('CLICKMARKED ' + JSON.stringify(r))
+    if (!r) return
+    if (r.x < 0) continue // had no size on screen: the script click above was all we could do
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: r.x, y: r.y })
+    win.webContents.sendInputEvent({ type: 'mouseDown', x: r.x, y: r.y, button: 'left', clickCount: 1 })
+    win.webContents.sendInputEvent({ type: 'mouseUp', x: r.x, y: r.y, button: 'left', clickCount: 1 })
+    await sleep(80)
+  }
+}
+
+async function queryPaging(
+  src: SourceDef,
+  url: string,
+  slug: string,
+  acc: Map<string, { title: string; url: string }>,
+  declared: number
+): Promise<void> {
+  const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
+  const ownNew = (list: { title: string; url: string }[]): { title: string; url: string }[] =>
+    list.filter((c) => !acc.has(c.url) && (!slug || flat(c.url).includes(slug)))
+  const base = url.split('#')[0].split('?')[0]
+  const styles = ['?tab=chapters&chapter_page=', '?chapter_page=', '?chapters_page=', '?cpage=', '?tab=chapters&page=', '?page=']
+  const fetchPage = async (style: string, n: number): Promise<{ title: string; url: string }[]> => {
+    const r = await fetchHtml(base + style + n)
+    return r.status === 200 ? parseSeries(r.html, base, src.chapterRe).chapters : []
+  }
+  try {
+    let style: string | null = null
+    let first: { title: string; url: string }[] = []
+    for (const st of styles) {
+      const got = ownNew(await fetchPage(st, 2))
+      if (got.length > 0) {
+        style = st
+        first = got
+        break
+      }
+    }
+    if (!style) return
+    for (const c of first) acc.set(c.url, c)
+    for (let n = 3; n <= 60 && acc.size < declared; n++) {
+      const got = ownNew(await fetchPage(style, n))
+      if (got.length === 0) break
+      for (const c of got) acc.set(c.url, c)
+    }
+  } catch {
+    /* keep what we have */
+  }
+}
+
+async function browserSeries(src: SourceDef, url: string, slug: string, firstPageOnly = false, depth = 0): Promise<SeriesDetail> {
   const win = hiddenWindow({ light: true })
   try {
     await loadPage(win, url)
@@ -909,20 +996,33 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
       // Show what we have so far: the screen can list the first chapters while the rest are still coming.
       if (acc.size > 0) partialEmitter({ ...out, url, chapters: finalizeChapters([...acc.values()], slug) })
       // More to load? Either a button/pager to press, or a box that loads the next slice when scrolled to its end.
-      let clicked: boolean = await win.webContents.executeJavaScript(CLICK_MORE)
-      if (!clicked) clicked = await win.webContents.executeJavaScript(INNER_SCROLL)
-      if (!clicked) break
-      // wait for the list to actually change after that instead of a fixed pause
+      // Many pages say how many chapters there are ("Chapters (198)", "Showing 50 of 198 chapters"): while we have
+      // fewer than that, a button that does nothing yet (the page is still starting up) is retried, not given up on.
+      const declared: number = await win.webContents.executeJavaScript(DECLARED_TOTAL).catch(() => 0)
+      const wantMore = declared > 0 && acc.size < declared * 0.98
       let changed = false
-      await waitXhrIdle(win, 250, 2500, 120) // the next slice is usually a data request: let it finish
-      for (let i = 0; i < 20; i++) {
-        await sleep(100)
-        out = await run()
-        if (out.chapters.map((c) => c.url).join('|') !== sig) {
-          changed = true
-          break
+      for (let attempt = 0; attempt < (wantMore ? 4 : 1) && !changed; attempt++) {
+        let clicked: boolean = await win.webContents.executeJavaScript(CLICK_MORE)
+        if (clicked) await clickMarked(win)
+        if (!clicked) clicked = await win.webContents.executeJavaScript(INNER_SCROLL)
+        if (process.env['MR_PAGERDEBUG']) console.log('MORE attempt=' + attempt + ' declared=' + declared + ' have=' + acc.size + ' clicked=' + clicked + ' refused=' + JSON.stringify(refusedIn(win).slice(-3)) + ' now=' + (await win.webContents.executeJavaScript(`document.querySelectorAll('a[href*=chapter]').length`).catch(() => '?')))
+        if (!clicked) {
+          if (!wantMore) break
+          await sleep(600) // the button may not exist yet
+          continue
+        }
+        // wait for the list to actually change after that instead of a fixed pause
+        await waitXhrIdle(win, 250, 2500, 120) // the next slice is usually a data request: let it finish
+        for (let i = 0; i < 20; i++) {
+          await sleep(100)
+          out = await run()
+          if (out.chapters.map((c) => c.url).join('|') !== sig) {
+            changed = true
+            break
+          }
         }
       }
+      if (process.env['MR_PAGERDEBUG']) console.log('MORECHG ' + url + ' sample=' + JSON.stringify(out.chapters.slice(0, 2)) + ' changed=' + changed + ' now=' + out.chapters.length + ' dom=' + (await win.webContents.executeJavaScript(`[document.querySelectorAll('a[href*=chapter]').length, [...document.querySelectorAll('a[href]')].filter((a) => a.pathname.startsWith(location.pathname + '/')).length, [...document.querySelectorAll('button')].map((b) => b.textContent.trim()).filter((t) => /more|load/i.test(t)).join('|')].join(' ')`).catch(() => -1)))
       if (!changed) break
     }
     if (acc.size === 0) {
@@ -933,8 +1033,26 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
             'right now; try again in a few minutes.'
         )
     }
+    const declaredEnd: number = firstPageOnly ? 0 : await win.webContents.executeJavaScript(DECLARED_TOTAL).catch(() => 0)
+    // The page says it has more chapters than we collected and its button did nothing: many sites also serve the
+    // other slices at plain addresses (?chapter_page=2 ...). Try those.
+    if (declaredEnd >= 10 && acc.size < declaredEnd * 0.9) await queryPaging(src, url, slug, acc, declaredEnd)
+    // Aggregator sites list several "sources" per series, each with its own page holding the full chapter list while the
+    // series page shows only the newest chapter of each: follow the first (biggest) source.
+    if (depth === 0 && declaredEnd >= 10 && acc.size < declaredEnd * 0.9) {
+      const sourceUrl: string = await win.webContents.executeJavaScript(`(() => { const a = [...document.querySelectorAll('a[href]')].find((x) => /\\/sources?\\/[^/?#]+\\/?$/i.test(x.pathname) && x.origin === location.origin); return a ? a.href : '' })()`).catch(() => '')
+      if (sourceUrl && sourceUrl !== url) {
+        try {
+          const sub = await browserSeries(src, sourceUrl, '', false, 1)
+          for (const c of sub.chapters) if (!acc.has(c.url)) acc.set(c.url, { title: c.title, url: c.url })
+        } catch {
+          /* keep what we have */
+        }
+      }
+    }
     const chapters = finalizeChapters([...acc.values()], slug)
-    return { ...out, chapters, incomplete: looksIncomplete(chapters) || undefined }
+    const short = declaredEnd >= 10 && chapters.length < declaredEnd * 0.9
+    return { ...out, chapters, incomplete: looksIncomplete(chapters) || short || undefined }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }
@@ -981,7 +1099,7 @@ let seriesCache: Record<string, SeriesCacheEntry> | null = null
 let seriesTimer: NodeJS.Timeout | undefined
 const seriesCachePath = (): string => join(app.getPath('userData'), 'series-cache.json')
 
-const SERIES_CACHE_VERSION = 3
+const SERIES_CACHE_VERSION = 4
 
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   if (seriesCache) return seriesCache

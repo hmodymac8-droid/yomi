@@ -98,6 +98,8 @@ export interface ProgressRecord {
   /** URLs of chapters you finished. */
   read: string[]
   updatedAt: number
+  /** Removed from "Continue reading" (the read marks are kept; reading again brings it back). */
+  hidden?: boolean
 }
 
 export type ProgressPatch = Omit<ProgressRecord, 'read' | 'updatedAt'> & { markRead?: string }
@@ -207,6 +209,7 @@ export interface MangaApi {
   progressGet: (seriesUrl: string) => Promise<ProgressRecord | null>
   progressSave: (p: ProgressPatch) => Promise<void>
   progressRecent: (limit: number) => Promise<ProgressRecord[]>
+  progressHide: (seriesUrl: string) => Promise<void>
   grabChapter: (url: string) => Promise<GrabResponse>
   listSources: () => Promise<SourceInfo[]>
   addSite: (url: string) => Promise<Result<SourceInfo>>

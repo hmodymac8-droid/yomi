@@ -495,18 +495,30 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
               <div className="meta">Continue reading</div>
               <div className="strip">
                 {recent.map((r) => (
-                  <button key={r.seriesUrl} className="card small" onClick={() => openRecent(r)}>
-                    <div className="cover">
-                      {r.cover && <img loading="lazy" src={proxied(r.cover, r.coverReferer)} />}
-                    </div>
-                    <div className="name" title={r.title}>
-                      {r.title}
-                    </div>
-                    <div className="from">
-                      {r.chapterTitle}
-                      {r.pos > 0.02 && !r.read.includes(r.chapterUrl) ? ` · ${Math.round(r.pos * 100)}%` : ''}
-                    </div>
-                  </button>
+                  <div key={r.seriesUrl} className="cwrap">
+                    <button className="card small" onClick={() => openRecent(r)}>
+                      <div className="cover">
+                        {r.cover && <img loading="lazy" src={proxied(r.cover, r.coverReferer)} />}
+                      </div>
+                      <div className="name" title={r.title}>
+                        {r.title}
+                      </div>
+                      <div className="from">
+                        {r.chapterTitle}
+                        {r.pos > 0.02 && !r.read.includes(r.chapterUrl) ? ` · ${Math.round(r.pos * 100)}%` : ''}
+                      </div>
+                    </button>
+                    <button
+                      className="cremove"
+                      title="Remove from Continue reading"
+                      onClick={() => {
+                        setRecent((list) => list.filter((x) => x.seriesUrl !== r.seriesUrl))
+                        window.api.progressHide(r.seriesUrl)
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>
