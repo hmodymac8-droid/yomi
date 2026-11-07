@@ -1,5 +1,6 @@
 import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electron'
 import { join } from 'path'
+import { mkdirSync, writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { closeWarm, ensureSession, hiddenWindow, loadPage, probeLinks, refererHints, warmUp } from './grabber'
@@ -1175,6 +1176,63 @@ app.whenReady().then(async () => {
   }
 
   createWindow()
+  // Dev helper: MR_SHOTS=<folder> walks through the main screens and saves a picture of each (used for the design kit).
+  if (process.env['MR_SHOTS']) {
+    const dir = process.env['MR_SHOTS']
+    setTimeout(async () => {
+      const win = BrowserWindow.getAllWindows()[0]
+      const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+      const js = (c: string): Promise<unknown> => win.webContents.executeJavaScript(c)
+      const click = (sel: string, text = ''): Promise<unknown> =>
+        js(
+          '(() => { const t = ' + JSON.stringify(text.toLowerCase()) + '; const el = [...document.querySelectorAll(' + JSON.stringify(sel) + ')].find((e) => !t || (e.textContent || "").toLowerCase().includes(t)); if (el) { el.click(); return true } return false })()'
+        )
+      const shot = async (name: string): Promise<void> => {
+        await js("document.querySelectorAll('.browse').forEach((e) => e.scrollTo(0, 0))")
+        await wait(800)
+        const img = await win.webContents.capturePage()
+        mkdirSync(dir, { recursive: true })
+        writeFileSync(join(dir, name + '.png'), img.toPNG())
+        console.log('SHOT ' + name)
+      }
+      const fresh = async (): Promise<void> => {
+        win.webContents.reload()
+        await wait(7000)
+      }
+      try {
+        win.setSize(1366, 860)
+        win.center()
+        await wait(10000)
+        await shot('01-main-page')
+        console.log('added', await click('button', 'added by me'))
+        await wait(1500)
+        await shot('02-added-by-me')
+        await fresh()
+        console.log('sites', await js("[...document.querySelectorAll('button')].find((b) => (b.textContent || '').trim() === 'Sites')?.click()"))
+        await wait(2500)
+        await shot('03-sites-screen')
+        await fresh()
+        await click('.bar button, .toolbar button', 'downloads')
+        await wait(2000)
+        await shot('04-downloads')
+        await fresh()
+        await click('.bar button, .toolbar button', 'follow')
+        await wait(2500)
+        await shot('05-following')
+        await fresh()
+        console.log('card', await click('.grid .card'))
+        await wait(7000)
+        await shot('06-series-page')
+        console.log('chapter', await click('.chapter'))
+        await wait(10000)
+        await shot('07-reader')
+      } catch (e) {
+        console.log('SHOTS_ERROR ' + (e instanceof Error ? e.message : String(e)))
+      }
+      app.quit()
+    }, 500)
+    return
+  }
   warmUp()
   primeNetwork()
   // Keep every site's title list complete and fresh without being asked: one site at a time, resuming unfinished scans
