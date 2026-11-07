@@ -31,6 +31,8 @@ export interface SourceDef {
   sitemapChecked?: boolean
   /** The site was added from its sitemap alone (fast start); its list pages are still being worked out. */
   needsRefine?: boolean
+  /** Made only to hold titles you added by address: never scanned, and not shown as a site. */
+  titlesOnly?: boolean
 }
 
 export interface SeriesEntry {

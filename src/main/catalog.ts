@@ -58,7 +58,47 @@ function load(): Store {
   if (!store) store = { sources: [], series: {}, scan: {} }
   store.scan ??= {} // catalogs saved by older versions have no scan state
   pruneForeignEntries(store)
+  // Sites made earlier only to hold an added title (no scan, no sitemap) are marked as such
+  for (const a of store.added ?? []) {
+    const t = store.sources.find((x) => x.id === a.sourceId)
+    if (t && !t.titlesOnly && t.maxPages === 0 && !(t.sitemaps && t.sitemaps.length)) t.titlesOnly = true
+  }
+  if (mergeTitleOnly(store)) saveSoon(true)
   return store
+}
+
+const siteHost = (src: SourceDef): string => {
+  try {
+    return new URL(src.baseUrl).hostname.replace(/^www./i, '').toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * A "titles only" site (made when you added one title by address) is folded into the real site once that one is added:
+ * its titles move over and it disappears, so the same site never shows up twice.
+ */
+function mergeTitleOnly(s: Store): boolean {
+  let changed = false
+  for (const t of [...s.sources]) {
+    if (!t.titlesOnly) continue
+    const full = s.sources.find((x) => x !== t && !x.titlesOnly && siteHost(x) === siteHost(t))
+    if (!full) continue
+    const have = new Set((s.series[full.id] ?? []).map((e) => e.url))
+    for (const e of s.series[t.id] ?? []) if (!have.has(e.url)) (s.series[full.id] ??= []).push({ ...e, sourceId: full.id })
+    for (const a of s.added ?? []) {
+      if (a.sourceId === t.id) {
+        a.sourceId = full.id
+        a.sourceName = full.name
+      }
+    }
+    s.sources = s.sources.filter((x) => x !== t)
+    delete s.series[t.id]
+    for (const k of Object.keys(s.scan)) if (k === t.id || k.startsWith(t.id + '#')) delete s.scan[k]
+    changed = true
+  }
+  return changed
 }
 
 /**
@@ -243,13 +283,8 @@ export async function addTitleByUrl(input: string): Promise<{
   }
   u.hash = ''
   const s = load()
-  let src = s.sources.find((x) => {
-    try {
-      return bareHost(new URL(x.baseUrl).hostname) === bareHost(u.hostname)
-    } catch {
-      return false
-    }
-  })
+  const sameHost = (x: SourceDef): boolean => siteHost(x) === bareHost(u.hostname)
+  let src = s.sources.find((x) => !x.titlesOnly && sameHost(x)) ?? s.sources.find(sameHost)
   const siteIsNew = !src
   if (!src) {
     const id = bareHost(u.hostname).replace(/[^a-z0-9]+/g, '-')
@@ -271,6 +306,7 @@ export async function addTitleByUrl(input: string): Promise<{
       }),
       id,
       maxPages: 0, // titles only: this site is never scanned
+      titlesOnly: true,
       sitemaps: [],
       sitemapChecked: true
     }) as SourceDef
@@ -310,7 +346,7 @@ export function removeAdded(url: string): void {
   const s = load()
   s.added = (s.added ?? []).filter((x) => x.url !== url)
   for (const src of s.sources) {
-    if (src.maxPages === 0 && !(src.sitemaps && src.sitemaps.length) && s.series[src.id]) {
+    if (src.titlesOnly && s.series[src.id]) {
       s.series[src.id] = s.series[src.id].filter((e) => e.url !== url)
     }
   }
@@ -333,7 +369,9 @@ export function getSource(id: string): SourceDef | undefined {
 
 export function listSources(): SourceInfo[] {
   const s = load()
-  return s.sources.map((src) => ({
+  return s.sources
+    .filter((src) => !src.titlesOnly)
+    .map((src) => ({
     ...src,
     count: s.series[src.id]?.length ?? 0,
     crawling: crawling.has(src.id)
@@ -362,7 +400,8 @@ export function addSource(def: SourceDef): SourceInfo {
       saveSoon(true)
     }
   }
-  return listSources().find((x) => x.id === def.id)!
+  mergeTitleOnly(s)
+  return listSources().find((x) => x.id === def.id) ?? ({ ...def, count: 0, crawling: false } as SourceInfo)
 }
 
 /**
@@ -375,7 +414,7 @@ export function sourcesWithChapterTitles(): string[] {
   for (const src of s.sources) {
     const list = s.series[src.id] ?? []
     // a site that was set up but has no titles and no way to list them (older detection picked a page the site forbids): redo it
-    if (list.length === 0 && src.maxPages === 0 && !(src.sitemaps && src.sitemaps.length)) out.push(src.id)
+    if (list.length === 0 && !src.titlesOnly && src.maxPages === 0 && !(src.sitemaps && src.sitemaps.length)) out.push(src.id)
     if (list.length === 0) continue
     const bad = list.filter((e) => {
       try {
