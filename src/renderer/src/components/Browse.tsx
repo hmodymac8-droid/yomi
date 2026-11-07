@@ -88,7 +88,29 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   const [counts, setCounts] = useState<{ manga: number; manhwa: number; manhua: number } | null>(null)
   const [sources, setSources] = useState<SourceInfo[]>([])
   // The sites actually searched (a site that was removed can't stay ticked). Empty = all of them.
-  const sourceIds = picked ? picked.filter((id) => sources.some((s) => s.id === id)) : []
+  // Language switch: All sites, only English sites, or only Arabic sites (remembered)
+  const [lang, setLangState] = useState<'' | 'en' | 'ar'>(() => {
+    try {
+      const v = localStorage.getItem('browse.lang')
+      return v === 'en' || v === 'ar' ? v : ''
+    } catch {
+      return ''
+    }
+  })
+  const setLang = (v: '' | 'en' | 'ar'): void => {
+    setLangState(v)
+    try {
+      localStorage.setItem('browse.lang', v)
+    } catch {
+      /* not critical */
+    }
+  }
+  const langOk = (s: SourceInfo): boolean => !lang || s.lang === lang
+  const pickedIds = picked ? picked.filter((id) => sources.some((s) => s.id === id)) : []
+  // the sites searched: the ones you ticked (or all), narrowed to the chosen language
+  const sourceIds = lang
+    ? (pickedIds.length ? pickedIds : sources.map((s) => s.id)).filter((id) => sources.some((s) => s.id === id && langOk(s)))
+    : pickedIds
   const sourceKey = sourceIds.join(',')
   const [hits, setHits] = useState<SearchHit[]>([])
   const [total, setTotal] = useState(0)
@@ -360,7 +382,11 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
       entries: [{ sourceId: f.sourceId, sourceName: name, url: f.seriesUrl }]
     })
   }
-  const withNew = follows.filter((f) => f.unread > 0)
+  // with a language chosen, your own shelves show only that language's sites too
+  const inLang = (id: string): boolean => !lang || sources.find((x) => x.id === id)?.lang === lang
+  const followsL = follows.filter((f) => inLang(f.sourceId))
+  const recentL = recent.filter((r) => inLang(r.sourceId))
+  const withNew = followsL.filter((f) => f.unread > 0)
 
   const openRecent = (r: ProgressRecord): void => {
     const name = sources.find((s) => s.id === r.sourceId)?.name ?? r.sourceId
@@ -468,6 +494,22 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
               <b>{sources.reduce((n, x) => n + x.count, 0).toLocaleString()}</b> titles · {sources.length} sites
             </span>
           </div>
+        </div>
+      )}
+      {shelf === 'all' && sources.some((x) => x.lang === 'ar') && sources.some((x) => x.lang !== 'ar') && (
+        <div className="langtabs" role="tablist" aria-label="Language of the sites">
+          {(
+            [
+              ['', 'All sites', sources.length],
+              ['en', 'English', sources.filter((x) => x.lang === 'en').length],
+              ['ar', 'العربية', sources.filter((x) => x.lang === 'ar').length]
+            ] as const
+          ).map(([v, label, n]) => (
+            <button key={v || 'all'} role="tab" aria-selected={lang === v} className={lang === v ? 'on' : ''} onClick={() => setLang(v)}>
+              <span lang={v === 'ar' ? 'ar' : undefined}>{label}</span>
+              <span className="n">{n}</span>
+            </button>
+          ))}
         </div>
       )}
       {shelf === 'all' && (
@@ -614,7 +656,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
           </>
         ) : (
         <>
-          {!q && <Featured recent={recent} follows={follows} sources={sources} onOpen={onOpen} onRead={onRead} />}
+          {!q && <Featured recent={recentL} follows={followsL} sources={sources} onOpen={onOpen} onRead={onRead} />}
           {withNew.length > 0 && !q && (
             <section className="continue">
               <div className="meta">New chapters</div>
@@ -639,11 +681,11 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
               </div>
             </section>
           )}
-          {recent.length > 0 && !q && (
+          {recentL.length > 0 && !q && (
             <section className="continue">
               <div className="meta">Continue reading</div>
               <div className="strip">
-                {recent.map((r) => (
+                {recentL.map((r) => (
                   <div key={r.seriesUrl} className="cwrap">
                     <button className="card small" onClick={() => openRecent(r)}>
                       <div className="cover">
@@ -696,9 +738,9 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
               </div>
               <div className="picker">
                 <button className="pickbtn" onClick={() => setPickerOpen((o) => !o)} title="Choose which sites to search">
-                  {sourceIds.length === 0 || sourceIds.length === sources.length
+                  {pickedIds.length === 0 || pickedIds.length === sources.length
                     ? `All sites (${sources.length})`
-                    : `${sourceIds.length} of ${sources.length} sites`}{' '}
+                    : `${pickedIds.length} of ${sources.length} sites`}{' '}
                   ▾
                 </button>
                 {pickerOpen && (
@@ -712,7 +754,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                         <span>tick the sites to search</span>
                       </div>
                       {sources.map((s) => {
-                        const on = sourceIds.length === 0 || sourceIds.includes(s.id)
+                        const on = pickedIds.length === 0 || pickedIds.includes(s.id)
                         return (
                           <div key={s.id} className="pickrow">
                             <label>
@@ -721,13 +763,14 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                                 checked={on}
                                 onChange={() => {
                                   // from "all" the first click unticks that one site; always keep at least one ticked
-                                  const current = sourceIds.length === 0 ? sources.map((x) => x.id) : sourceIds
+                                  const current = pickedIds.length === 0 ? sources.map((x) => x.id) : pickedIds
                                   const next = on ? current.filter((id) => id !== s.id) : [...current, s.id]
                                   if (next.length === 0) return
                                   choose(next.length === sources.length ? null : next)
                                 }}
                               />{' '}
                               {s.name} <em>{s.count.toLocaleString()}</em>
+                              {s.lang === 'ar' && <em className="langtag">عربي</em>}
                             </label>
                             <button className="mini" title="Search only this site" onClick={() => { choose([s.id]); setPickerOpen(false) }}>
                               only

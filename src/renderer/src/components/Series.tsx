@@ -316,7 +316,7 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
             </div>
           )}
           {offline && <p className="desc">Can&apos;t reach the site, so this shows only the chapters saved on this PC.</p>}
-          {detail?.description && <p className="desc">{detail.description}</p>}
+          {detail?.description && <p className="desc" dir="auto">{detail.description}</p>}
           {detail && (resume || first) && (
             <div className="resume">
               {resume ? (

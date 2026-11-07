@@ -40,6 +40,13 @@ const api = {
   titleAdd: (url: string) => ipcRenderer.invoke('title-add', url),
   windowControl: (action: 'minimize' | 'maximize' | 'close') => ipcRenderer.send('window-control', action),
   genreStatus: () => ipcRenderer.invoke('genre-status'),
+  updateStatus: () => ipcRenderer.invoke('update-status'),
+  updateInstall: () => ipcRenderer.invoke('update-install'),
+  onUpdateReady: (cb: (u: { version: string }) => void) => {
+    const h = (_e: unknown, u: { version: string }): void => cb(u)
+    ipcRenderer.on('update-ready', h)
+    return () => ipcRenderer.removeListener('update-ready', h)
+  },
   genreScanNow: (id: string) => ipcRenderer.invoke('genre-scan-now', id),
   titleList: () => ipcRenderer.invoke('title-list'),
   titleRemove: (url: string) => ipcRenderer.invoke('title-remove', url),

@@ -370,6 +370,40 @@ export function getSource(id: string): SourceDef | undefined {
   return load().sources.find((s) => s.id === id)
 }
 
+/** Arabic, English or another language, from the site's home page (its lang / dir tags, or the script of its text). */
+export function langOfHtml(html: string): 'ar' | 'en' | 'other' {
+  const tag = html.match(/<html[^>]*>/i)?.[0] ?? ''
+  const lang = (tag.match(/\blang=["']?([a-zA-Z-]+)/i)?.[1] ?? '').toLowerCase()
+  const text = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/g, ' ').slice(0, 300000)
+  const arabic = (text.match(/[\u0600-\u06ff]/g) ?? []).length
+  const latin = (text.match(/[a-zA-Z]/g) ?? []).length
+  if (lang.startsWith('ar') || /\bdir=["']?rtl/i.test(tag) || arabic > latin * 0.5) return 'ar'
+  if (lang.startsWith('en') || latin > 200) return 'en'
+  return 'other'
+}
+
+let langRunning = false
+/** Works out the language of every site that doesn't have one yet (one site at a time, in the background). */
+export async function fillSiteLanguages(): Promise<void> {
+  if (langRunning) return
+  langRunning = true
+  try {
+    for (const src of load().sources) {
+      if (src.lang) continue
+      try {
+        const r = await fetchHtml(src.baseUrl, 20000)
+        if (r.status !== 200 || r.html.length < 2000) continue
+        src.lang = langOfHtml(r.html)
+        saveSoon()
+      } catch {
+        /* try again next launch */
+      }
+    }
+  } finally {
+    langRunning = false
+  }
+}
+
 export function listSources(): SourceInfo[] {
   const s = load()
   return s.sources

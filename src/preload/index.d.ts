@@ -25,6 +25,8 @@ export interface SourceDef {
   chapterRe: string
   /** 0 means "no page scan" (the sitemap is the only source of titles). */
   maxPages: number
+  /** The language the site is written in: 'ar' Arabic, 'en' English (found by reading its home page). */
+  lang?: 'ar' | 'en' | 'other'
   /** Sitemap files that list every series; read first because it is complete and fast. */
   sitemaps?: string[]
   /** True once we have looked for a sitemap (so we don't look again on every launch). */
@@ -254,6 +256,11 @@ export interface MangaApi {
   /** How far the genre scan of each site has got. */
   genreStatus: () => Promise<{ sites: Record<string, { at: number; genres: number; titles: number; note?: string; running?: boolean }>; progress: Record<string, string> }>
   genreScanNow: (id: string) => Promise<boolean>
+  /** A newer Yomi downloaded from GitHub and waiting to be installed (null when there is none). */
+  updateStatus: () => Promise<{ version: string } | null>
+  /** Restarts Yomi into the downloaded update. */
+  updateInstall: () => Promise<void>
+  onUpdateReady: (cb: (u: { version: string }) => void) => () => void
   downloadGetPaused: () => Promise<boolean>
   downloadSetPaused: (on: boolean) => Promise<boolean>
   offlineGet: () => Promise<boolean>

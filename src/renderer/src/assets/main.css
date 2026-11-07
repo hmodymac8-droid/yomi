@@ -526,3 +526,20 @@ select { cursor: pointer; }
 .pinback .back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
 .pinback .back:hover { border-color: var(--primary); color: var(--primary-text); }
 .pinback .secondary { padding: 8px 14px; }
+
+/* Discover: All sites / English / Arabic */
+.langtabs { display: inline-flex; gap: 0; margin: 4px 0 12px; border: 1px solid var(--border); border-radius: 6px; padding: 3px; background: var(--paper); }
+.langtabs button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 0; border-radius: 4px; background: transparent; color: var(--muted-foreground); font-size: 13px; font-weight: 500; transition: background 0.3s, color 0.3s; }
+.langtabs button:hover { color: var(--foreground); }
+.langtabs button.on { background: var(--primary); color: var(--primary-foreground); }
+.langtabs button .n { font-size: 10px; font-variant-numeric: tabular-nums; opacity: 0.75; }
+.langtabs [lang='ar'] { font-family: 'Segoe UI', Tahoma, var(--font-sans); font-size: 14px; }
+.pickrow .langtag { margin-left: 6px; color: var(--primary-text); }
+
+/* a new version is ready */
+.updatebar { flex: none; display: flex; align-items: center; gap: 12px; padding: 8px 24px; background: var(--peach-soft); border-top: 1px solid var(--border); font-size: 12px; color: var(--peach-foreground); }
+.updatebar b { color: var(--foreground); font-weight: 600; }
+.updatebar span { flex: 1; }
+.updatebar .primary, .updatebar .secondary { padding: 6px 14px; }
+
+.fdesc[dir="auto"], .desc[dir="auto"] { text-align: start; }

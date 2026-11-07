@@ -114,7 +114,7 @@ export default function Featured({ recent, follows, sources, onOpen, onRead }: P
         <div className="eyebrow peach">{p.eyebrow}</div>
         <h2>{p.title}</h2>
         <Tags detail={p.detail} />
-        <p className="fdesc">{p.detail.description}</p>
+        <p className="fdesc" dir="auto">{p.detail.description}</p>
         <div className="factions">
           <button className="primary withicon" onClick={read}>
             <Icon name="play" /> Read now

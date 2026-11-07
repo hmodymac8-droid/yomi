@@ -94,6 +94,12 @@ function AppInner(): React.JSX.Element {
   const [addedCount, setAddedCount] = useState(0)
   const [queued, setQueued] = useState(0)
   const [sources, setSources] = useState<SourceInfo[]>([])
+  // a newer Yomi has been downloaded in the background: offer to restart into it
+  const [update, setUpdate] = useState<{ version: string } | null>(null)
+  useEffect(() => {
+    window.api.updateStatus().then(setUpdate)
+    return window.api.onUpdateReady(setUpdate)
+  }, [])
   const [health, setHealth] = useState<Record<string, SiteHealth>>({})
 
   useEffect(() => {
@@ -219,6 +225,19 @@ function AppInner(): React.JSX.Element {
           </div>
         )}
       </div>
+      {update && !reading && (
+        <div className="updatebar" role="status">
+          <span>
+            <b>Yomi {update.version}</b> is ready. It installs when you close Yomi, or now:
+          </span>
+          <button className="primary" onClick={() => void window.api.updateInstall()}>
+            Restart and update
+          </button>
+          <button className="secondary" onClick={() => setUpdate(null)}>
+            Later
+          </button>
+        </div>
+      )}
       {!reading && (
         <footer className="statusbar">
           <span>

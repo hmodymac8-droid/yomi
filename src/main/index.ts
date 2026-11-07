@@ -1,6 +1,8 @@
 import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electron'
 import { join } from 'path'
 import { mkdirSync, writeFileSync } from 'fs'
+import { fetchHtml } from './http'
+import { startAutoUpdates } from './updater'
 import { discoverGenres, genreProgress, genreScanStatus, scanGenresNow, scanSiteGenres, startGenreScheduler, urlKey } from './genres'
 import { optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -24,6 +26,7 @@ import {
   catalogUrls,
   getSeriesCached,
   listSources,
+  fillSiteLanguages,
   openSeries,
   prefetchSeries,
   setSeriesPartialEmitter,
@@ -278,6 +281,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('list-sources', () => listSources())
   ipcMain.handle('add-site', (_e, url: string) =>
     wrap(async () => {
+      setTimeout(() => void fillSiteLanguages(), 4000)
       let u = url.trim()
       if (!/^https?:\/\//i.test(u)) u = 'https://' + u
       new URL(u) // throws on garbage
@@ -320,6 +324,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('updates-auto-download', (_e, on: boolean) => setAutoDownload(on))
   startUpdateScheduler()
   startGenreScheduler()
+  startAutoUpdates()
+  // every site gets its language (English / Arabic) for the language switch on Discover
+  setTimeout(() => void fillSiteLanguages(), 8000)
   ipcMain.handle('progress-recent', (_e, limit: number) => recentProgress(limit))
   ipcMain.handle('progress-hide', (_e, seriesUrl: string) => hideProgress(seriesUrl))
   ipcMain.handle('remove-site', (_e, id: string) => {
@@ -914,6 +921,30 @@ app.whenReady().then(async () => {
   }
 
   // Dev helper: MR_HEALTHTEST=<site url> adds the site, runs the Sites "Re-check" on it and prints the result.
+  // Dev helper: MR_CHECKALL=1 runs the full site check (titles, chapter list, pages, image) on every site in the catalog.
+  if (process.env['MR_CHECKALL']) {
+    void (async () => {
+      warmUp()
+      await new Promise((r) => setTimeout(r, 2500))
+      for (const s of listSources()) {
+        try {
+          await runSiteCheck(s.id)
+          const h = healthOf(s.id)
+          let lang = ''
+          try {
+            const r = await fetchHtml(getSource(s.id)!.baseUrl, 15000)
+            lang = (r.html.match(/<html[^>]*lang=["']?([a-zA-Z-]+)/i)?.[1] ?? '') + (/[؀-ۿ]{20,}/.test(r.html) ? ' arabic-text' : '')
+          } catch {
+            /* no language */
+          }
+          console.log('CHECK ' + JSON.stringify({ id: s.id, name: s.name, titles: s.count, overall: h?.check?.overall, lang, steps: h?.check?.steps.map((x) => x.name + ':' + x.status + ' ' + x.detail.slice(0, 60)) }))
+        } catch (e) {
+          console.log('CHECK ' + JSON.stringify({ id: s.id, error: String(e) }))
+        }
+      }
+    })().finally(() => app.quit())
+    return
+  }
   if (process.env['MR_HEALTHTEST']) {
     void (async () => {
       warmUp()
@@ -1279,6 +1310,21 @@ app.whenReady().then(async () => {
         win.center()
         await wait(10000)
         await shot('01-main-page')
+        if (process.env['MR_LANGTEST']) {
+          console.log('LANGTABS ' + (await js("[...document.querySelectorAll('.langtabs button')].map((b) => b.textContent).join(' | ')")))
+          await js("document.querySelectorAll('.langtabs button')[2].click()")
+          await wait(2500)
+          console.log('ARABIC ' + (await js("[...new Set([...document.querySelectorAll('.grid .card .from')].flatMap((o) => o.textContent.split(' · ')))].join(', ')")))
+          await js("document.querySelector('.gridtop')?.scrollIntoView()")
+          await wait(1500)
+          await shot('lang-arabic-all-titles')
+          await js("document.querySelector('.browse').scrollTo(0, 0)")
+          await wait(800)
+          await shot('lang-arabic')
+          await js("document.querySelectorAll('.langtabs button')[0].click()")
+          app.quit()
+          return
+        }
         if (process.env['MR_README']) {
           // README pictures: a Featured series whose text is in English, then that series' page
           const n = Number(await js("document.querySelectorAll('.flist button').length"))
@@ -1470,7 +1516,7 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_GENRETEST'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_GENRETEST'] || process.env['MR_CHECKALL'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

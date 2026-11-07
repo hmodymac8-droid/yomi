@@ -10,8 +10,8 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - '!{design-kit,design-handoff,docs}/**'
-  - '!{SPEC.md,HANDOFF.md,*.zip}'
+  - '!docs/**'
+  - '!*.zip'
 asarUnpack:
   - resources/**
 win:
@@ -40,11 +40,6 @@ nsis:
   createStartMenuShortcut: true
   runAfterFinish: true
   deleteAppDataOnUninstall: false
-mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  notarize: false
-dmg:
-  artifactName: Yomi-${version}.${ext}
 linux:
   target:
     - AppImage
@@ -53,3 +48,8 @@ linux:
 appImage:
   artifactName: Yomi-${version}.${ext}
 npmRebuild: false
+publish:
+  provider: github
+  owner: hmodymac8-droid
+  repo: yomi
+  releaseType: release
