@@ -34,6 +34,8 @@ const api = {
   downloadList: () => ipcRenderer.invoke('dl-list'),
   downloadGet: (chapterUrl: string) => ipcRenderer.invoke('dl-get', chapterUrl),
   downloadCancel: (id: string) => ipcRenderer.invoke('dl-cancel', id),
+  downloadGetConcurrency: () => ipcRenderer.invoke('download-get-concurrency'),
+  downloadSetConcurrency: (n: number) => ipcRenderer.invoke('download-set-concurrency', n),
   downloadRemoveMany: (ids: string[]) => ipcRenderer.invoke('download-remove-many', ids),
   downloadRemove: (id: string) => ipcRenderer.invoke('dl-remove', id),
   onDownload: (cb: (i: unknown) => void) => {

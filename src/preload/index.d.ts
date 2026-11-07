@@ -236,6 +236,9 @@ export interface MangaApi {
   downloadRemove: (id: string) => Promise<void>
   /** Deletes several downloads (their files too) at once. */
   downloadRemoveMany: (ids: string[]) => Promise<void>
+  /** How many chapters download at the same time (1 to 8). */
+  downloadGetConcurrency: () => Promise<number>
+  downloadSetConcurrency: (n: number) => Promise<number>
   onDownload: (cb: (i: DownloadItem) => void) => () => void
   progressGet: (seriesUrl: string) => Promise<ProgressRecord | null>
   progressSave: (p: ProgressPatch) => Promise<void>

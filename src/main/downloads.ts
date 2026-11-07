@@ -14,7 +14,34 @@ let items: Record<string, DownloadItem> | null = null
 let saveTimer: NodeJS.Timeout | undefined
 let emitter: (item: DownloadItem) => void = () => {}
 const cancelled = new Set<string>()
-let running = false
+const active = new Set<string>() // chapters being downloaded right now
+
+// How many chapters download at the same time (you choose it on the Downloads screen). Saved in download-settings.json.
+const settingsFile = (): string => join(app.getPath('userData'), 'download-settings.json')
+let concurrency: number | null = null
+
+export function getConcurrency(): number {
+  if (concurrency !== null) return concurrency
+  let n = 3
+  try {
+    if (existsSync(settingsFile())) n = Number(JSON.parse(readFileSync(settingsFile(), 'utf8')).concurrency)
+  } catch {
+    /* default */
+  }
+  concurrency = Number.isFinite(n) ? Math.max(1, Math.min(8, Math.round(n))) : 3
+  return concurrency
+}
+
+export function setConcurrency(n: number): number {
+  concurrency = Math.max(1, Math.min(8, Math.round(Number(n) || 1)))
+  try {
+    writeFileSync(settingsFile(), JSON.stringify({ concurrency }))
+  } catch {
+    /* not critical */
+  }
+  void pump() // a higher number starts more chapters right away
+  return concurrency
+}
 
 export function setDownloadEmitter(fn: (item: DownloadItem) => void): void {
   emitter = fn
@@ -117,18 +144,17 @@ export function removeDownload(id: string): void {
   emitter({ ...i, status: 'removed' })
 }
 
+/** Starts queued chapters until as many are running as you allowed; each one starts the next when it ends. */
 async function pump(): Promise<void> {
-  if (running) return
-  running = true
-  try {
-    for (;;) {
-      const next = listDownloads().find((i) => i.status === 'queued')
-      if (!next) break
-      await run(next)
-      await new Promise((r) => setTimeout(r, 400))
-    }
-  } finally {
-    running = false
+  for (;;) {
+    if (active.size >= getConcurrency()) return
+    const next = listDownloads().find((i) => i.status === 'queued' && !active.has(i.id))
+    if (!next) return
+    active.add(next.id)
+    void run(next).finally(() => {
+      active.delete(next.id)
+      setTimeout(() => void pump(), 250)
+    })
   }
 }
 

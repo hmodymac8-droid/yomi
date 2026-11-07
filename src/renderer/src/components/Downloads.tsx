@@ -16,10 +16,12 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
   const [box, setBox] = useState<Box | null>(null) // the drag rectangle, in the scrolling area's own coordinates
   const area = useRef<HTMLDivElement>(null)
   const lastClicked = useRef<string | null>(null)
+  const [concurrency, setConcurrencyState] = useState(3)
   const suppressClick = useRef(false) // a drag ends with a click event: ignore that one
 
   useEffect(() => {
     let cancelled = false
+    window.api.downloadGetConcurrency().then((n) => !cancelled && setConcurrencyState(n))
     window.api.downloadList().then((list) => {
       if (!cancelled) setItems(Object.fromEntries(list.map((i) => [i.id, i])))
     })
@@ -217,6 +219,25 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
         )}
       </div>
 
+      <div className="meta">
+        <label title="How many chapters download at the same time. More is faster; some sites slow down or refuse if you ask too much.">
+          Download at the same time:{' '}
+          <select
+            value={concurrency}
+            onChange={(e) => {
+              const n = Number(e.target.value)
+              setConcurrencyState(n)
+              void window.api.downloadSetConcurrency(n)
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <option key={n} value={n}>
+                {n} {n === 1 ? 'chapter' : 'chapters'}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       {all.length > 0 && (
         <div className="seltools">
           <button className="mini big" onClick={() => setSelected(new Set(all.map((i) => i.id)))}>

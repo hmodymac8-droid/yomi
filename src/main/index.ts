@@ -50,10 +50,12 @@ import {
   cancelDownload,
   enqueueDownloads,
   flushDownloads,
+  getConcurrency,
   getDownload,
   listDownloads,
   removeDownload,
   resumeDownloads,
+  setConcurrency,
   setDownloadEmitter
 } from './downloads'
 
@@ -318,6 +320,8 @@ app.whenReady().then(async () => {
     for (const w of BrowserWindow.getAllWindows()) w.webContents.send('series-partial', d)
   })
   ipcMain.handle('enrich', (_e, urls: string[]) => enrichEntries(urls))
+  ipcMain.handle('download-get-concurrency', () => getConcurrency())
+  ipcMain.handle('download-set-concurrency', (_e, n: number) => setConcurrency(n))
   ipcMain.handle('download-remove-many', (_e, ids: string[]) => {
     for (const id of ids) removeDownload(id)
   })
@@ -401,6 +405,34 @@ app.whenReady().then(async () => {
       await tryIt('referrer-option', () => ses.fetch(img, { referrer: ref, referrerPolicy: 'unsafe-url' }))
       await tryIt('net.fetch+session', () => net.fetch(img, { headers: { Referer: ref }, session: ses } as RequestInit))
     })().finally(() => app.quit())
+    return
+  }
+
+  // Dev helper: MR_DLPAR=<n>,<url>,<url>... sets "download n chapters at once", queues all the chapters together and
+  // prints how long until every one is done (and the most that ran at the same time).
+  if (process.env['MR_DLPAR']) {
+    ;(async () => {
+      const [n, ...urls] = process.env['MR_DLPAR']!.split(',')
+      setConcurrency(Number(n))
+      const origin = new URL(urls[0]).origin + '/'
+      const t0 = Date.now()
+      enqueueDownloads(
+        urls.map((u, i) => ({ chapterUrl: u, chapterTitle: 'par' + i, seriesUrl: origin + 'x', seriesTitle: 'par', sourceId: 't', referer: origin }))
+      )
+      let peak = 0
+      for (;;) {
+        const list = listDownloads().filter((i) => urls.includes(i.id))
+        peak = Math.max(peak, list.filter((i) => i.status === 'downloading').length)
+        if (list.every((i) => i.status === 'done' || i.status === 'error') || Date.now() - t0 > 280000) {
+          console.log('DLPAR ' + JSON.stringify({ limit: Number(n), chapters: urls.length, secs: Math.round((Date.now() - t0) / 100) / 10, peak, done: list.filter((i) => i.status === 'done').length, errors: list.filter((i) => i.status === 'error').map((i) => i.error) }))
+          break
+        }
+        await new Promise((r) => setTimeout(r, 200))
+      }
+      for (const u of urls) removeDownload(u)
+    })()
+      .catch((e) => console.log('DLPAR_ERROR ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => app.quit())
     return
   }
 
@@ -1167,7 +1199,7 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

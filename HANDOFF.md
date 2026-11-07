@@ -103,3 +103,6 @@ Following screen by hand (built, never opened). Everything above was verified wi
   Ctrl keeps earlier picks, click a series name to select its whole series, Ctrl+A, Delete key, Esc. Buttons: Select all,
   Delete selected, Delete all (each with a confirm). Bulk IPC `download-remove-many`. Drag, auto-scroll and delete were
   tested in a temporary mock page in the browser pane (removed afterwards); not tried with real downloads.
+- **Parallel downloads**: Downloads screen has "Download at the same time: 1-8 chapters" (default 3, saved in
+  download-settings.json). `pump` in downloads.ts starts queued chapters until the limit is reached. Dev test:
+  MR_DLPAR=<n>,<url>,<url>... (12 olympustaff chapters: 14.6 s at 1, 9.5 s at 6).
