@@ -12,6 +12,10 @@ Run it: open a terminal in this folder and run `npm run dev`. Check code: `npm r
 - **Reader**: webtoon + paged modes, next/prev chapter (pre-loaded), position + "read" marks saved, Continue reading row.
 - **Downloads** (offline reading), **Following** screen (everything you follow), **new-chapter checker** (every 30 min,
   Windows notification, optional auto-download).
+- **Site picker** (Browse top bar): tick which sites to search, "only" shortcut, remembered (localStorage `pickedSites`).
+  Search over ~300k titles: page turns ~0 ms, searches 40-230 ms; title index warmed 4 s after launch.
+- Safety nets: main-process errors are logged (not fatal), failed search keeps the grid, a crashing screen shows a reload button.
+  NOT yet clicked through by hand: site picker, paging/scroll-to-next, Following screen.
 - Speed work: plain-HTTP fast path verified against a real browser per site, spare hidden window, tracker blocking.
 - "Verify you are human" pages (Cloudflare etc.): the app opens a normal window for you to pass it, never automates it.
 
