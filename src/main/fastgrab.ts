@@ -1,4 +1,5 @@
-import { grabChapter, grabChapterLight, type GrabResult } from './grabber'
+import { session } from 'electron'
+import { ensureSession, grabChapter, grabChapterLight, refererHints, type GrabResult } from './grabber'
 import { fetchHtml } from './http'
 import { parseChapterImages } from './staticParse'
 import { getMode, setMode } from './hostmode'
@@ -123,6 +124,55 @@ function track(p: Promise<unknown>): void {
 }
 export const settleVerifications = (): Promise<unknown> => Promise.allSettled([...pending])
 
+/**
+ * Some readers show ONE page per screen (…/read/<series>/<chapter>/1, /2...) and only that page's image is in the
+ * address you can read. The images themselves are numbered (…/001, …/002), so once one numbered image is known the
+ * next ones are asked for (a quick HEAD request each, a few at a time) until the site says there are no more.
+ */
+const NUMBERED = /^(.*\/)(\d{1,4})((?:\.[a-z0-9]{2,4})?\??[^/]*)$/i
+
+async function exists(url: string, referer: string): Promise<boolean> {
+  const ses = session.fromPartition('persist:sources')
+  ensureSession()
+  refererHints.set(url, referer)
+  try {
+    const r = await ses.fetch(url, { method: 'HEAD' })
+    const type = (r.headers.get('content-type') ?? '').toLowerCase()
+    return r.status === 200 && type.startsWith('image/')
+  } catch {
+    return false
+  } finally {
+    refererHints.delete(url)
+  }
+}
+
+async function extendSequence(res: GrabResult): Promise<GrabResult> {
+  const numbered = res.pages.filter((u) => NUMBERED.test(u))
+  if (numbered.length !== 1 || res.pages.length > 4) return res // already a real list (or nothing to follow)
+  const m = numbered[0].match(NUMBERED)!
+  const [, head, digits, tail] = m
+  const referer = new URL(res.url).origin + '/'
+  const start = Number(digits)
+  const make = (n: number): string => head + String(n).padStart(digits.length, '0') + tail
+  const found: string[] = [numbered[0]]
+  const BATCH = 6
+  for (let n = start + 1; n < start + 400; n += BATCH) {
+    const batch = Array.from({ length: BATCH }, (_, i) => n + i)
+    const ok = await Promise.all(batch.map((x) => exists(make(x), referer)))
+    let stop = false
+    for (let i = 0; i < batch.length; i++) {
+      if (!ok[i]) {
+        stop = true
+        break
+      }
+      found.push(make(batch[i]))
+    }
+    if (stop) break
+  }
+  if (found.length < 2) return res
+  return { ...res, pages: found }
+}
+
 /** Page list for a chapter: memory cache -> fastest verified method for the site. */
 export function grabChapterFast(url: string): Promise<GrabResult> {
   const hit = cache.get(url)
@@ -130,6 +180,7 @@ export function grabChapterFast(url: string): Promise<GrabResult> {
   const running = inflight.get(url)
   if (running) return running
   const p = grab(url)
+    .then((res) => extendSequence(res).catch(() => res))
     .then((res) => {
       if (res.pages.length > 0) cache.set(url, { at: Date.now(), res })
       return res
