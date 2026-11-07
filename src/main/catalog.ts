@@ -631,7 +631,8 @@ const CLICK_MORE = `(() => {
     return true;
   };
   const els = [...document.querySelectorAll('button, [role=button], a')];
-  const label = (el) => (el.textContent || '').trim().toLowerCase();
+  // (whitespace inside a label, like "Show all 35 chapters   · 19", must not make it look too long)
+  const label = (el) => (el.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase();
   const next = els.find((el) => { const t = label(el); return t.length < 12 && /^(next\\b|›$)/.test(t) && clickable(el); });
   if (next) { next.click(); return true; }
   // Numbered pager (1 2 3 4 ...): click the next number. Pages also contain other bare numbers (comment vote
@@ -665,9 +666,28 @@ const CLICK_MORE = `(() => {
   let any = false;
   for (const el of els) {
     const t = label(el);
-    if (t.length < 25 && /^(show|view|load|see)\\s+(all|more)/.test(t) && clickable(el)) { el.click(); any = true; }
+    if (t.length < 45 && /^(show|view|load|see|expand)\\s+(all|more|the rest)/.test(t) && clickable(el)) { el.click(); any = true; }
   }
   return any;
+})()`
+
+// Many sites keep the chapter list in a box that scrolls by itself and load the next slice when you reach its
+// bottom. Scroll every such box (and the page) to its end. Returns true if anything actually moved, i.e. there may
+// be more to load.
+const INNER_SCROLL = `(() => {
+  let moved = false;
+  for (const e of document.querySelectorAll('div,ul,section,main,aside')) {
+    if (!['auto', 'scroll'].includes(getComputedStyle(e).overflowY)) continue;
+    if (e.scrollHeight <= e.clientHeight + 40) continue;
+    if (e.querySelectorAll('a[href]').length < 10) continue;
+    const atBottom = e.scrollTop + e.clientHeight >= e.scrollHeight - 4;
+    e.scrollTop = e.scrollHeight;
+    if (!atBottom) moved = true;
+  }
+  const doc = document.documentElement;
+  const pageAtBottom = window.scrollY + window.innerHeight >= doc.scrollHeight - 4;
+  window.scrollTo(0, doc.scrollHeight);
+  return moved || !pageAtBottom;
 })()`
 
 const NUM = '(\\d+(?:\\.\\d+)?)'
@@ -696,9 +716,9 @@ function mergeProviders(list: { title: string; url: string }[]): Ch[] {
   const byNum = new Map<string, Ch>()
   for (const c of list) {
     const num = numFromTitle(c.title)
-    // "Chapter 34 1h" / "Ch.170 Thunderscans 4h ago": keep just "Chapter 34", drop the date or group that follows
-    const lead = c.title.match(/^((?:chapter|chap\.?|ch\.?|episode|ep\.?)\s*\d+(?:\.\d+)?)/i)
-    const title = lead ? lead[1] : num ? `Chapter ${num}` : c.title || 'Chapter'
+    // One consistent name: "Chapter 34", whatever the site prints ("Ch. 34 108p Today", "34", "Ch.170 Thunderscans 4h ago").
+    const shown = num ?? (chapterNum(c) !== null ? String(chapterNum(c)) : null)
+    const title = shown !== null ? `Chapter ${shown}` : c.title || 'Chapter'
     if (num) {
       const have = byNum.get(num)
       if (have) {
@@ -790,10 +810,13 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
       if (firstPageOnly) break // update checks only need the newest chapters: don't walk the whole list
       // Show what we have so far: the screen can list the first chapters while the rest are still coming.
       if (acc.size > 0) partialEmitter({ ...out, url, chapters: finalizeChapters([...acc.values()], slug) })
-      const clicked: boolean = await win.webContents.executeJavaScript(CLICK_MORE)
+      // More to load? Either a button/pager to press, or a box that loads the next slice when scrolled to its end.
+      let clicked: boolean = await win.webContents.executeJavaScript(CLICK_MORE)
+      if (!clicked) clicked = await win.webContents.executeJavaScript(INNER_SCROLL)
       if (!clicked) break
-      // wait for the list to actually change after the click instead of a fixed pause
+      // wait for the list to actually change after that instead of a fixed pause
       let changed = false
+      await waitXhrIdle(win, 350, 2500) // the next slice is usually a data request: let it finish
       for (let i = 0; i < 20; i++) {
         await sleep(100)
         out = await run()
@@ -827,7 +850,7 @@ export function looksIncomplete(chapters: { title: string; url: string }[]): boo
   const nums = chapters.map((c) => chapterNum(c)).filter((n): n is number => n !== null && n < 5000)
   if (nums.length === 0) return false
   const max = Math.max(...nums)
-  return max >= 10 && chapters.length < max * 0.4
+  return max >= 10 && chapters.length < max * 0.6
 }
 
 async function staticSeries(src: SourceDef, url: string, slug: string): Promise<SeriesDetail | null> {
@@ -860,7 +883,7 @@ let seriesCache: Record<string, SeriesCacheEntry> | null = null
 let seriesTimer: NodeJS.Timeout | undefined
 const seriesCachePath = (): string => join(app.getPath('userData'), 'series-cache.json')
 
-const SERIES_CACHE_VERSION = 2
+const SERIES_CACHE_VERSION = 3
 
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   if (seriesCache) return seriesCache

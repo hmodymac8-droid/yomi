@@ -147,7 +147,7 @@ export function parseSeries(
     })
   const paged =
     /Showing\s+\d+\s*[–-]\s*\d+\s+of\s+\d+/i.test(body) ||
-    /(show|view|load|see)\s+(all|more)\s+chapters?/i.test(body) ||
+    /(show|view|load|see|expand)\s+(all|more)(\s+\d+)?\s+(chapters?|episodes?)/i.test(body) || // "Show all 35 chapters"
     pagerNext
   return {
     title: $('h1').first().text().trim().replace(/\s+/g, ' ') || meta('og:title') || $('title').text().trim(),

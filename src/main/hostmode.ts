@@ -15,7 +15,7 @@ let timer: NodeJS.Timeout | undefined
 const file = (): string => join(app.getPath('userData'), 'hostmode.json')
 
 // Bump when the way "fast" and "browser" are compared changes: older verdicts may have been wrong.
-const VERDICT_VERSION = 2
+const VERDICT_VERSION = 3
 
 function load(): Record<string, Mode> {
   if (data) return data

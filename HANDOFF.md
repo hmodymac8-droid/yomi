@@ -25,27 +25,28 @@ MR_CRAWL=`site,pages` (+MR_CRAWL_SERIES=`1|url`), MR_SMOKE=`chapter url`, MR_DIS
 MR_QUICK, MR_UPDTEST, MR_DLTEST, MR_MOELIST=`everythingmoe section url`. MR_NOHUMAN=1 stops them opening windows.
 Results of the big site survey are in `docs/site-tests/` (sc1 = cheap checks, out0-3 = whole chain).
 
-## OPEN PROBLEMS (most important first)
-1. **Chapter lists are incomplete on many sites** (e.g. Manganato.gg showed 2 chapters, Weeb Central 1, WebtoonClub 16 of 43).
-   Causes found: (a) the fast path was trusted although it read a half-loaded page, and both paths agreed on the wrong
-   answer; (b) chapters found only by address ("chapter-12"), missing sites with opaque addresses; (c) not waiting for the
-   page's own data requests; (d) bad lists were saved. **Fixes were just written but NOT tested**: text-based chapter
-   detection, `waitXhrIdle`, `looksIncomplete` (rejects the fast result, flags `SeriesDetail.incomplete`), saved lists and
-   learned `|series` verdicts reset (version bump), "Start Reading" buttons excluded, titles cleaned.
-   TODO: rebuild, test Manganato.gg `/manga/the-spirit-suppressing-museum` (should list ~66), Weeb Central, WebtoonClub;
-   add a warning banner in `Series.tsx` when `detail.incomplete` is true (not written yet).
-2. **Grid shows stale rows when switching the site filter** (first two rows stay from the previous site). Not investigated.
-   Suspects: `Browse.tsx` hits state (append vs reset race in `runSearch`, the enrichment patch `setHits(prev => ...)`), or
-   the "site order" cover-first sort in `catalog.ts search()`. Reproduce first.
-3. **The "smooth sites" list I gave was too generous**: the whole-chain test accepted any site with >=1 chapter. Tighten
-   MR_SITEPIPE (best of 6 titles must have >=8 chapters and not `looksIncomplete`) and re-run on the 28 that passed.
-4. **Mangapill lists only its home page (38 titles).** Its only full list is search: `/search?q=a&page=N` (~30 pages per
-   query, empty query shows nothing). Plan: one search per letter, merged. DONE: `SourceDef.listTemplates` and the scanner
-   loops over them (`crawlSource`). NOT DONE: detection in `sources.ts` (capture the search form in SNAPSHOT/`Analysis`,
-   try `?q=a`, `probePagination`, build 26 templates, `maxPages` ~120). Other "home page only" sites: Lua Comic, MangaTaro, Projectsuki.
-5. comix.to refuses chapter lists (HTTP 403) from this connection; titles still work. Wait and retry.
-6. mangadot.net is behind a human check the app's browser can't pass.
+## STATUS OF THE EARLIER PROBLEMS (updated)
+- **Chapter lists too short**: fixed for Manganato.gg (box that scrolls by itself loads the next 50), Weeb Central
+  (chapters recognised by their text, not only their address), WebtoonClub ("Show all N chapters" button). Also: wait for
+  the page's data requests (`waitXhrIdle`), reject fast-path answers that look cut short (`looksIncomplete`), banner +
+  *Reload full list* in the series screen, saved lists and learned verdicts reset (versions bumped), consistent names
+  ("Chapter N"). Verified by scripted tests, not by clicking.
+- **Stale rows when switching site**: cause was a "load more" request overtaking the new-list request. Fixed with a
+  generation counter in `Browse.tsx` (typechecked, not tried in the window).
+- **Mangapill only 38 titles**: fixed. Detection now falls back to the site's search (one search per letter, merged;
+  `SourceDef.listTemplates`). Short test: 3,589 titles from 3 pages per letter. A full scan takes several minutes.
+- **Site test made strict** (MR_SITEPIPE): WORKS = best of 6 titles has 8+ chapters, not cut short, 4-80 pages, real image.
+  Results: `docs/site-tests/strict0-3.txt` (31 sites): 13 WORKS, 16 CHECK, 2 FAILED.
 
+## OPEN PROBLEMS NOW
+1. **Chapter lists still cut short on some sites** (strict test flagged `incomplete`): TopManhua (exactly 50), JustManga,
+   MangaK, XComic, Mangapill (4 chapters in the series tested). 50 looks like a page size: probably a "load more" /
+   pager the finder doesn't press. Look with MR_ANCH=`series url`.
+2. **Odd page counts** (chapter page list may include non-page images): Manganato.gg 453, Manhuaus 238, mangageko 102,
+   FreeManhwa 112, PandaToons 92, Weeb Central 141; Nyx/Toonz/Projectsuki only 3 pages. Compare with the real chapter.
+3. comix.to refuses chapter lists (HTTP 403) from this connection; titles work. mangadot.net needs a human check the
+   app's browser can't pass. Fropi timed out (100 s) in the strict test; Swarm's image download failed.
+4. The Spirit Suppressing Museum (Manganato.gg) lists 79 chapters for a newest chapter of 66: check for stray entries.
 ## Not built yet
 Point-and-click "teach it this site" builder, genre/type filters, CBZ export, settings screen, clicking through the
 Following screen by hand (built, never opened). Everything above was verified with scripted tests, not by using the window.

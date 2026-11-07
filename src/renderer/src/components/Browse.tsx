@@ -38,18 +38,35 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
   }
   const searchRef = useRef<HTMLInputElement>(null)
   const sentinel = useRef<HTMLDivElement>(null)
-  const reqId = useRef(0)
+  // Every change of query / site / sort starts a new "generation" of the list. Anything that comes back from an
+  // older generation is dropped, so rows of the previous site can never end up in front of the new one.
+  const gen = useRef(0)
+  const resetting = useRef(false) // a brand-new list is still being fetched
+  const loadingMore = useRef(false)
   const lastRefresh = useRef(0)
 
   const refreshSources = useCallback(async () => setSources(await window.api.listSources()), [])
 
   const runSearch = useCallback(
     async (reset: boolean, offset = 0) => {
-      const id = ++reqId.current
-      const res = await window.api.search(q, sourceId, sort, offset, PAGE)
-      if (id !== reqId.current) return // a newer search superseded this one
-      setTotal(res.total)
-      setHits((prev) => (reset ? res.hits : [...prev, ...res.hits]))
+      if (reset) {
+        gen.current++
+        resetting.current = true
+      } else if (resetting.current || loadingMore.current) {
+        return // "load more" must not start while the new list is loading, or run twice at once
+      } else {
+        loadingMore.current = true
+      }
+      const myGen = gen.current
+      try {
+        const res = await window.api.search(q, sourceId, sort, offset, PAGE)
+        if (myGen !== gen.current) return // the list was replaced while we waited
+        setTotal(res.total)
+        setHits((prev) => (reset ? res.hits : [...prev, ...res.hits]))
+      } finally {
+        if (myGen === gen.current) resetting.current = false
+        if (!reset) loadingMore.current = false
+      }
     },
     [q, sourceId, sort]
   )

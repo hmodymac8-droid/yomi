@@ -233,7 +233,7 @@ app.whenReady().then(async () => {
       await new Promise((r) => setTimeout(r, 2500))
       const tDetect = Date.now()
       const def = await detectSource(site)
-      console.log('DETECTED ' + JSON.stringify({ detectMs: Date.now() - tDetect, tpl: def.listTemplate, maxPages: def.maxPages, sitemaps: def.sitemaps?.length ?? 0 }))
+      console.log('DETECTED ' + JSON.stringify({ detectMs: Date.now() - tDetect, tpl: def.listTemplate, lists: def.listTemplates?.length ?? 1, maxPages: def.maxPages, sitemaps: def.sitemaps?.length ?? 0 }))
       def.maxPages = Number(max || 3)
       def.id = 'smoke-' + def.id
       addSource(def)
@@ -424,6 +424,17 @@ app.whenReady().then(async () => {
         return { total: as.length, byText: chap.length, sample: chap.slice(0, 3).map((a) => txt(a).slice(0, 30) + ' -> ' + a.getAttribute('href')), underSlug: as.filter((a) => a.href.includes(slug) && /chapter/i.test(a.href)).length, height: document.documentElement.scrollHeight };
       })()`
       const before = await w.webContents.executeJavaScript(probe)
+      // which elements scroll on their own (a chapter list inside a scrollable box)? what do the buttons say?
+      const boxes = await w.webContents.executeJavaScript(`[...document.querySelectorAll('div,ul,section')].filter((e) => e.scrollHeight > e.clientHeight + 40 && ['auto','scroll'].includes(getComputedStyle(e).overflowY) && e.querySelectorAll('a[href]').length > 10).slice(0, 4).map((e) => e.tagName + '.' + String(e.className).slice(0, 40) + ' links=' + e.querySelectorAll('a[href]').length + ' h=' + e.scrollHeight)`)
+      const btns = await w.webContents.executeJavaScript(`[...document.querySelectorAll('button,[role=button]')].map((b) => (b.textContent || '').trim().slice(0, 24)).filter(Boolean).slice(0, 25).join(' | ')`)
+      console.log('ANCH_BOXES ' + JSON.stringify({ boxes, btns }))
+      const nets: string[] = []
+      w.webContents.session.webRequest.onCompleted((d) => {
+        if (/\/api\//.test(d.url)) nets.push(d.statusCode + ' ' + d.url.replace(/^https?:\/\/[^/]+/, '').slice(0, 90))
+      })
+      await w.webContents.executeJavaScript(`[...document.querySelectorAll('div,ul,section')].filter((e) => e.scrollHeight > e.clientHeight + 40 && ['auto','scroll'].includes(getComputedStyle(e).overflowY)).forEach((e) => { e.scrollTop = e.scrollHeight })`)
+      await sleepMs(1800)
+      console.log('ANCH_NET_AFTER_INNER_SCROLL ' + JSON.stringify(nets))
       for (let i = 0; i < 12; i++) {
         await w.webContents.executeJavaScript('window.scrollBy(0, 900)')
         await sleepMs(350)
@@ -468,22 +479,29 @@ app.whenReady().then(async () => {
           o.withCovers = hits.filter((h) => h.cover).length
           lap('listMs')
           if (hits.length === 0) throw new Error('no titles found')
-          // try up to 3 titles until one has chapters
+          // Read up to 6 titles and keep the one with the most chapters. A site only counts as fully working if that
+          // list is substantial (8+) and does not look cut short (e.g. 2 chapters when the newest is Chapter 66).
           let chapters: { title: string; url: string }[] = []
           let seriesUrl = ''
-          for (const h of hits.slice(0, 3)) {
+          let incomplete = false
+          let tried = 0
+          for (const h of hits.slice(0, 6)) {
             try {
               const d = await getSeries(def.id, h.entries[0].url)
-              if (d.chapters.length > 0) {
+              tried++
+              if (d.chapters.length > chapters.length) {
                 chapters = d.chapters
                 seriesUrl = h.entries[0].url
-                break
+                incomplete = !!d.incomplete
               }
+              if (chapters.length >= 8 && !incomplete) break
             } catch (e) {
               o.seriesError = (e instanceof Error ? e.message : String(e)).slice(0, 80)
             }
           }
           o.chapters = chapters.length
+          o.incomplete = incomplete
+          o.seriesTried = tried
           lap('chaptersMs')
           if (chapters.length === 0) throw new Error('no chapters found')
           const g = await grabChapterFast(chapters[0].url)
@@ -500,7 +518,9 @@ app.whenReady().then(async () => {
           o.imageKb = Math.round(buf.byteLength / 1024)
           o.imageType = (r.headers.get('content-type') ?? '').split(';')[0]
           lap('imageMs')
-          o.result = r.ok && String(o.imageType).startsWith('image/') && buf.byteLength > 5000 ? 'WORKS' : 'IMAGE-FAILED'
+          const imageOk = r.ok && String(o.imageType).startsWith('image/') && buf.byteLength > 5000
+          const solid = chapters.length >= 8 && !incomplete && g.pages.length >= 4 && g.pages.length <= 80
+          o.result = !imageOk ? 'IMAGE-FAILED' : solid ? 'WORKS' : 'CHECK' // CHECK: passes, but the numbers look thin or odd
         }
         try {
           await Promise.race([run(), new Promise((_, rej) => setTimeout(() => rej(new Error('timed out after 100 s')), 100000))])

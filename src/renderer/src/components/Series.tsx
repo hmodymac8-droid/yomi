@@ -353,6 +353,14 @@ export default function Series({ series, onBack, onRead }: Props): React.JSX.Ele
               </>
             )}
           </div>
+          {detail.incomplete && !refreshing && (
+            <div className="error small">
+              This list looks too short for the newest chapter, so some chapters may be missing.{' '}
+              <button className="mini" onClick={() => reload('full')}>
+                Reload full list
+              </button>
+            </div>
+          )}
           {refreshError && (
             <div className="error small">
               Showing the saved list. Couldn&apos;t check for new chapters: {refreshError}{' '}

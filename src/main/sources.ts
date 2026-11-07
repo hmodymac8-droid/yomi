@@ -62,7 +62,10 @@ const SNAPSHOT = `(() => {
     if (a.querySelector('img')) cards.push(a.href.split('#')[0]);
   }
   const all = [...new Set([...document.querySelectorAll('a[href]')].map(a => a.href.split('#')[0]))];
-  return { cards, all, title: document.title };
+  // The page's search box: its field name and where it submits (some sites can only be listed through search).
+  const box = document.querySelector('input[type=search], input[name=q], input[name=s], input[name=query], input[name=keyword], input[name=search]');
+  const search = box && box.name ? { name: box.name, action: box.form && box.form.action ? box.form.action : location.href } : null;
+  return { cards, all, title: document.title, search };
 })()`
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -93,9 +96,9 @@ async function snapshot(
   win: BrowserWindow,
   host: string,
   maxMs = 7000
-): Promise<{ cards: string[]; all: string[]; title: string }> {
+): Promise<{ cards: string[]; all: string[]; title: string; search: { name: string; action: string } | null }> {
   const start = Date.now()
-  let last = { cards: [] as string[], all: [] as string[], title: '' }
+  let last = { cards: [] as string[], all: [] as string[], title: '', search: null as { name: string; action: string } | null }
   let prev = -1
   while (Date.now() - start < maxMs) {
     last = await win.webContents.executeJavaScript(SNAPSHOT)
@@ -127,6 +130,8 @@ interface Analysis {
   listTemplate: string
   paged: boolean
   links: string[]
+  /** The page's search box (field name + where it submits), if it has one. */
+  searchForm: { name: string; action: string } | null
 }
 
 const isPage2 = (p: URL): boolean =>
@@ -159,7 +164,7 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
     groups.get(key)!.add(p.origin + p.pathname)
   }
   const best = [...groups.entries()].sort((a, b) => b[1].size - a[1].size)[0]
-  const empty: Analysis = { cards: 0, cardUrls: [], seriesRe: '', listTemplate: pageUrl, paged: false, links: snap.all }
+  const empty: Analysis = { cards: 0, cardUrls: [], seriesRe: '', listTemplate: pageUrl, paged: false, links: snap.all, searchForm: snap.search }
   if (!best) return empty
 
   const [countStr, first] = best[0].split('|')
@@ -186,7 +191,7 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
       ? next.replace(/([?&](?:page|p|paged)=)2(?=&|$)/, '$1{n}')
       : next.replace(/2(\/?)$/, '{n}$1')
   }
-  return { cards: best[1].size, cardUrls: [...best[1]], seriesRe, listTemplate, paged: !!next, links: snap.all }
+  return { cards: best[1].size, cardUrls: [...best[1]], seriesRe, listTemplate, paged: !!next, links: snap.all, searchForm: snap.search }
 }
 
 /**
@@ -358,8 +363,9 @@ export async function detectSource(
       ;({ a: pick, challenged } = await readHome())
     } catch (e) {
       if (!(await planP)) throw e
-      pick = { cards: 0, cardUrls: [], seriesRe: '', listTemplate: input, paged: false, links: [] }
+      pick = { cards: 0, cardUrls: [], seriesRe: '', listTemplate: input, paged: false, links: [], searchForm: null }
     }
+    let listTemplates: string[] | undefined // set when the site can only be listed through its search
     T(`home page read: ${pick.cards} cards, paged=${pick.paged}`)
     // Nothing found: is the site hiding behind a "verify you are human" screen? If so, let the person pass it.
     if (pick.cards < 5 && challenged && !(await planP)) {
@@ -399,6 +405,28 @@ export async function detectSource(
         }
         if (score(best.a) > score(pick)) pick = best.a
       }
+
+      // Some sites can only be listed through their search: an empty search shows nothing, but a search for "a"
+      // lists 50 series per page over many pages. If no real paged list turned up, try that. One search per letter
+      // is scanned and the results are merged (a single search stops after a few dozen pages).
+      if (!pick.paged) {
+        const form = pick.searchForm ?? analyses.map((a) => a?.searchForm).find((f) => f) ?? null
+        if (form) {
+          onStage('Trying the site’s search as a list…')
+          const base = new URL(form.action, input)
+          base.searchParams.set(form.name, 'a')
+          const a = await pool.use((w) => analyze(w, base.toString())).catch(() => null)
+          if (a && a.cards >= 10 && a.seriesRe) {
+            const t = await probePagination(pool, base.toString(), a)
+            T('search listing: ' + (t ?? 'no pagination'))
+            if (t) {
+              const re = new RegExp('([?&]' + escapeRe(form.name) + '=)a(?=&|$)')
+              listTemplates = 'abcdefghijklmnopqrstuvwxyz'.split('').map((l) => t.replace(re, `$1${l}`))
+              pick = { ...a, listTemplate: listTemplates[0], paged: true }
+            }
+          }
+        }
+      }
     }
     const plan = await planP // (usually finished long ago: it ran while the pages were being read)
     if (pick.cards < 5 && !plan)
@@ -412,10 +440,12 @@ export async function detectSource(
       name: prettyName(input),
       baseUrl: u.origin + '/',
       listTemplate: pick.listTemplate,
+      listTemplates,
       seriesRe: pick.cards >= 5 ? pick.seriesRe : plan!.seriesRe,
       chapterRe: '(?:chapter|chap|ch|episode|ep|read)[-_/ ]?\\d',
-      // sites with a pager: scan until the list runs out (the scan stops by itself at the last page)
-      maxPages: !scanAllowed ? 0 : pick.paged ? 3000 : 1,
+      // sites with a pager: scan until the list runs out (the scan stops by itself at the last page).
+      // A search list is capped per letter (a search stops after a few dozen pages anyway).
+      maxPages: !scanAllowed ? 0 : listTemplates ? 120 : pick.paged ? 3000 : 1,
       sitemaps: plan?.files,
       sitemapChecked: true
     }
