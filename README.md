@@ -19,6 +19,35 @@
   <img src="docs/screenshots/series.png" alt="Series page" width="49%">
 </p>
 
+## Sites that work smoothly with Yomi
+
+Tested end to end (title list, chapters, pages and images). Copy an address, paste it into **Add a site** on Discover, and every title on that site appears in Yomi.
+
+### English sites
+| Site | Address (paste into **Add a site**) | Has |
+|---|---|---|
+| **MangaFreak** | [ww3.mangafreak.me](https://ww3.mangafreak.me/) | manga |
+| **Manganato** | [www.manganato.gg](https://www.manganato.gg/) | manga · manhwa · manhua |
+| **Mangapill** | [mangapill.com](https://mangapill.com/) | manga · manhwa · manhua |
+| **Weebcentral** | [weebcentral.com](https://weebcentral.com/) | manga · manhwa · manhua |
+| **Mangastash** | [mangastash.org](https://mangastash.org/) | manga · manhwa · manhua |
+| **Kuramanga** | [kuramanga.com](https://kuramanga.com/) | manhwa · manhua |
+| **ManhwaTop** | [manhwatop.com](https://manhwatop.com/) | manhwa |
+| **BaeToon** | [baetoon.com](https://baetoon.com/) | manhwa · webtoons |
+| **Webtoonclub** | [webtoonclub.com](https://webtoonclub.com/) | manhwa · webtoons |
+| **Manhuatop** | [manhuatop.org](https://manhuatop.org/) | manhua |
+| **Projectsuki** | [projectsuki.com](https://projectsuki.com/) | manga |
+
+### Arabic sites · المواقع العربية
+| Site | Address (paste into **Add a site**) | Has |
+|---|---|---|
+| **Azorafly** | [azorafly.com](https://azorafly.com/) | مانجا · مانهوا · مانها |
+| **Olympustaff** | [olympustaff.com](https://olympustaff.com/) | مانجا · مانهوا · مانها |
+| **Mangadar** | [mangadar.com](https://mangadar.com/) | مانجا · مانهوا · مانها |
+| **Mangasid** | [mangasid.com](https://mangasid.com/) | مانجا · مانهوا · مانها |
+
+<sub>Comix ([comix.to](https://comix.to/)) also works, but its chapter lists can take a minute to load. Any other manga site can be tried the same way.</sub>
+
 ## What it does
 
 - **Add any site.** Paste its address and every title joins one big catalog.
@@ -36,20 +65,6 @@
 2. On **Discover**, paste a manga site's address into **Add a site** and press **Add**.
 3. Search with the top bar (**Ctrl + K**), open a title, and press **Start** or **Continue**.
 4. Press **☆ Follow** to get new chapters, or **⬇** to save chapters for offline.
-
-## Sites tested and working
-
-Every site below was tested end to end: title list, chapters, pages and images.
-
-| English | | Arabic · عربي |
-|---|---|---|
-| MangaFreak · Manganato · Mangapill | manga, manhwa, manhua | Azorafly |
-| Weebcentral · Mangastash · Kuramanga | manga, manhwa, manhua | Olympustaff |
-| ManhwaTop · BaeToon · Webtoonclub | manhwa, webtoons | Mangadar |
-| Manhuatop | manhua | Mangasid |
-| Projectsuki | manga | |
-
-<sub>Comix also works, but its chapter lists can be slow to load.</sub>
 
 ## Build from source
 
@@ -85,11 +100,14 @@ npm run build:win  # make the installer in dist/
 3. ابحث من الشريط العلوي (**Ctrl + K**)، افتح أي عمل، واضغط **Start** أو **Continue**.
 4. اضغط **☆ Follow** لتصلك الفصول الجديدة، أو **⬇** لحفظ الفصول للقراءة بدون إنترنت.
 
-### مواقع تمت تجربتها وتعمل
+### مواقع تعمل بسلاسة مع يومي
 
-**المواقع العربية:** Azorafly · Olympustaff · Mangadar · Mangasid
+انسخ الرابط والصقه في خانة **Add a site** وستظهر كل أعمال الموقع في يومي.
 
-**المواقع الإنجليزية:** MangaFreak · Manganato · Mangapill · Weebcentral · Mangastash · Kuramanga · ManhwaTop · BaeToon · Webtoonclub · Manhuatop · Projectsuki
+**المواقع العربية:** [Azorafly](https://azorafly.com/) · [Olympustaff](https://olympustaff.com/) · [Mangadar](https://mangadar.com/) · [Mangasid](https://mangasid.com/)
+
+**المواقع الإنجليزية:** [MangaFreak](https://ww3.mangafreak.me/) · [Manganato](https://www.manganato.gg/) · [Mangapill](https://mangapill.com/) · [Weebcentral](https://weebcentral.com/) · [Mangastash](https://mangastash.org/) · [Kuramanga](https://kuramanga.com/) · [ManhwaTop](https://manhwatop.com/) · [BaeToon](https://baetoon.com/) · [Webtoonclub](https://webtoonclub.com/) · [Manhuatop](https://manhuatop.org/) · [Projectsuki](https://projectsuki.com/)
+
 
 </div>
 

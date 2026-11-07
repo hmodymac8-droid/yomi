@@ -1,0 +1,45 @@
+# Pushing a version tag (v1.2.0, …) builds the Windows installer on GitHub and publishes the release with it.
+# The release carries the three files the app's auto-updater needs: the installer, its .blockmap and latest.yml.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build the installer (x64 + ARM in one)
+        run: |
+          npm run build
+          npx electron-builder --win --publish never
+
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          NOTES="docs/release-notes/${TAG}.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/Yomi-Setup-*.exe dist/Yomi-Setup-*.exe.blockmap dist/latest.yml --clobber
+          else
+            if [ -f "$NOTES" ]; then ARGS=(--notes-file "$NOTES"); else ARGS=(--generate-notes); fi
+            gh release create "$TAG" --title "Yomi ${TAG#v}" "${ARGS[@]}" --latest \
+              dist/Yomi-Setup-*.exe dist/Yomi-Setup-*.exe.blockmap dist/latest.yml
+          fi
