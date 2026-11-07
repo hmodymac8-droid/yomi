@@ -1073,6 +1073,14 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     // The page says it has more chapters than we collected and its button did nothing: many sites also serve the
     // other slices at plain addresses (?chapter_page=2 ...). Try those.
     if (declaredEnd >= 10 && acc.size < declaredEnd * 0.9) await queryPaging(src, url, slug, acc, declaredEnd)
+    else if (!firstPageOnly && depth === 0) {
+      // Plain pager LINKS on the page (…/series/ABC?page=2): the series page shows one slice at a time and no button
+      // loads the rest. Walk those addresses until a page brings nothing new.
+      const hasPagerLinks: boolean = await win.webContents
+        .executeJavaScript(`[...document.querySelectorAll('a[href]')].some((a) => a.origin === location.origin && a.pathname === location.pathname && /[?&](page|chapter_page|chapters_page|cpage)=2(&|$)/.test(a.search))`)
+        .catch(() => false)
+      if (hasPagerLinks) await queryPaging(src, url, slug, acc, 100000)
+    }
     // Aggregator sites list several "sources" per series, each with its own page holding the full chapter list while the
     // series page shows only the newest chapter of each: follow the first (biggest) source.
     if (depth === 0 && declaredEnd >= 10 && acc.size < declaredEnd * 0.9) {
@@ -1112,6 +1120,8 @@ async function staticSeries(src: SourceDef, url: string, slug: string): Promise<
     const p = parseSeries(r.html, url, src.chapterRe)
     if (process.env['MR_PIPEDEBUG']) console.log('STATIC', url, 'status', r.status, 'chapters', p.chapters.length, 'paged', p.paged)
     if (p.paged || p.chapters.length === 0) return null
+    // Pager links to the same page (…?page=2): this is only the first slice of the list.
+    if (/href="[^"]*[?&](?:page|chapter_page|chapters_page|cpage)=2(?:&|")/i.test(r.html.replace(/&amp;/g, '&'))) return null
     // The static HTML may only hold other series' chapter links (the real list is added by JavaScript).
     const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
     if (slug && !p.chapters.some((c) => flat(c.url).includes(slug))) return null

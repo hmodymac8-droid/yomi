@@ -540,7 +540,7 @@ app.whenReady().then(async () => {
           let seriesUrl = ''
           let incomplete = false
           let tried = 0
-          for (const h of hits.slice(0, 6)) {
+          for (const h of process.env['MR_PIPESERIES'] ? ([{ entries: [{ url: process.env['MR_PIPESERIES'] }] }] as typeof hits) : hits.slice(0, 6)) {
             try {
               const d = await getSeries(def.id, h.entries[0].url)
               tried++

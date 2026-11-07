@@ -68,3 +68,5 @@ Following screen by hand (built, never opened). Everything above was verified wi
 - First-time static-vs-browser check: plain HTTP wins when it finds clearly more chapters than the browser view.
 - Series cache version 5. Debug: MR_PIPEDEBUG=1 prints per-series chapter counts. Sites added before this fix must be
   removed and added again (their catalog holds chapter links as titles).
+- Chapter lists split by plain pager links (`…/series/ABC?page=2`, olympustaff.com): the browser path now walks those
+  addresses (`queryPaging` with no declared total) and the static path defers to it. MR_PIPESERIES=<series url> tests one series.
