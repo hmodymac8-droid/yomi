@@ -689,19 +689,32 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
   const text = (a) => (a.innerText || a.textContent || '').trim().replace(/\\s+/g, ' ');
   // A chapter is a link whose ADDRESS looks like one (…/chapter-12) OR whose visible text does ("Chapter 12"):
   // some sites use opaque addresses (…/chapters/01J76X…), so the address alone misses their whole list.
-  const byText = (t) => /^(vol(ume)?\\.?\\s*\\d+\\s*[,:.\\-]?\\s*)?(chapter|chap\\.?|ch\\.?|episode|ep\\.?)\\s*\\d/i.test(t);
+  const byText = (t) => /^(vol(ume)?\\.?\\s*\\d+\\s*[,:.\\-]?\\s*)?(chapter|chap\\.?|ch\\.?|episode|ep\\.?|ال?فصل|حلقة|الحلقة)\\s*\\d/i.test(t);
   // A link below this series' own address that has "chapter 12" / "vol-2" in its path is one of its chapters, even
   // with a long title in the address (…/the-series/vol-2-chapter-16-power-of-the-darkness).
   const base = location.pathname.replace(/\\/$/, '');
   const underBase = (h) => { try { const u = new URL(h); return !!base && u.origin === location.origin && u.pathname.startsWith(base + '/') && /(chapter|chap|episode|ep|ch)[-_ ]?\\d|vol[-_ ]?\\d/i.test(u.pathname.slice(base.length)); } catch (e) { return false; } };
   // "Start Reading", "Read first", "Latest" buttons point at chapters but are not chapters themselves.
   const junk = (t) => /^(start|read|continue|first|last|latest|new)\\b/i.test(t) && !/\\d/.test(t);
+  // Sites that number chapters by address only: …/reader/<series-slug>/138 (no "chapter" word anywhere).
+  const lastSeg = decodeURIComponent(base.split('/').pop() || '').replace(/[.*+?^$()|[\\]{}\\\\]/g, '\\\\$&');
+  const slugNumRe = lastSeg ? new RegExp('/' + lastSeg + '/(\\\\d+(?:[._-]\\\\d+)?)/?$', 'i') : null;
+  const slugNum = (h) => { if (!slugNumRe) return null; try { const m = slugNumRe.exec(decodeURIComponent(new URL(h).pathname)); return m ? m[1] : null; } catch (e) { return null; } };
   for (const a of document.querySelectorAll('a[href]')) {
     const href = a.href.split('#')[0];
-    const t = text(a);
-    if ((!re.test(href) && !byText(t) && !underBase(href)) || junk(t) || seen.has(href)) continue;
+    let t = text(a);
+    const sn = slugNum(href);
+    if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t) || seen.has(href)) continue;
+    // a whole card of text is no title: name it by its number
+    if (sn !== null && (!byText(t) || t.length > 60)) t = 'Chapter ' + sn.replace(/[_-]/g, '.');
     seen.add(href);
     chapters.push({ title: t.slice(0, 80), url: href });
+  }
+  // Chapter lists shipped as data inside the page (a JSON script tag) rather than as links.
+  if (slugNumRe) {
+    const raw = document.documentElement.innerHTML.replace(/\\\\\\//g, '/').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    const found = raw.match(new RegExp('https?://[^"\\'\\\\s<>\\\\\\\\,)]*/' + lastSeg + '/\\\\d+(?:[._-]\\\\d+)?/?(?=["\\'\\\\s<>\\\\\\\\,)]|$)', 'gi')) || [];
+    for (const f of found) { const h = f.split('#')[0]; const sn = slugNum(h); if (sn === null || seen.has(h)) continue; seen.add(h); chapters.push({ title: 'Chapter ' + sn.replace(/[_-]/g, '.'), url: h }); }
   }
   // Pages often show "related"/"popular" series too: keep only chapters whose URL mentions this series.
   // (Sites with opaque chapter URLs have no slug in them, so then everything is kept.)
@@ -1074,6 +1087,7 @@ async function staticSeries(src: SourceDef, url: string, slug: string): Promise<
     const r = await fetchHtml(url)
     if (r.status !== 200) return null
     const p = parseSeries(r.html, url, src.chapterRe)
+    if (process.env['MR_PIPEDEBUG']) console.log('STATIC', url, 'status', r.status, 'chapters', p.chapters.length, 'paged', p.paged)
     if (p.paged || p.chapters.length === 0) return null
     // The static HTML may only hold other series' chapter links (the real list is added by JavaScript).
     const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
@@ -1099,7 +1113,7 @@ let seriesCache: Record<string, SeriesCacheEntry> | null = null
 let seriesTimer: NodeJS.Timeout | undefined
 const seriesCachePath = (): string => join(app.getPath('userData'), 'series-cache.json')
 
-const SERIES_CACHE_VERSION = 4
+const SERIES_CACHE_VERSION = 5
 
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   if (seriesCache) return seriesCache
@@ -1267,8 +1281,12 @@ async function getSeriesInner(sourceId: string, url: string, newestOnly = false)
     } else {
       const bv = b.value
       const same = !!sv && sv.chapters.length === bv.chapters.length && sv.chapters[0]?.url === bv.chapters[0]?.url
-      if (bv.chapters.length > 0) setMode(key, same ? 'static' : 'browser')
-      result = bv
+      // The plain page can hold MORE than the browser view (a list shown 13 at a time, the rest in the page's data):
+      // then plain HTTP is the better way for this site, not the worse one.
+      const staticWins = !!sv && !!bv.incomplete && sv.chapters.length > bv.chapters.length
+      const staticMore = !!sv && sv.chapters.length > bv.chapters.length * 1.2 && sv.chapters.length >= bv.chapters.length + 3
+      if (bv.chapters.length > 0 || sv) setMode(key, same || staticWins || staticMore ? 'static' : 'browser')
+      result = sv && (staticWins || staticMore) ? sv : bv
     }
   }
   // An empty list is never saved: it would hide the last good list and show "no chapters" instantly next time.

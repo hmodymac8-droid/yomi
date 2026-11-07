@@ -127,7 +127,7 @@ export function parseSeries(
   const chapters: { title: string; url: string }[] = []
   // A chapter is a link whose address looks like one OR whose visible text does ("Chapter 12"): some sites use
   // opaque addresses (/chapters/01J76X…). "Start Reading" / "Latest" buttons are not chapters themselves.
-  const byText = (t: string): boolean => /^(vol(ume)?\.?\s*\d+\s*[,:.-]?\s*)?(chapter|chap\.?|ch\.?|episode|ep\.?)\s*\d/i.test(t)
+  const byText = (t: string): boolean => /^(vol(ume)?\.?\s*\d+\s*[,:.-]?\s*)?(chapter|chap\.?|ch\.?|episode|ep\.?|ال?فصل|حلقة|الحلقة)\s*\d/i.test(t)
   // A link below this series' own address with "chapter 12" / "vol-2" in its path is one of its chapters.
   let basePath = ''
   let baseOrigin = ''
@@ -147,14 +147,41 @@ export function parseSeries(
     }
   }
   const junk = (t: string): boolean => /^(start|read|continue|first|last|latest|new)\b/i.test(t) && !/\d/.test(t)
+  // Sites that number chapters by address only: …/reader/<series-slug>/138 (no "chapter" word anywhere).
+  const lastSeg = decodeURIComponent(basePath.split('/').pop() || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const slugNumRe = lastSeg ? new RegExp('/' + lastSeg + '/(\\d+(?:[._-]\\d+)?)/?$', 'i') : null
+  const slugNum = (h: string): string | null => {
+    if (!slugNumRe) return null
+    try {
+      const m = slugNumRe.exec(decodeURIComponent(new URL(h).pathname))
+      return m ? m[1] : null
+    } catch {
+      return null
+    }
+  }
   $('a[href]').each((_, a) => {
     const href = abs($(a).attr('href'), pageUrl).split('#')[0]
     if (!href || seen.has(href)) return
-    const t = textOf(a).slice(0, 80)
-    if ((!re.test(href) && !byText(t) && !underBase(href)) || junk(t)) return
+    let t = textOf(a).slice(0, 80)
+    const sn = slugNum(href)
+    if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t)) return
+    if (sn !== null && (!byText(t) || t.length > 60)) t = 'Chapter ' + sn.replace(/[_-]/g, '.')
     seen.add(href)
     chapters.push({ title: t, url: href })
   })
+  // Some sites ship the chapter list as data inside the page (a JSON script tag, a hydration blob) and draw the links
+  // later with JavaScript. Pick chapter addresses (…/<series-slug>/<number>) out of the raw text as well.
+  if (slugNumRe) {
+    const raw = html.replace(/\\\//g, '/').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    const found = raw.match(new RegExp('https?://[^"\'\\s<>\\\\,)]*/' + lastSeg + '/\\d+(?:[._-]\\d+)?/?(?=["\'\\s<>\\\\,)]|$)', 'gi')) ?? []
+    for (const f of found) {
+      const href = f.split('#')[0]
+      const sn = slugNum(href)
+      if (sn === null || seen.has(href)) continue
+      seen.add(href)
+      chapters.push({ title: 'Chapter ' + sn.replace(/[_-]/g, '.'), url: href })
+    }
+  }
   const meta = (p: string): string => $(`meta[property="${p}"]`).attr('content') ?? ''
   const body = textOf($('body').get(0))
   const pagerNext = $('button, [role=button], a')

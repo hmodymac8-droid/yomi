@@ -543,6 +543,7 @@ app.whenReady().then(async () => {
             try {
               const d = await getSeries(def.id, h.entries[0].url)
               tried++
+              if (process.env['MR_PIPEDEBUG']) console.log('PIPETRY', h.entries[0].url, d.chapters.length, !!d.incomplete)
               if (d.chapters.length > chapters.length) {
                 chapters = d.chapters
                 seriesUrl = h.entries[0].url

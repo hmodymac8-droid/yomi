@@ -59,3 +59,12 @@ Results of the big site survey are in `docs/site-tests/` (sc1 = cheap checks, ou
 ## Not built yet
 Point-and-click "teach it this site" builder, genre/type filters, CBZ export, settings screen, clicking through the
 Following screen by hand (built, never opened). Everything above was verified with scripted tests, not by using the window.
+
+## Added later: sites that number chapters by address only (mangasid.com, mangadar.com)
+- Chapter links like `/reader/<slug>/138` (no "chapter" word, Arabic link text) were not recognised -> 0 chapters.
+  Now: `slugNum` rule in `parseSeries` and `seriesScript` (link ending in `<series-slug>/<number>`), Arabic "فصل" in `byText`,
+  and chapter addresses are also picked out of data inside the page (JSON script tags).
+- List detection counted such chapter links as series on home pages (`isChapterGroup` now also rejects `…/slug/<number>`).
+- First-time static-vs-browser check: plain HTTP wins when it finds clearly more chapters than the browser view.
+- Series cache version 5. Debug: MR_PIPEDEBUG=1 prints per-series chapter counts. Sites added before this fix must be
+  removed and added again (their catalog holds chapter links as titles).
