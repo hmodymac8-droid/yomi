@@ -36,7 +36,7 @@ Tested end to end (title list, chapters, pages and images). Copy an address, pas
 | **BaeToon** | [baetoon.com](https://baetoon.com/) | manhwa · webtoons |
 | **Webtoonclub** | [webtoonclub.com](https://webtoonclub.com/) | manhwa · webtoons |
 | **Manhuatop** | [manhuatop.org](https://manhuatop.org/) | manhua |
-| **Projectsuki** | [projectsuki.com](https://projectsuki.com/) | manga |
+| **Projectsuki** | [projectsuki.com](https://projectsuki.com/) | manga · manhwa · manhua |
 
 ### Arabic sites · المواقع العربية
 | Site | Address (paste into **Add a site**) | Has |
