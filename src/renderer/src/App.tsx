@@ -14,8 +14,8 @@ type View =
   | { name: 'following' }
   | { name: 'sites' }
   | { name: 'addtitle' }
-  | { name: 'series'; series: OpenSeries }
-  | { name: 'reader'; series: OpenSeries; chapter: OpenChapter }
+  | { name: 'series'; series: OpenSeries; back?: 'addtitle' }
+  | { name: 'reader'; series: OpenSeries; chapter: OpenChapter; back?: 'addtitle' }
 
 /** If a screen ever crashes while drawing, show a message and a way back instead of a blank window. */
 class Boundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -70,7 +70,7 @@ function AppInner(): React.JSX.Element {
       )}
       {view.name === 'addtitle' && (
         <div className="pane">
-          <AddTitle onBack={() => setView({ name: 'browse' })} onOpen={(series) => setView({ name: 'series', series })} />
+          <AddTitle onBack={() => setView({ name: 'browse' })} onOpen={(series) => setView({ name: 'series', series, back: 'addtitle' })} />
         </div>
       )}
       {view.name === 'sites' && (
@@ -87,8 +87,8 @@ function AppInner(): React.JSX.Element {
         <div className="pane">
           <Series
             series={view.series}
-            onBack={() => setView({ name: 'browse' })}
-            onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter })}
+            onBack={() => setView(view.back === 'addtitle' ? { name: 'addtitle' } : { name: 'browse' })}
+            onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter, back: view.back })}
           />
         </div>
       )}
@@ -97,8 +97,8 @@ function AppInner(): React.JSX.Element {
           <Reader
             chapter={view.chapter}
             series={view.series}
-            onBack={() => setView({ name: 'series', series: view.series })}
-            onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter })}
+            onBack={() => setView({ name: 'series', series: view.series, back: view.back })}
+            onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter, back: view.back })}
           />
         </div>
       )}

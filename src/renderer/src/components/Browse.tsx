@@ -14,6 +14,14 @@ interface Props {
   onAddTitle: () => void
 }
 
+interface AddedTitle {
+  sourceId: string
+  sourceName: string
+  url: string
+  title: string
+  cover: string
+}
+
 export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites, onAddTitle }: Props): React.JSX.Element {
   // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
   const [sitesOpen, setSitesOpen] = useState<boolean>(() => {
@@ -36,6 +44,9 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
   const [follows, setFollows] = useState<FollowInfo[]>([])
   const [upd, setUpd] = useState<UpdateStatus | null>(null)
   const [q, setQ] = useState('')
+  // "All titles" or only the ones you added by address (the Add title tab)
+  const [shelf, setShelf] = useState<'all' | 'added'>('all')
+  const [added, setAdded] = useState<AddedTitle[]>([])
   // Which sites are searched. null means all of them; otherwise the chosen ones (remembered between launches).
   const [picked, setPicked] = useState<string[] | null>(() => {
     try {
@@ -240,6 +251,14 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
     window.api.progressRecent(12).then(setRecent)
     window.api.followList().then(setFollows)
     window.api.updatesStatus().then(setUpd)
+  }, [active])
+  useEffect(() => {
+    if (!active) return
+    try {
+      setAdded(JSON.parse(localStorage.getItem('addedTitles') ?? '[]'))
+    } catch {
+      setAdded([])
+    }
   }, [active])
 
   // The background checker tells us when it starts, finds something or finishes.
@@ -496,6 +515,46 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
         </div>
       ) : (
         <>
+        <div className="shelves">
+          <button className={`mini big${shelf === 'all' ? ' on' : ''}`} onClick={() => setShelf('all')}>
+            All titles
+          </button>
+          <button className={`mini big${shelf === 'added' ? ' on' : ''}`} onClick={() => setShelf('added')}>
+            Added by me ({added.length})
+          </button>
+        </div>
+        {shelf === 'added' ? (
+          <>
+            {added.length === 0 && <div className="hint">Nothing here yet. Use “Add title” to paste the address of a title.</div>}
+            <div className="grid">
+              {added
+                .filter((a) => !q.trim() || a.title.toLowerCase().includes(q.trim().toLowerCase()))
+                .map((a) => (
+                  <button
+                    key={a.url}
+                    className="card"
+                    onClick={() =>
+                      onOpen({
+                        title: a.title,
+                        cover: a.cover,
+                        coverReferer: new URL(a.url).origin + '/',
+                        entries: [{ sourceId: a.sourceId, sourceName: a.sourceName, url: a.url }]
+                      })
+                    }
+                  >
+                    <div className="cover">
+                      {a.cover ? <img loading="lazy" src={proxied(a.cover, new URL(a.url).origin + '/')} /> : <div className="ph">{a.title.trim().slice(0, 1).toUpperCase()}</div>}
+                    </div>
+                    <div className="name" title={a.title}>
+                      {a.title}
+                    </div>
+                    <div className="from">{a.sourceName}</div>
+                  </button>
+                ))}
+            </div>
+          </>
+        ) : (
+        <>
           {withNew.length > 0 && !q && (
             <section className="continue">
               <div className="meta">New chapters</div>
@@ -601,6 +660,8 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
               )}
             </div>
           )}
+        </>
+        )}
         </>
       )}
     </div>

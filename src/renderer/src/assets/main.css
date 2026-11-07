@@ -203,3 +203,6 @@ button:disabled { opacity: .5; cursor: default; }
 .mini.danger { background: #8a2a2a !important; }
 .mini.danger:hover { background: #c0392b !important; }
 .marquee { position: absolute; z-index: 5; pointer-events: none; background: rgba(124, 92, 255, .18); border: 1px solid var(--accent); border-radius: 2px; }
+
+.shelves { display: flex; gap: 8px; margin: 10px 0 6px; }
+.shelves .mini { margin-left: 0; }
