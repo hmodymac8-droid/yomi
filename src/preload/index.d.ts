@@ -65,6 +65,8 @@ export interface SearchResult {
   counts?: { manga: number; manhwa: number; manhua: number }
   /** Genres among the matching titles (as far as their pages said), most common first. */
   genres?: { name: string; count: number }[]
+  /** How many of the matching titles have no known genres yet. */
+  noGenre?: number
 }
 
 export interface SeriesDetail {

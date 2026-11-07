@@ -1076,26 +1076,31 @@ function pick(groups: Grp[], kind: SeriesType | undefined, genre: string | undef
     memo = { v, kinds: groups.map(kindOf), genres: groups.map(genresOf) }
     kindMemo.set(groups, memo)
   }
-  const g = genre ? canonGenres([genre])[0] : undefined
+  // '__none__' = the titles whose genres aren't known yet (open one and its genres load)
+  const none = genre === '__none__'
+  const g = genre && !none ? canonGenres([genre])[0] : undefined
+  let noGenre = 0
   // type counts follow the chosen genre, genre counts follow the chosen type
   const counts = { manga: 0, manhwa: 0, manhua: 0 }
+  const kindOk = (k: SeriesType | null): boolean => !kind || k === kind
   const byGenre = new Map<string, number>()
   const keep: Grp[] = []
   for (let i = 0; i < groups.length; i++) {
     const k = memo.kinds[i]
     const gs = memo.genres[i]
-    const genreOk = !g || gs.includes(g)
-    const kindOk = !kind || k === kind
+    const genreOk = none ? gs.length === 0 : !g || gs.includes(g)
+    if (kindOk(k) && gs.length === 0) noGenre++
     if (k && genreOk) counts[k]++
-    if (kindOk) for (const x of gs) byGenre.set(x, (byGenre.get(x) ?? 0) + 1)
-    if (genreOk && kindOk) keep.push(groups[i])
+    const kOk = kindOk(k)
+    if (kOk) for (const x of gs) byGenre.set(x, (byGenre.get(x) ?? 0) + 1)
+    if (genreOk && kOk) keep.push(groups[i])
   }
   const genres = [...byGenre.entries()]
     .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 80)
     .map(([name, count]) => ({ name, count }))
-  return { total: keep.length, hits: keep.slice(offset, offset + limit).map(toHit), counts, genres }
+  return { total: keep.length, hits: keep.slice(offset, offset + limit).map(toHit), counts, genres, noGenre }
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -543,3 +543,5 @@ select { cursor: pointer; }
 .updatebar .primary, .updatebar .secondary { padding: 6px 14px; }
 
 .fdesc[dir="auto"], .desc[dir="auto"] { text-align: start; }
+
+.nogenre-note { margin: 0 auto 16px; padding: 10px 14px; border: 1px dashed color-mix(in oklab, var(--primary) 40%, transparent); border-radius: 6px; background: color-mix(in oklab, var(--peach-soft) 45%, transparent); color: var(--peach-foreground); font-size: 12px; }

@@ -83,6 +83,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   }, [sort])
   const [genre, setGenre] = useState('')
   const [genreList, setGenreList] = useState<{ name: string; count: number }[]>([])
+  const [noGenre, setNoGenre] = useState(0)
   // All / Manga / Manhwa / Manhua: only titles whose type a series page has stated are in the three type tabs
   const [kind, setKind] = useState<'' | 'manga' | 'manhwa' | 'manhua'>('')
   const [counts, setCounts] = useState<{ manga: number; manhwa: number; manhua: number } | null>(null)
@@ -167,6 +168,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
     setHits(res.hits)
     setCounts(res.counts ?? null)
     setGenreList(res.genres ?? [])
+    setNoGenre(res.noGenre ?? 0)
     // the list got shorter (a site was removed, a filter changed): don't sit on a page that no longer exists
     const last = Math.max(0, Math.ceil(res.total / PAGE) - 1)
     if (page > last) setPage(last)
@@ -789,7 +791,8 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                 title="Genres come from the series pages the app has read so far"
               >
                 <option value="">All genres</option>
-                {genre && !genreList.some((x) => x.name.toLowerCase() === genre.toLowerCase()) && <option value={genre}>{genre}</option>}
+                <option value="__none__">No genres yet ({noGenre.toLocaleString()}): open them to load</option>
+                {genre && genre !== '__none__' && !genreList.some((x) => x.name.toLowerCase() === genre.toLowerCase()) && <option value={genre}>{genre}</option>}
                 {genreList.map((x) => (
                   <option key={x.name} value={x.name}>
                     {x.name} ({x.count.toLocaleString()})
@@ -805,6 +808,12 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
               </select>
             </div>
           </div>
+          {genre === '__none__' && (
+            <div className="nogenre-note">
+              These titles&apos; genres aren&apos;t known yet. Open one and its genres load straight away; the background scan fills in the
+              rest site by site.
+            </div>
+          )}
           {pager()}
           <div className="grid">
             {hits.map((h) => (

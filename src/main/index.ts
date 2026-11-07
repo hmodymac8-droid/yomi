@@ -1311,6 +1311,11 @@ app.whenReady().then(async () => {
         await wait(10000)
         await shot('01-main-page')
         if (process.env['MR_LANGTEST']) {
+          const sel = "document.querySelector('.genresel')"
+          console.log('NOGENRE_OPTION ' + (await js(sel + ".options[1].textContent")))
+          await js("(() => { const s = document.querySelector('.genresel'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(s, '__none__'); s.dispatchEvent(new Event('change', { bubbles: true })) })()")
+          await wait(2500)
+          console.log('NOGENRE_LIST ' + (await js("document.querySelector('.gridtop .eyebrow')?.textContent + ' | note: ' + !!document.querySelector('.nogenre-note')")))
           console.log('LANGTABS ' + (await js("[...document.querySelectorAll('.langtabs button')].map((b) => b.textContent).join(' | ')")))
           await js("document.querySelectorAll('.langtabs button')[2].click()")
           await wait(2500)
