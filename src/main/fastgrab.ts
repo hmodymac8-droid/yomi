@@ -153,19 +153,25 @@ async function extendSequence(res: GrabResult): Promise<GrabResult> {
   const [, head, digits, tail] = m
   const referer = new URL(res.url).origin + '/'
   const start = Number(digits)
-  const make = (n: number): string => head + String(n).padStart(digits.length, '0') + tail
+  const zeros = digits.length - String(start).length // leading zeros of the first number (001 -> 2)
+  // Sites do not always pad the same way: 001..009 then 010 (padded), 10 (plain) or 0010 (always two zeros first).
+  const variants = (n: number): string[] =>
+    [...new Set([String(n).padStart(digits.length, '0'), String(n), '0'.repeat(Math.max(0, zeros)) + n])].map((d) => head + d + tail)
+  const find = async (n: number): Promise<string | null> => {
+    for (const u of variants(n)) if (await exists(u, referer)) return u
+    return null
+  }
   const found: string[] = [numbered[0]]
   const BATCH = 6
   for (let n = start + 1; n < start + 400; n += BATCH) {
-    const batch = Array.from({ length: BATCH }, (_, i) => n + i)
-    const ok = await Promise.all(batch.map((x) => exists(make(x), referer)))
+    const got = await Promise.all(Array.from({ length: BATCH }, (_, i) => find(n + i)))
     let stop = false
-    for (let i = 0; i < batch.length; i++) {
-      if (!ok[i]) {
+    for (const u of got) {
+      if (!u) {
         stop = true
         break
       }
-      found.push(make(batch[i]))
+      found.push(u)
     }
     if (stop) break
   }
