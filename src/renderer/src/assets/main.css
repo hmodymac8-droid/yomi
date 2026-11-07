@@ -186,3 +186,7 @@ button:disabled { opacity: .5; cursor: default; }
 .shelftools .search { max-width: 360px; }
 .shelfpick { width: 100%; margin-top: 6px; padding: 5px 8px; font-size: 12px; border-radius: 8px; }
 .newcard.wide { display: flex; flex-direction: column; }
+
+/* foldable site list */
+.sitesbar { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.sitesbar .mini { margin-left: 0; }

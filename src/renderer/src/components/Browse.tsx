@@ -14,6 +14,23 @@ interface Props {
 }
 
 export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites }: Props): React.JSX.Element {
+  // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
+  const [sitesOpen, setSitesOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('browse.sitesOpen') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleSites = (): void =>
+    setSitesOpen((o) => {
+      try {
+        localStorage.setItem('browse.sitesOpen', o ? '0' : '1')
+      } catch {
+        /* the choice just won't stick */
+      }
+      return !o
+    })
   const [recent, setRecent] = useState<ProgressRecord[]>([])
   const [follows, setFollows] = useState<FollowInfo[]>([])
   const [upd, setUpd] = useState<UpdateStatus | null>(null)
@@ -401,7 +418,16 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
         <button onClick={onSites}>Sites</button>
       </div>
 
-      <div className="sites">
+      <div className="sitesbar">
+        <button className="mini big" onClick={toggleSites} title={sitesOpen ? 'Hide the site list' : 'Show the site list'}>
+          {sitesOpen || sources.length === 0 ? '▾' : '▸'} {sources.length} {sources.length === 1 ? 'site' : 'sites'}
+        </button>
+        <span className="sub">
+          {sources.reduce((n, x) => n + x.count, 0).toLocaleString()} titles
+          {sources.some((x) => x.crawling) && ' · scanning…'}
+        </span>
+      </div>
+      <div className="sites" style={{ display: sitesOpen || sources.length === 0 ? undefined : 'none' }}>
         {sources.map((s) => {
           const p = progress[s.id]
           const busy = s.crawling && !(p && p.done)

@@ -98,3 +98,4 @@ Following screen by hand (built, never opened). Everything above was verified wi
   "New chapters only", and a per-card shelf picker. Finished and Dropped series are not checked for updates. Data:
   `FollowRecord.category` in updates.json, IPC `follow-category`. A site that lists one title twice now shows once in
   "Read from". Typechecked and built, never clicked by hand.
+- Browse: the site chips row folds away (button '▸ 11 sites', remembered; collapsed by default, auto-open when no sites).
