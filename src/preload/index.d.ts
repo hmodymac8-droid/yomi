@@ -234,6 +234,8 @@ export interface MangaApi {
   downloadGet: (chapterUrl: string) => Promise<DownloadItem | null>
   downloadCancel: (id: string) => Promise<void>
   downloadRemove: (id: string) => Promise<void>
+  /** Deletes several downloads (their files too) at once. */
+  downloadRemoveMany: (ids: string[]) => Promise<void>
   onDownload: (cb: (i: DownloadItem) => void) => () => void
   progressGet: (seriesUrl: string) => Promise<ProgressRecord | null>
   progressSave: (p: ProgressPatch) => Promise<void>

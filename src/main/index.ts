@@ -318,6 +318,9 @@ app.whenReady().then(async () => {
     for (const w of BrowserWindow.getAllWindows()) w.webContents.send('series-partial', d)
   })
   ipcMain.handle('enrich', (_e, urls: string[]) => enrichEntries(urls))
+  ipcMain.handle('download-remove-many', (_e, ids: string[]) => {
+    for (const id of ids) removeDownload(id)
+  })
   ipcMain.handle('prefetch-chapter', (_e, url: string) => prefetchChapter(url))
 
   ipcMain.handle('grab-chapter', async (_e, url: string) => {

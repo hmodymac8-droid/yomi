@@ -99,3 +99,7 @@ Following screen by hand (built, never opened). Everything above was verified wi
   `FollowRecord.category` in updates.json, IPC `follow-category`. A site that lists one title twice now shows once in
   "Read from". Typechecked and built, never clicked by hand.
 - Browse: the site chips row folds away (button '▸ 11 sites', remembered; collapsed by default, auto-open when no sites).
+- **Downloads selection**: drag a box over rows (auto-scrolls near the top/bottom edge), click toggles a row, Shift range,
+  Ctrl keeps earlier picks, click a series name to select its whole series, Ctrl+A, Delete key, Esc. Buttons: Select all,
+  Delete selected, Delete all (each with a confirm). Bulk IPC `download-remove-many`. Drag, auto-scroll and delete were
+  tested in a temporary mock page in the browser pane (removed afterwards); not tried with real downloads.

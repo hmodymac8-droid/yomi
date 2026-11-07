@@ -34,6 +34,7 @@ const api = {
   downloadList: () => ipcRenderer.invoke('dl-list'),
   downloadGet: (chapterUrl: string) => ipcRenderer.invoke('dl-get', chapterUrl),
   downloadCancel: (id: string) => ipcRenderer.invoke('dl-cancel', id),
+  downloadRemoveMany: (ids: string[]) => ipcRenderer.invoke('download-remove-many', ids),
   downloadRemove: (id: string) => ipcRenderer.invoke('dl-remove', id),
   onDownload: (cb: (i: unknown) => void) => {
     const h = (_e: unknown, i: unknown): void => cb(i)

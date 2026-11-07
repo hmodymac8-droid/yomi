@@ -190,3 +190,16 @@ button:disabled { opacity: .5; cursor: default; }
 /* foldable site list */
 .sitesbar { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
 .sitesbar .mini { margin-left: 0; }
+
+/* downloads: selecting like in a file explorer */
+.dlarea { position: relative; }
+.dlrow { user-select: none; cursor: default; padding-left: 8px; padding-right: 8px; border-radius: 6px; }
+.dlrow:hover { background: #1f1f25; }
+.dlrow.sel { background: rgba(124, 92, 255, .28); outline: 1px solid var(--accent); }
+.dlgrouphead { cursor: pointer; user-select: none; }
+.seltools { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.seltools .grow { flex: 1; }
+.seltip { margin-bottom: 8px; }
+.mini.danger { background: #8a2a2a !important; }
+.mini.danger:hover { background: #c0392b !important; }
+.marquee { position: absolute; z-index: 5; pointer-events: none; background: rgba(124, 92, 255, .18); border: 1px solid var(--accent); border-radius: 2px; }
