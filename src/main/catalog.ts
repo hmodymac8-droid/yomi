@@ -1072,14 +1072,25 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     const declaredEnd: number = firstPageOnly ? 0 : await win.webContents.executeJavaScript(DECLARED_TOTAL).catch(() => 0)
     // The page says it has more chapters than we collected and its button did nothing: many sites also serve the
     // other slices at plain addresses (?chapter_page=2 ...). Try those.
-    if (declaredEnd >= 10 && acc.size < declaredEnd * 0.9) await queryPaging(src, url, slug, acc, declaredEnd)
-    else if (!firstPageOnly && depth === 0) {
+    let pagingTried = false
+    if (declaredEnd >= 10 && acc.size < declaredEnd * 0.9) {
+      pagingTried = true
+      await queryPaging(src, url, slug, acc, declaredEnd)
+    } else if (!firstPageOnly && depth === 0) {
       // Plain pager LINKS on the page (…/series/ABC?page=2): the series page shows one slice at a time and no button
       // loads the rest. Walk those addresses until a page brings nothing new.
       const hasPagerLinks: boolean = await win.webContents
         .executeJavaScript(`[...document.querySelectorAll('a[href]')].some((a) => a.origin === location.origin && a.pathname === location.pathname && /[?&](page|chapter_page|chapters_page|cpage)=2(&|$)/.test(a.search))`)
         .catch(() => false)
-      if (hasPagerLinks) await queryPaging(src, url, slug, acc, 100000)
+      if (hasPagerLinks) {
+        pagingTried = true
+        await queryPaging(src, url, slug, acc, 100000)
+      }
+    }
+    // Self-check: the list has holes or is far shorter than its newest chapter says. Try the other ways of reaching
+    // the rest before giving up (plain addresses for the slices), then let the check below flag whatever is left.
+    if (!firstPageOnly && depth === 0 && !pagingTried && looksIncomplete(finalizeChapters([...acc.values()], slug))) {
+      await queryPaging(src, url, slug, acc, 100000)
     }
     // Aggregator sites list several "sources" per series, each with its own page holding the full chapter list while the
     // series page shows only the newest chapter of each: follow the first (biggest) source.
@@ -1110,7 +1121,17 @@ export function looksIncomplete(chapters: { title: string; url: string }[]): boo
   const nums = chapters.map((c) => chapterNum(c)).filter((n): n is number => n !== null && n < 5000)
   if (nums.length === 0) return false
   const max = Math.max(...nums)
-  return max >= 10 && chapters.length < max * 0.6
+  if (max >= 10 && chapters.length < max * 0.6) return true
+  // Holes in the numbering (21..60 and then 0): the middle slice was never read. A few missing numbers are normal
+  // (skipped or merged chapters); a big share of the range missing is not.
+  const min = Math.min(...nums)
+  if (max - min >= 10) {
+    const have = new Set(nums.filter((n) => Number.isInteger(n)))
+    let missing = 0
+    for (let n = Math.ceil(min); n <= max; n++) if (!have.has(n)) missing++
+    if (missing > Math.max(3, (max - min + 1) * 0.2)) return true
+  }
+  return false
 }
 
 async function staticSeries(src: SourceDef, url: string, slug: string): Promise<SeriesDetail | null> {

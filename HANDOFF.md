@@ -70,3 +70,7 @@ Following screen by hand (built, never opened). Everything above was verified wi
   removed and added again (their catalog holds chapter links as titles).
 - Chapter lists split by plain pager links (`…/series/ABC?page=2`, olympustaff.com): the browser path now walks those
   addresses (`queryPaging` with no declared total) and the static path defers to it. MR_PIPESERIES=<series url> tests one series.
+- Self-checking lists: `looksIncomplete` also flags holes in the numbering (21..60 then 0); when a full read still looks
+  incomplete, `browserSeries` tries plain-address paging (`queryPaging`) before giving up. Known open: MangaK series
+  often come back with a constant 11 chapters flagged incomplete (same before this change; not a regression).
+  Next for this idea: capture the page's own JSON data requests and use a chapter array from them.
