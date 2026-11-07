@@ -18,11 +18,16 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
   const lastClicked = useRef<string | null>(null)
   const [concurrency, setConcurrencyState] = useState(3)
   const [deleting, setDeleting] = useState(false)
+  const [paused, setPausedState] = useState(false)
+  const [offline, setOfflineState] = useState(false)
+  const [note, setNote] = useState('')
   const suppressClick = useRef(false) // a drag ends with a click event: ignore that one
 
   useEffect(() => {
     let cancelled = false
     window.api.downloadGetConcurrency().then((n) => !cancelled && setConcurrencyState(n))
+    window.api.downloadGetPaused().then((p) => !cancelled && setPausedState(p))
+    window.api.offlineGet().then((o) => !cancelled && setOfflineState(o))
     window.api.downloadList().then((list) => {
       if (!cancelled) setItems(Object.fromEntries(list.map((i) => [i.id, i])))
     })
@@ -197,6 +202,17 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
 
   const failed = all.filter((i) => i.status === 'error')
 
+  const exportCbz = async (ids: string[]): Promise<void> => {
+    const done = ids.filter((id) => items[id]?.status === 'done')
+    if (done.length === 0) {
+      setNote('Pick finished chapters to export.')
+      return
+    }
+    setNote('Exporting…')
+    const r = await window.api.downloadExportCbz(done)
+    setNote(r ? `Saved ${r.written} .cbz file${r.written === 1 ? '' : 's'}${r.skipped ? ` (${r.skipped} skipped)` : ''}.` : '')
+  }
+
   return (
     <div className="series dlarea" ref={area} onMouseDown={onMouseDown}>
       <button className="back" onClick={onBack}>
@@ -228,6 +244,23 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
         )}
       </div>
 
+      <div className="meta">
+        <button
+          className="mini big"
+          title={paused ? 'Start downloading the queue again' : 'Stop the queue. Chapters being downloaded go back to the queue and restart when you resume.'}
+          onClick={async () => setPausedState(await window.api.downloadSetPaused(!paused))}
+        >
+          {paused ? '▶ Resume downloads' : '⏸ Pause downloads'}
+        </button>{' '}
+        <button
+          className={`mini big${offline ? ' on' : ''}`}
+          title="Offline mode: the app only uses chapters saved on this computer and doesn't visit any site."
+          onClick={async () => setOfflineState(await window.api.offlineSet(!offline))}
+        >
+          {offline ? '✈ Offline mode: ON' : '✈ Offline mode: off'}
+        </button>
+        {paused && <span className="sub"> Paused: {active} waiting</span>}
+      </div>
       <div className="meta">
         <label title="How many chapters download at the same time. More is faster; some sites slow down or refuse if you ask too much.">
           Download at the same time:{' '}
@@ -263,6 +296,10 @@ export default function Downloads({ onBack }: { onBack: () => void }): React.JSX
               </button>
             </>
           )}
+          <button className="mini big" onClick={() => void exportCbz(selected.size > 0 ? [...selected] : all.map((i) => i.id))} title="Save finished chapters as .cbz files (open them in any comic reader)">
+            Export as CBZ{selected.size > 0 ? ' (selected)' : ' (all)'}
+          </button>
+          {note && <span className="sub">{note}</span>}
           <span className="grow" />
           <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds(all.map((i) => i.id), 'ALL downloads')}>
             {deleting ? 'Deleting…' : 'Delete all'}

@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, net, session } from 'electron'
+import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -55,6 +55,12 @@ import {
   listDownloads,
   removeDownload,
   removeDownloads,
+  isPaused,
+  setPaused,
+  isOffline,
+  setOffline,
+  offlineSeries,
+  exportCbz,
   resumeDownloads,
   setConcurrency,
   setDownloadEmitter
@@ -305,12 +311,19 @@ app.whenReady().then(async () => {
     ])
   ipcMain.handle('get-series', (_e, sourceId: string, url: string, mode?: 'auto' | 'check' | 'full') =>
     wrap(async () => {
+      if (isOffline()) {
+        const off = offlineSeries(url)
+        if (off) return off
+        throw new Error('Offline mode is on and nothing from this series is saved on this computer.')
+      }
       try {
         const d = await withTimeout(openSeries(sourceId, url, mode), 60000, 'Loading the chapter list')
         recordOpen(sourceId, d.chapters.length === 0 ? 'failed' : d.incomplete ? 'incomplete' : 'ok', d.chapters.length === 0 ? 'No chapters found' : undefined)
         return d
       } catch (e) {
         recordOpen(sourceId, 'failed', e instanceof Error ? e.message : String(e))
+        const off = offlineSeries(url) // the site can't be reached: show what is saved
+        if (off) return off
         throw e
       }
     })
@@ -324,6 +337,17 @@ app.whenReady().then(async () => {
   ipcMain.handle('download-get-concurrency', () => getConcurrency())
   ipcMain.handle('download-set-concurrency', (_e, n: number) => setConcurrency(n))
   ipcMain.handle('download-remove-many', (_e, ids: string[]) => removeDownloads(ids))
+  ipcMain.handle('download-get-paused', () => isPaused())
+  ipcMain.handle('download-set-paused', (_e, on: boolean) => setPaused(!!on))
+  ipcMain.handle('offline-get', () => isOffline())
+  ipcMain.handle('offline-set', (_e, on: boolean) => setOffline(!!on))
+  ipcMain.handle('download-export-cbz', async (_e, ids: string[]) => {
+    const r = await dialog.showOpenDialog({ title: 'Choose a folder for the .cbz files', properties: ['openDirectory', 'createDirectory'] })
+    if (r.canceled || r.filePaths.length === 0) return null
+    const out = await exportCbz(ids, r.filePaths[0])
+    void shell.openPath(r.filePaths[0])
+    return out
+  })
   ipcMain.handle('prefetch-chapter', (_e, url: string) => prefetchChapter(url))
 
   ipcMain.handle('grab-chapter', async (_e, url: string) => {

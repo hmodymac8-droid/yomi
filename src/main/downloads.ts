@@ -2,7 +2,9 @@ import { app, session } from 'electron'
 import { join } from 'path'
 import { createHash } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
-import { rm, writeFile } from 'fs/promises'
+import { readdir, rm, writeFile } from 'fs/promises'
+import { readFile } from 'fs/promises'
+import type { SeriesDetail } from '../preload/index.d'
 import type { DownloadItem, DownloadRequest } from '../preload/index.d'
 import { grabChapterFast } from './fastgrab'
 import { ensureSession, refererHints } from './grabber'
@@ -20,27 +22,177 @@ const active = new Set<string>() // chapters being downloaded right now
 const settingsFile = (): string => join(app.getPath('userData'), 'download-settings.json')
 let concurrency: number | null = null
 
-export function getConcurrency(): number {
-  if (concurrency !== null) return concurrency
+let paused = false // the queue is on hold: nothing new starts, and running chapters go back to the queue
+let offline = false // offline mode: only downloaded chapters are used, the network is left alone
+
+function loadSettings(): void {
+  if (concurrency !== null) return
   let n = 3
   try {
-    if (existsSync(settingsFile())) n = Number(JSON.parse(readFileSync(settingsFile(), 'utf8')).concurrency)
+    if (existsSync(settingsFile())) {
+      const j = JSON.parse(readFileSync(settingsFile(), 'utf8'))
+      n = Number(j.concurrency)
+      paused = !!j.paused
+      offline = !!j.offline
+    }
   } catch {
-    /* default */
+    /* defaults */
   }
   concurrency = Number.isFinite(n) ? Math.max(1, Math.min(8, Math.round(n))) : 3
-  return concurrency
 }
 
-export function setConcurrency(n: number): number {
-  concurrency = Math.max(1, Math.min(8, Math.round(Number(n) || 1)))
+function saveSettings(): void {
   try {
-    writeFileSync(settingsFile(), JSON.stringify({ concurrency }))
+    writeFileSync(settingsFile(), JSON.stringify({ concurrency, paused, offline }))
   } catch {
     /* not critical */
   }
+}
+
+export function getConcurrency(): number {
+  loadSettings()
+  return concurrency!
+}
+
+export function setConcurrency(n: number): number {
+  loadSettings()
+  concurrency = Math.max(1, Math.min(8, Math.round(Number(n) || 1)))
+  saveSettings()
   void pump() // a higher number starts more chapters right away
   return concurrency
+}
+
+export function isPaused(): boolean {
+  loadSettings()
+  return paused
+}
+
+/** Hold or release the whole queue. Holding sends the chapters being downloaded back to the queue (they restart on resume). */
+export function setPaused(on: boolean): boolean {
+  loadSettings()
+  paused = on
+  saveSettings()
+  if (!on) void pump()
+  return paused
+}
+
+export function isOffline(): boolean {
+  loadSettings()
+  return offline
+}
+
+export function setOffline(on: boolean): boolean {
+  loadSettings()
+  offline = on
+  saveSettings()
+  return offline
+}
+
+/** A series' page built only from what is saved on this computer (offline mode, or when the site cannot be reached). */
+export function offlineSeries(seriesUrl: string): SeriesDetail | null {
+  const mine = Object.values(load()).filter((i) => i.seriesUrl === seriesUrl && i.status === 'done')
+  if (mine.length === 0) return null
+  const num = (t: string): number => Number(t.match(/(\d+(?:\.\d+)?)/)?.[1] ?? -1)
+  mine.sort((a, b) => num(b.chapterTitle) - num(a.chapterTitle) || b.queuedAt - a.queuedAt)
+  return {
+    url: seriesUrl,
+    title: mine[0].seriesTitle,
+    cover: '',
+    description: 'Offline: only the chapters saved on this computer are shown.',
+    chapters: mine.map((i) => ({ title: i.chapterTitle, url: i.id }))
+  }
+}
+
+// ---- CBZ export ---------------------------------------------------------------------------------------------------
+// A .cbz is a zip of the page images (stored, not compressed: they are already compressed pictures).
+
+const CRC = (() => {
+  const t = new Uint32Array(256)
+  for (let n = 0; n < 256; n++) {
+    let c = n
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+    t[n] = c >>> 0
+  }
+  return t
+})()
+function crc32(buf: Buffer): number {
+  let c = 0xffffffff
+  for (let i = 0; i < buf.length; i++) c = CRC[(c ^ buf[i]) & 0xff] ^ (c >>> 8)
+  return (c ^ 0xffffffff) >>> 0
+}
+
+function zipStore(entries: { name: string; data: Buffer }[]): Buffer {
+  const parts: Buffer[] = []
+  const central: Buffer[] = []
+  let offset = 0
+  for (const e of entries) {
+    const name = Buffer.from(e.name, 'utf8')
+    const crc = crc32(e.data)
+    const local = Buffer.alloc(30)
+    local.writeUInt32LE(0x04034b50, 0)
+    local.writeUInt16LE(20, 4)
+    local.writeUInt16LE(0x0800, 6) // names are UTF-8
+    local.writeUInt16LE(0, 8) // stored
+    local.writeUInt32LE(crc, 14)
+    local.writeUInt32LE(e.data.length, 18)
+    local.writeUInt32LE(e.data.length, 22)
+    local.writeUInt16LE(name.length, 26)
+    parts.push(local, name, e.data)
+    const c = Buffer.alloc(46)
+    c.writeUInt32LE(0x02014b50, 0)
+    c.writeUInt16LE(20, 4)
+    c.writeUInt16LE(20, 6)
+    c.writeUInt16LE(0x0800, 8)
+    c.writeUInt32LE(crc, 16)
+    c.writeUInt32LE(e.data.length, 20)
+    c.writeUInt32LE(e.data.length, 24)
+    c.writeUInt16LE(name.length, 28)
+    c.writeUInt32LE(offset, 42)
+    central.push(c, name)
+    offset += 30 + name.length + e.data.length
+  }
+  const cdSize = central.reduce((s, b) => s + b.length, 0)
+  const end = Buffer.alloc(22)
+  end.writeUInt32LE(0x06054b50, 0)
+  end.writeUInt16LE(entries.length, 8)
+  end.writeUInt16LE(entries.length, 10)
+  end.writeUInt32LE(cdSize, 12)
+  end.writeUInt32LE(offset, 16)
+  return Buffer.concat([...parts, ...central, end])
+}
+
+const safeName = (s: string): string => s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 120) || 'chapter'
+
+/** Writes one .cbz per finished chapter into the folder. Returns how many were written and the folder's files. */
+export async function exportCbz(ids: string[], folder: string): Promise<{ written: number; skipped: number }> {
+  const all = load()
+  let written = 0
+  let skipped = 0
+  for (const id of ids) {
+    const i = all[id]
+    if (!i || i.status !== 'done' || i.files.length === 0) {
+      skipped++
+      continue
+    }
+    try {
+      const dir = join(downloadsRoot(), i.dir)
+      const present = new Set(await readdir(dir))
+      const entries: { name: string; data: Buffer }[] = []
+      for (const f of i.files) if (f && present.has(f)) entries.push({ name: f, data: await readFile(join(dir, f)) })
+      if (entries.length === 0) {
+        skipped++
+        continue
+      }
+      let out = join(folder, safeName(i.seriesTitle + ' - ' + i.chapterTitle) + '.cbz')
+      for (let n = 2; existsSync(out); n++) out = join(folder, safeName(i.seriesTitle + ' - ' + i.chapterTitle) + ' (' + n + ').cbz')
+      await writeFile(out, zipStore(entries))
+      written++
+    } catch {
+      skipped++
+    }
+    await new Promise((r) => setImmediate(r)) // let the app breathe between chapters
+  }
+  return { written, skipped }
 }
 
 export function setDownloadEmitter(fn: (item: DownloadItem) => void): void {
@@ -178,7 +330,7 @@ export async function removeDownloads(ids: string[]): Promise<void> {
 
 async function pump(): Promise<void> {
   for (;;) {
-    if (active.size >= getConcurrency()) return
+    if (isPaused() || active.size >= getConcurrency()) return
     const next = listDownloads().find((i) => i.status === 'queued' && !active.has(i.id))
     if (!next) return
     active.add(next.id)
@@ -237,7 +389,7 @@ async function run(item: DownloadItem): Promise<void> {
       }
     }
     if (pages.length === 0) throw new Error(lastErr)
-    if (cancelled.has(item.id)) throw new Error('Cancelled')
+    if (cancelled.has(item.id) || paused) throw new Error(paused && !cancelled.has(item.id) ? 'Paused' : 'Cancelled')
 
     mkdirSync(dir, { recursive: true })
     update(item, { total: pages.length })
@@ -250,7 +402,7 @@ async function run(item: DownloadItem): Promise<void> {
     const worker = async (): Promise<void> => {
       for (;;) {
         const idx = next++
-        if (idx >= pages.length || cancelled.has(item.id)) return
+        if (idx >= pages.length || cancelled.has(item.id) || paused) return
         let ok = false
         for (let attempt = 0; attempt < 3 && !ok; attempt++) {
           try {
@@ -271,10 +423,15 @@ async function run(item: DownloadItem): Promise<void> {
     }
     await Promise.all([worker(), worker(), worker()])
     if (cancelled.has(item.id)) throw new Error('Cancelled')
+    if (paused) throw new Error('Paused')
     if (failed > 0) throw new Error(`${failed} of ${pages.length} pages failed to download (${lastImgErr})`)
     update(item, { status: 'done', files, done: pages.length })
   } catch (e) {
     if (!load()[item.id]) return // removed while running
+    if (e instanceof Error && e.message === 'Paused') {
+      update(item, { status: 'queued', done: 0, total: 0, files: [], bytes: 0, error: undefined }) // waits in the queue until you resume
+      return
+    }
     update(item, { status: 'error', error: e instanceof Error ? e.message : String(e) })
   } finally {
     cancelled.delete(item.id)

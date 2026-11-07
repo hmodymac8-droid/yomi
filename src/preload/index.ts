@@ -37,6 +37,11 @@ const api = {
   downloadGetConcurrency: () => ipcRenderer.invoke('download-get-concurrency'),
   downloadSetConcurrency: (n: number) => ipcRenderer.invoke('download-set-concurrency', n),
   downloadRemoveMany: (ids: string[]) => ipcRenderer.invoke('download-remove-many', ids),
+  downloadGetPaused: () => ipcRenderer.invoke('download-get-paused'),
+  downloadSetPaused: (on: boolean) => ipcRenderer.invoke('download-set-paused', on),
+  offlineGet: () => ipcRenderer.invoke('offline-get'),
+  offlineSet: (on: boolean) => ipcRenderer.invoke('offline-set', on),
+  downloadExportCbz: (ids: string[]) => ipcRenderer.invoke('download-export-cbz', ids),
   downloadRemove: (id: string) => ipcRenderer.invoke('dl-remove', id),
   onDownload: (cb: (i: unknown) => void) => {
     const h = (_e: unknown, i: unknown): void => cb(i)
