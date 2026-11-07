@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { isUnreadable, readJson, writeAtomic } from './safefile'
 
 /**
  * Per site and task, remember whether plain HTTP + HTML parsing gives the same answer as the
@@ -18,12 +18,8 @@ const file = (): string => join(app.getPath('userData'), 'hostmode.json')
 const VERDICT_VERSION = 3
 
 function load(): Record<string, Mode> {
-  if (data) return data
-  try {
-    if (existsSync(file())) data = JSON.parse(readFileSync(file(), 'utf8'))
-  } catch {
-    data = null
-  }
+  if (data && !isUnreadable(file())) return data
+  data = readJson<Record<string, Mode>>(file(), data ? 1 : 8) ?? data
   data ??= {}
   const rec = data as unknown as Record<string, unknown>
   if (rec['__v'] !== VERDICT_VERSION) {
@@ -46,7 +42,7 @@ export function flushModes(): void {
   timer = undefined
   if (!data) return
   try {
-    writeFileSync(file(), JSON.stringify(data))
+    writeAtomic(file(), JSON.stringify(data))
   } catch {
     /* not critical */
   }

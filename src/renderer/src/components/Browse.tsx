@@ -290,6 +290,21 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
     refreshSources()
   }, [refreshSources])
 
+  // Right after an install or update the data files can be busy for a moment: if the site list comes back empty,
+  // ask again every 2 s for half a minute, so your library shows up by itself.
+  const retried = useRef(0)
+  useEffect(() => {
+    if (sources.length > 0 || retried.current >= 15) return
+    const t = setTimeout(() => {
+      retried.current++
+      void refreshSources()
+      void runSearch()
+      window.api.progressRecent(12).then(setRecent)
+      window.api.followList().then(setFollows)
+    }, 2000)
+    return () => clearTimeout(t)
+  }, [sources, refreshSources, runSearch])
+
   // Reload "Continue reading" and "New chapters" every time we come back to this screen.
   useEffect(() => {
     if (!active) return

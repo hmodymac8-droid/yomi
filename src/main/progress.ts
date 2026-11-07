@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
 import type { ProgressPatch, ProgressRecord } from '../preload/index.d'
+import { isUnreadable, readJson, writeAtomic } from './safefile'
 
 let data: Record<string, ProgressRecord> | null = null
 let timer: NodeJS.Timeout | undefined
@@ -9,12 +9,8 @@ let timer: NodeJS.Timeout | undefined
 const file = (): string => join(app.getPath('userData'), 'progress.json')
 
 function load(): Record<string, ProgressRecord> {
-  if (data) return data
-  try {
-    if (existsSync(file())) data = JSON.parse(readFileSync(file(), 'utf8'))
-  } catch {
-    data = null
-  }
+  if (data && !isUnreadable(file())) return data
+  data = readJson<Record<string, ProgressRecord>>(file(), data ? 1 : 8) ?? data
   return (data ??= {})
 }
 
@@ -23,7 +19,7 @@ export function flushProgress(): void {
   timer = undefined
   if (!data) return
   try {
-    writeFileSync(file(), JSON.stringify(data))
+    writeAtomic(file(), JSON.stringify(data))
   } catch (e) {
     console.error('progress save failed', e)
   }

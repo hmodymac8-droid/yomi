@@ -921,6 +921,16 @@ app.whenReady().then(async () => {
   }
 
   // Dev helper: MR_HEALTHTEST=<site url> adds the site, runs the Sites "Re-check" on it and prints the result.
+  // Dev helper: MR_LOCKTEST=1 reads the catalog while another program holds it busy, then again a bit later.
+  if (process.env['MR_LOCKTEST']) {
+    void (async () => {
+      const t0 = Date.now()
+      console.log('LOCK first ' + listSources().length + ' sites after ' + (Date.now() - t0) + ' ms')
+      await new Promise((r) => setTimeout(r, 12000))
+      console.log('LOCK later ' + listSources().length + ' sites')
+    })().finally(() => app.quit())
+    return
+  }
   // Dev helper: MR_CHECKALL=1 runs the full site check (titles, chapter list, pages, image) on every site in the catalog.
   if (process.env['MR_CHECKALL']) {
     void (async () => {
@@ -1521,7 +1531,7 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_GENRETEST'] || process.env['MR_CHECKALL'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_GENRETEST'] || process.env['MR_CHECKALL'] || process.env['MR_LOCKTEST'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

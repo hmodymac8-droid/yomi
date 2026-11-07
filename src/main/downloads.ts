@@ -1,9 +1,9 @@
 import { app, session } from 'electron'
 import { join } from 'path'
 import { createHash } from 'crypto'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, rmSync } from 'fs'
 import { readdir, rm, writeFile } from 'fs/promises'
-import { readJson, writeAtomic } from './safefile'
+import { isUnreadable, readJson, writeAtomic } from './safefile'
 import { readFile } from 'fs/promises'
 import type { SeriesDetail } from '../preload/index.d'
 import type { DownloadItem, DownloadRequest } from '../preload/index.d'
@@ -30,8 +30,8 @@ function loadSettings(): void {
   if (concurrency !== null) return
   let n = 3
   try {
-    if (existsSync(settingsFile())) {
-      const j = JSON.parse(readFileSync(settingsFile(), 'utf8'))
+    const j = readJson<{ concurrency?: number; paused?: boolean; offline?: boolean }>(settingsFile())
+    if (j) {
       n = Number(j.concurrency)
       paused = !!j.paused
       offline = !!j.offline
@@ -44,7 +44,7 @@ function loadSettings(): void {
 
 function saveSettings(): void {
   try {
-    writeFileSync(settingsFile(), JSON.stringify({ concurrency, paused, offline }))
+    writeAtomic(settingsFile(), JSON.stringify({ concurrency, paused, offline }))
   } catch {
     /* not critical */
   }
@@ -201,9 +201,8 @@ export function setDownloadEmitter(fn: (item: DownloadItem) => void): void {
 }
 
 function load(): Record<string, DownloadItem> {
-  if (items) return items
-  items = readJson<Record<string, DownloadItem>>(indexFile())
-  items ??= {}
+  if (items && !isUnreadable(indexFile())) return items
+  items = readJson<Record<string, DownloadItem>>(indexFile(), items ? 1 : 8) ?? items ?? {}
   // Anything that was mid-download when the app closed goes back in the queue.
   for (const i of Object.values(items)) if (i.status === 'downloading') i.status = 'queued'
   return items

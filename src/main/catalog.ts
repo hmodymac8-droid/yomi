@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
 import type {
   CrawlProgress,
   EnrichedEntry,
@@ -15,7 +14,7 @@ import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
 import { canonGenres, dataChapters, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
 import { readSitemapFile } from './sitemap'
-import { readJson, writeAtomic } from './safefile'
+import { isUnreadable, readJson, writeAtomic } from './safefile'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
@@ -51,9 +50,11 @@ const crawling = new Map<string, { cancel: boolean }>()
 const storePath = (): string => join(app.getPath('userData'), 'catalog.json')
 
 function load(): Store {
-  if (store) return store
-  store = readJson<Store>(storePath())
-  if (!store) store = { sources: [], series: {}, scan: {} }
+  if (store && !isUnreadable(storePath())) return store
+  const fresh = readJson<Store>(storePath(), store ? 1 : 8)
+  if (!fresh && store) return store // still busy: keep the empty stand-in (never saved) and try again on the next use
+  store = fresh ?? { sources: [], series: {}, scan: {} }
+  if (fresh) lastSearch = null
   store.scan ??= {} // catalogs saved by older versions have no scan state
   pruneForeignEntries(store)
   // Sites made earlier only to hold an added title (no scan, no sitemap) are marked as such
@@ -983,12 +984,9 @@ let metaVersion = 0
 let metaTimer: NodeJS.Timeout | undefined
 const metaPath = (): string => join(app.getPath('userData'), 'series-meta.json')
 function loadMeta(): Record<string, SeriesMeta> {
-  if (metaStore) return metaStore
-  try {
-    metaStore = existsSync(metaPath()) ? JSON.parse(readFileSync(metaPath(), 'utf8')) : {}
-  } catch {
-    metaStore = {}
-  }
+  if (metaStore && !isUnreadable(metaPath())) return metaStore
+  metaStore = readJson<Record<string, SeriesMeta>>(metaPath(), metaStore ? 1 : 8) ?? metaStore ?? {}
+  metaVersion++
   for (const m of Object.values(metaStore!)) if (m.genres) m.genres = canonGenres(m.genres)
   return metaStore!
 }
@@ -1003,7 +1001,7 @@ function rememberMeta(url: string, d: SeriesMeta): void {
   if (metaTimer) clearTimeout(metaTimer)
   metaTimer = setTimeout(() => {
     try {
-      writeFileSync(metaPath(), JSON.stringify(m))
+      writeAtomic(metaPath(), JSON.stringify(m))
     } catch {
       /* not critical */
     }
@@ -1650,12 +1648,8 @@ const seriesCachePath = (): string => join(app.getPath('userData'), 'series-cach
 const SERIES_CACHE_VERSION = 7
 
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
-  if (seriesCache) return seriesCache
-  try {
-    if (existsSync(seriesCachePath())) seriesCache = JSON.parse(readFileSync(seriesCachePath(), 'utf8'))
-  } catch {
-    seriesCache = null
-  }
+  if (seriesCache && !isUnreadable(seriesCachePath())) return seriesCache
+  seriesCache = readJson<Record<string, SeriesCacheEntry>>(seriesCachePath(), seriesCache ? 1 : 8) ?? seriesCache
   seriesCache ??= {}
   const rec = seriesCache as unknown as Record<string, unknown>
   if (rec['__v'] !== SERIES_CACHE_VERSION) {
@@ -1672,7 +1666,7 @@ export function flushSeriesCache(): void {
   seriesTimer = undefined
   if (!seriesCache) return
   try {
-    writeFileSync(seriesCachePath(), JSON.stringify(seriesCache))
+    writeAtomic(seriesCachePath(), JSON.stringify(seriesCache))
   } catch {
     /* not critical */
   }

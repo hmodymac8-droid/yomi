@@ -1,6 +1,5 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
 import * as cheerio from 'cheerio'
 import { fetchHtml } from './http'
 import { robotsAllows } from './robots'
@@ -10,6 +9,7 @@ import { canonGenre, knownGenre, parseSeriesList, type SeriesType } from './stat
 import type { SourceDef } from '../preload/index.d'
 import { catalogUrls, getSource, listSources } from './catalog'
 import { isOffline } from './downloads'
+import { isUnreadable, readJson, writeAtomic } from './safefile'
 
 /*
  * Genres for every title, without opening every title: most sites have a page per genre ("/genre/action/") that
@@ -37,17 +37,15 @@ let lookup: Map<string, { g?: string[]; t?: SeriesType }> | null = null
 const indexPath = (): string => join(app.getPath('userData'), 'genre-index.json')
 
 function loadIndex(): Record<string, SiteIndex> {
-  if (index) return index
-  try {
-    index = existsSync(indexPath()) ? JSON.parse(readFileSync(indexPath(), 'utf8')) : {}
-  } catch {
-    index = {}
-  }
+  if (index && !isUnreadable(indexPath())) return index
+  const was = index
+  index = readJson<Record<string, SiteIndex>>(indexPath(), index ? 1 : 8) ?? index ?? {}
+  if (index !== was) lookup = null
   return index!
 }
 function saveIndex(): void {
   try {
-    writeFileSync(indexPath(), JSON.stringify(loadIndex()))
+    writeAtomic(indexPath(), JSON.stringify(loadIndex()))
   } catch {
     /* not critical */
   }

@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
 import type { SiteHealth, HealthCheck } from '../preload/index.d'
+import { isUnreadable, readJson, writeAtomic } from './safefile'
 
 /**
  * What we know about how each site is doing: the outcome of your last 20 series opens, and the result of the
@@ -19,12 +19,8 @@ let timer: NodeJS.Timeout | undefined
 const file = (): string => join(app.getPath('userData'), 'site-health.json')
 
 function load(): Record<string, Entry> {
-  if (data) return data
-  try {
-    if (existsSync(file())) data = JSON.parse(readFileSync(file(), 'utf8'))
-  } catch {
-    data = null
-  }
+  if (data && !isUnreadable(file())) return data
+  data = readJson<Record<string, Entry>>(file(), data ? 1 : 8) ?? data
   data ??= {}
   return data
 }
@@ -34,7 +30,7 @@ export function flushHealth(): void {
   timer = undefined
   if (!data) return
   try {
-    writeFileSync(file(), JSON.stringify(data))
+    writeAtomic(file(), JSON.stringify(data))
   } catch {
     /* not critical */
   }

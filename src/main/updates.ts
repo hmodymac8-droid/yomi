@@ -1,10 +1,10 @@
 import { app, BrowserWindow, Notification } from 'electron'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
 import type { DownloadRequest, FollowCategory, FollowInfo, FollowMeta, FollowRecord, NewChapter, UpdateStatus } from '../preload/index.d'
 import { getSeries, getSeriesCached, getSource, mergeNewest, openSeries } from './catalog'
 import { enqueueDownloads } from './downloads'
 import { getProgress, recentProgress } from './progress'
+import { isUnreadable, readJson, writeAtomic } from './safefile'
 
 interface State {
   follows: Record<string, FollowRecord>
@@ -21,12 +21,8 @@ const file = (): string => join(app.getPath('userData'), 'updates.json')
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 function load(): State {
-  if (state) return state
-  try {
-    if (existsSync(file())) state = JSON.parse(readFileSync(file(), 'utf8')) as State
-  } catch {
-    state = null
-  }
+  if (state && !isUnreadable(file())) return state
+  state = readJson<State>(file(), state ? 1 : 8) ?? state
   return (state ??= { follows: {}, autoDownload: true, lastChecked: 0 })
 }
 
@@ -40,7 +36,7 @@ export function flushUpdates(): void {
   saveTimer = undefined
   if (!state) return
   try {
-    writeFileSync(file(), JSON.stringify(state))
+    writeAtomic(file(), JSON.stringify(state))
   } catch (e) {
     console.error('updates save failed', e)
   }
