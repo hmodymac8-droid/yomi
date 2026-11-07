@@ -489,3 +489,10 @@ select { cursor: pointer; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { border: 1px solid var(--border); background: var(--paper); color: var(--muted-foreground); font-size: 10px; padding: 4px 10px; border-radius: 4px; }
 .info .tags { margin-bottom: 14px; }
+
+/* All / Manga / Manhwa / Manhua */
+.kindtabs { display: flex; border-bottom: 1px solid var(--border); margin-right: 8px; }
+.kindtabs button { padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--muted-foreground); font-size: 12px; font-weight: 500; transition: color 0.3s; }
+.kindtabs button:hover { color: var(--foreground); }
+.kindtabs button span { margin-left: 5px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.kindtabs button.on { border-bottom-color: var(--primary); color: var(--primary-text); }

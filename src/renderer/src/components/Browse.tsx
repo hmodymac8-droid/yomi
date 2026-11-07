@@ -67,6 +67,9 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
     }
   }
   const [sort, setSort] = useState<'site' | 'az'>('site')
+  // All / Manga / Manhwa / Manhua: only titles whose type a series page has stated are in the three type tabs
+  const [kind, setKind] = useState<'' | 'manga' | 'manhwa' | 'manhua'>('')
+  const [counts, setCounts] = useState<{ manga: number; manhwa: number; manhua: number } | null>(null)
   const [sources, setSources] = useState<SourceInfo[]>([])
   // The sites actually searched (a site that was removed can't stay ticked). Empty = all of them.
   const sourceIds = picked ? picked.filter((id) => sources.some((s) => s.id === id)) : []
@@ -117,17 +120,18 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
     const myGen = ++gen.current
     let res: Awaited<ReturnType<typeof window.api.search>>
     try {
-      res = await window.api.search(q, sourceKey ? sourceKey.split(',') : [], sort, page * PAGE, PAGE)
+      res = await window.api.search(q, sourceKey ? sourceKey.split(',') : [], sort, page * PAGE, PAGE, kind || undefined)
     } catch {
       return // a failed search leaves the grid as it is; the next one tries again
     }
     if (myGen !== gen.current) return // replaced while we waited
     setTotal(res.total)
     setHits(res.hits)
+    setCounts(res.counts ?? null)
     // the list got shorter (a site was removed, a filter changed): don't sit on a page that no longer exists
     const last = Math.max(0, Math.ceil(res.total / PAGE) - 1)
     if (page > last) setPage(last)
-  }, [q, sourceKey, sort, page])
+  }, [q, sourceKey, sort, page, kind])
 
   const goPage = (n: number): void => {
     const target = Math.min(Math.max(0, n), pages - 1)
@@ -140,7 +144,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   // A new query / site / sort starts again from page 1.
   useEffect(() => {
     setPage(0)
-  }, [q, sourceKey, sort])
+  }, [q, sourceKey, sort, kind])
 
   // Mouse wheel past the bottom of the page: keep scrolling and the next page opens. A short pause after reaching
   // the bottom keeps the momentum of getting there from flipping the page by accident.
@@ -665,6 +669,14 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
               <h2>{q.trim() ? `Results for “${q.trim()}”` : 'All titles'}</h2>
             </div>
             <div className="secact">
+              <div className="kindtabs">
+                {(['', 'manga', 'manhwa', 'manhua'] as const).map((k) => (
+                  <button key={k || 'all'} className={kind === k ? 'on' : ''} onClick={() => setKind(k)} title={k ? `Titles whose page says they are ${k} (more appear as series are opened)` : 'Every title'}>
+                    {k ? k.charAt(0).toUpperCase() + k.slice(1) : 'All'}
+                    {k && counts ? <span>{counts[k].toLocaleString()}</span> : null}
+                  </button>
+                ))}
+              </div>
               <div className="picker">
                 <button className="pickbtn" onClick={() => setPickerOpen((o) => !o)} title="Choose which sites to search">
                   {sourceIds.length === 0 || sourceIds.length === sources.length

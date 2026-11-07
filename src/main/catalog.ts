@@ -13,7 +13,7 @@ import type {
 } from '../preload/index.d'
 import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
-import { parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover } from './staticParse'
+import { parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
 import { readSitemapFile } from './sitemap'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
@@ -849,11 +849,16 @@ function toHit(g: Grp): SearchHit {
 }
 
 /** `sourceIds` are the sites to search; an empty list means all of them. */
-export function search(q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number): SearchResult {
-  const sig = `${catalogVersion}|${q}|${sourceIds.join(',')}|${sort}`
-  if (lastSearch && lastSearch.sig === sig) {
-    return { total: lastSearch.groups.length, hits: lastSearch.groups.slice(offset, offset + limit).map(toHit) }
-  }
+export function search(
+  q: string,
+  sourceIds: string[],
+  sort: 'site' | 'az',
+  offset: number,
+  limit: number,
+  kind?: SeriesType
+): SearchResult {
+  const sig = `${catalogVersion}|${metaVersion}|${q}|${sourceIds.join(',')}|${sort}`
+  if (lastSearch && lastSearch.sig === sig) return pick(lastSearch.groups, kind, offset, limit)
   const s = load()
   const tokens = norm(q).split(' ').filter(Boolean)
   const only = sourceIds.length > 0 ? new Set(sourceIds) : null
@@ -894,7 +899,84 @@ export function search(q: string, sourceIds: string[], sort: 'site' | 'az', offs
     })
   }
   lastSearch = { sig, groups }
-  return { total: groups.length, hits: groups.slice(offset, offset + limit).map(toHit) }
+  return pick(groups, kind, offset, limit)
+}
+
+// ---- type / genres / status of series, as their pages stated them (kept apart from the chapter-list cache) ----
+let metaStore: Record<string, SeriesMeta> | null = null
+let metaVersion = 0
+let metaTimer: NodeJS.Timeout | undefined
+const metaPath = (): string => join(app.getPath('userData'), 'series-meta.json')
+function loadMeta(): Record<string, SeriesMeta> {
+  if (metaStore) return metaStore
+  try {
+    metaStore = existsSync(metaPath()) ? JSON.parse(readFileSync(metaPath(), 'utf8')) : {}
+  } catch {
+    metaStore = {}
+  }
+  return metaStore!
+}
+function rememberMeta(url: string, d: SeriesMeta): void {
+  if (!d.type && !d.genres && !d.status) return
+  const m = loadMeta()
+  const prev = m[url]
+  const next: SeriesMeta = { type: d.type ?? prev?.type, genres: d.genres ?? prev?.genres, status: d.status ?? prev?.status }
+  if (JSON.stringify(prev) === JSON.stringify(next)) return
+  m[url] = next
+  metaVersion++
+  if (metaTimer) clearTimeout(metaTimer)
+  metaTimer = setTimeout(() => {
+    try {
+      writeFileSync(metaPath(), JSON.stringify(m))
+    } catch {
+      /* not critical */
+    }
+  }, 1500)
+}
+/** A saved series with what its page said about it last time (lists saved before this was read have none). */
+function withMeta(d: SeriesDetail): SeriesDetail {
+  const m = loadMeta()[d.url]
+  return m ? { ...d, type: d.type ?? m.type, genres: d.genres ?? m.genres, status: d.status ?? m.status } : d
+}
+export function seriesMeta(url: string): SeriesMeta | undefined {
+  return loadMeta()[url]
+}
+/** A site whose own name says what it hosts. Mixed sites get no default: an unknown type stays unknown. */
+const hostKind = new Map<string, SeriesType | null>()
+function siteKind(src: SourceDef): SeriesType | null {
+  let k = hostKind.get(src.id)
+  if (k === undefined) {
+    const host = (() => {
+      try {
+        return new URL(src.baseUrl).hostname
+      } catch {
+        return ''
+      }
+    })()
+    k = /manhwa/i.test(host) ? 'manhwa' : /manhua/i.test(host) ? 'manhua' : null
+    hostKind.set(src.id, k)
+  }
+  return k
+}
+function kindOf(g: Grp): SeriesType | null {
+  const m = loadMeta()
+  for (const x of [{ e: g.e, src: g.src }, ...(g.more ?? [])]) {
+    const t = m[x.e.url]?.type ?? siteKind(x.src)
+    if (t) return t
+  }
+  return null
+}
+const kindMemo = new WeakMap<Grp[], { v: number; kinds: (SeriesType | null)[] }>()
+function pick(groups: Grp[], kind: SeriesType | undefined, offset: number, limit: number): SearchResult {
+  let memo = kindMemo.get(groups)
+  if (!memo || memo.v !== metaVersion) {
+    memo = { v: metaVersion, kinds: groups.map(kindOf) }
+    kindMemo.set(groups, memo)
+  }
+  const counts = { manga: 0, manhwa: 0, manhua: 0 }
+  for (const k of memo.kinds) if (k) counts[k]++
+  const list = kind ? groups.filter((_, i) => memo!.kinds[i] === kind) : groups
+  return { total: list.length, hits: list.slice(offset, offset + limit).map(toHit), counts }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1376,7 +1458,9 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     }
     const chapters = finalizeChapters([...acc.values()], slug)
     const short = declaredEnd >= 10 && chapters.length < declaredEnd * 0.9
-    return { ...out, chapters, incomplete: looksIncomplete(chapters) || short || undefined }
+    // type / genres / status, from the page as it is now (read once, while the page is open anyway)
+    const html: string = await win.webContents.executeJavaScript('document.documentElement.outerHTML.slice(0, 1500000)').catch(() => '')
+    return { ...out, ...parseMeta(html, url), chapters, incomplete: looksIncomplete(chapters) || short || undefined }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }
@@ -1418,7 +1502,7 @@ async function staticSeries(src: SourceDef, url: string, slug: string): Promise<
     const chapters = finalizeChapters(p.chapters, slug)
     // The page handed over only a slice (the rest is added by JavaScript after load): not a usable answer.
     if (looksIncomplete(chapters)) return null
-    return { url, title: p.title, cover: p.cover, description: p.description, chapters }
+    return { url, title: p.title, cover: p.cover, description: p.description, ...parseMeta(r.html, url), chapters }
   } catch {
     return null
   }
@@ -1482,9 +1566,13 @@ export function mergeNewest(url: string, newest: SeriesDetail): SeriesDetail | n
     ...c.detail,
     chapters: fresh.length > 0 ? sortChapters([...fresh, ...c.detail.chapters]) : c.detail.chapters,
     description: c.detail.description || newest.description,
+    type: newest.type ?? c.detail.type,
+    genres: newest.genres ?? c.detail.genres,
+    status: newest.status ?? c.detail.status,
     cover: c.detail.cover || newest.cover
   }
   c.checkedAt = Date.now()
+  rememberMeta(url, c.detail)
   if (seriesTimer) clearTimeout(seriesTimer)
   seriesTimer = setTimeout(flushSeriesCache, 1500)
   return c.detail
@@ -1516,12 +1604,13 @@ export async function openSeries(
   const c = loadSeriesCache()[url]
   const saved = c && c.detail.chapters.length > 0 ? c : null
   if (mode === 'full' || !saved) return getSeries(sourceId, url)
-  if (mode === 'auto' && Date.now() - (saved.checkedAt ?? saved.at) < CHECK_EVERY) return saved.detail
+  if (mode === 'auto' && Date.now() - (saved.checkedAt ?? saved.at) < CHECK_EVERY) return withMeta(saved.detail)
   const newest = await getSeries(sourceId, url, true)
-  return mergeNewest(url, newest) ?? saved.detail
+  return withMeta(mergeNewest(url, newest) ?? saved.detail)
 }
 
 function cacheSeries(d: SeriesDetail): void {
+  rememberMeta(d.url, d)
   const c = loadSeriesCache()
   c[d.url] = { at: Date.now(), checkedAt: Date.now(), detail: d }
   const keys = Object.keys(c)
@@ -1535,7 +1624,7 @@ function cacheSeries(d: SeriesDetail): void {
 
 export function getSeriesCached(url: string): SeriesDetail | null {
   const d = loadSeriesCache()[url]?.detail
-  return d && d.chapters.length > 0 ? d : null // (older versions could have saved an empty list)
+  return d && d.chapters.length > 0 ? withMeta(d) : null // (older versions could have saved an empty list)
 }
 
 /**

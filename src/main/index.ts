@@ -313,8 +313,8 @@ app.whenReady().then(async () => {
   })
   ipcMain.handle('crawl', (_e, id: string) => void crawlSource(id, emit))
   ipcMain.handle('cancel-crawl', (_e, id: string) => cancelCrawl(id))
-  ipcMain.handle('search', (_e, q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number) =>
-    search(q, sourceIds, sort, offset, limit)
+  ipcMain.handle('search', (_e, q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number, kind?: 'manga' | 'manhwa' | 'manhua') =>
+    search(q, sourceIds, sort, offset, limit, kind)
   )
   // Nothing the screens wait for may hang forever: give up with a clear message instead.
   const withTimeout = <T>(p: Promise<T>, ms: number, what: string): Promise<T> =>
@@ -1251,7 +1251,12 @@ app.whenReady().then(async () => {
         await shot('06-series-page')
         console.log('chapter', await click('.chapter'))
         await wait(10000)
+        await js("document.querySelector('.readerview').dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientY: 10 }))")
+        await wait(500)
         await shot('07-reader')
+        await js("(() => { const r = document.querySelector('.reader'); r.scrollTop = r.scrollHeight })()")
+        await wait(2500)
+        await shot('07b-reader-end')
         if (process.env['MR_SHOTS_LIGHT']) {
           await js("localStorage.setItem('yomi-theme', 'light')")
           await fresh()

@@ -272,3 +272,92 @@ export function parseChapterImages(html: string, pageUrl: string): { title: stri
   }
   return { title: $('title').first().text().trim(), pages }
 }
+
+export type SeriesType = 'manga' | 'manhwa' | 'manhua'
+export type SeriesStatus = 'ongoing' | 'completed' | 'hiatus' | 'cancelled'
+export interface SeriesMeta {
+  type?: SeriesType
+  genres?: string[]
+  status?: SeriesStatus
+}
+
+const TYPE_WORD: Record<string, SeriesType> = { manga: 'manga', manhwa: 'manhwa', manhua: 'manhua', webtoon: 'manhwa' }
+const STATUS_WORD: Record<string, SeriesStatus> = {
+  ongoing: 'ongoing', 'on going': 'ongoing', releasing: 'ongoing', publishing: 'ongoing',
+  completed: 'completed', complete: 'completed', finished: 'completed', ended: 'completed',
+  hiatus: 'hiatus', 'on hold': 'hiatus', cancelled: 'cancelled', canceled: 'cancelled', dropped: 'cancelled'
+}
+
+/**
+ * What a series page says about itself: its type (manga / manhwa / manhua), genres and status. Only what the page
+ * states is kept, never a guess. Genre menus in the site header list every genre, so header/nav/footer/sidebars
+ * are ignored, and a "genre list" longer than 15 is treated as such a menu and dropped.
+ */
+export function parseMeta(html: string, pageUrl: string): SeriesMeta {
+  if (!html) return {}
+  const $ = cheerio.load(html)
+  const clean = (t: string): string => t.replace(/\s+/g, ' ').replace(/[,;]+$/, '').trim()
+  const ok = (t: string): boolean => t.length >= 2 && t.length <= 30 && !/^\d+$/.test(t) && !/^(genres?|tags?|all|more|\+\d+)$/i.test(t)
+  let genres: string[] = []
+
+  // 1. structured data
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (genres.length) return
+    try {
+      const walk = (v: any): void => {
+        if (!v || typeof v !== 'object' || genres.length) return
+        if (Array.isArray(v)) return v.forEach(walk)
+        const g = v.genre
+        if (g) genres = (Array.isArray(g) ? g : String(g).split(',')).map((x: unknown) => clean(String(x))).filter(ok)
+        for (const k of Object.keys(v)) if (typeof v[k] === 'object') walk(v[k])
+      }
+      walk(JSON.parse($(el).contents().text()))
+    } catch {
+      /* not JSON */
+    }
+  })
+
+  // 2. the page's own genre block, away from menus
+  $('header, nav, footer, aside, [class*="menu"], [class*="dropdown"], [id*="menu"], [class*="sidebar"], [class*="footer"]').remove()
+  if (!genres.length) {
+    const known = $('.genres-content a, .mgen a, .wp-manga-tags-list a, .seriestugenre a, .genres a, .genre a, .tags a, [class*="genre"] a, a[rel="tag"]')
+    genres = known.toArray().map((el) => clean($(el).text())).filter(ok)
+  }
+  // 3. any link to a genre page left in the content
+  if (!genres.length) {
+    genres = $('a[href]')
+      .toArray()
+      .filter((el) => /\/(genres?|tags?|categor(y|ies))\/|[?&]genres?=/i.test($(el).attr('href') ?? ''))
+      .map((el) => clean($(el).text()))
+      .filter(ok)
+  }
+  genres = [...new Map(genres.map((g) => [g.toLowerCase(), g])).values()]
+  if (genres.length > 15) genres = [] // that was a menu of every genre, not this series' genres
+
+  const text = clean($('body').text()).slice(0, 200000)
+  let type: SeriesType | undefined
+  const tm = /\b(?:type|format|comic type)\s*:?\s*(manga|manhwa|manhua|webtoon)\b/i.exec(text)
+  if (tm) type = TYPE_WORD[tm[1].toLowerCase()]
+  // many sites list the type among the genres
+  const typed = genres.filter((g) => TYPE_WORD[g.toLowerCase()])
+  if (!type && typed.length === 1) type = TYPE_WORD[typed[0].toLowerCase()]
+  genres = genres.filter((g) => !TYPE_WORD[g.toLowerCase()])
+  // a site whose own name says what it hosts (manhwatop, manhuatop)
+  if (!type) {
+    try {
+      const host = new URL(pageUrl).hostname
+      if (/manhwa/i.test(host)) type = 'manhwa'
+      else if (/manhua/i.test(host)) type = 'manhua'
+    } catch {
+      /* no host */
+    }
+  }
+  let status: SeriesStatus | undefined
+  const sm = /\bstatus\s*:?\s*(on going|ongoing|releasing|publishing|completed|complete|finished|ended|hiatus|on hold|cancell?ed|dropped)\b/i.exec(text)
+  if (sm) status = STATUS_WORD[sm[1].toLowerCase()]
+  return {
+    ...(type ? { type } : {}),
+    ...(genres.length ? { genres: genres.slice(0, 12) } : {}),
+    ...(status ? { status } : {})
+  }
+}
