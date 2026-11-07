@@ -426,6 +426,17 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
           {sources.reduce((n, x) => n + x.count, 0).toLocaleString()} titles
           {sources.some((x) => x.crawling) && ' · scanning…'}
         </span>
+        <span className="add">
+          <input
+            placeholder="Add a site: paste its URL"
+            value={siteUrl}
+            onChange={(e) => setSiteUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addSite()}
+          />
+          <button onClick={addSite} disabled={adding}>
+            {adding ? 'Detecting…' : 'Add site'}
+          </button>
+        </span>
       </div>
       <div className="sites" style={{ display: sitesOpen || sources.length === 0 ? undefined : 'none' }}>
         {sources.map((s) => {
@@ -453,17 +464,6 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
             </span>
           )
         })}
-        <span className="add">
-          <input
-            placeholder="Add a site: paste its URL"
-            value={siteUrl}
-            onChange={(e) => setSiteUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addSite()}
-          />
-          <button onClick={addSite} disabled={adding}>
-            {adding ? 'Detecting…' : 'Add site'}
-          </button>
-        </span>
       </div>
       {addError && <div className="error small">{addError}</div>}
       {adding && stage && <div className="stage">⏳ {stage}</div>}
