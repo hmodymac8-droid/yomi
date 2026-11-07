@@ -1279,6 +1279,23 @@ app.whenReady().then(async () => {
         win.center()
         await wait(10000)
         await shot('01-main-page')
+        if (process.env['MR_README']) {
+          // README pictures: a Featured series whose text is in English, then that series' page
+          const n = Number(await js("document.querySelectorAll('.flist button').length"))
+          for (let i = 0; i < n; i++) {
+            await js('document.querySelectorAll(".flist button")[' + i + '].click()')
+            await wait(400)
+            const txt = String(await js("(document.querySelector('.fdesc')?.textContent || '') + (document.querySelector('.fbody h2')?.textContent || '')"))
+            if (!/[؀-ۿ぀-ヿ一-鿿가-힯]/.test(txt)) break
+          }
+          await wait(1500)
+          await shot('readme-1-discover')
+          await click('.factions .secondary')
+          await wait(7000)
+          await shot('readme-2-series')
+          app.quit()
+          return
+        }
         console.log('GENRES ' + (await js("[...document.querySelectorAll('.genresel option')].map((o) => o.textContent).join(' | ')")))
         console.log('FIRST ' + (await js("[...document.querySelectorAll('.grid .card .from')].slice(0, 16).map((o) => o.textContent.split(' · ')[0]).join(' | ')")))
         console.log('KINDS ' + (await js("[...document.querySelectorAll('.kindtabs button')].map((o) => o.textContent).join(' | ')")))
