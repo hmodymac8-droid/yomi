@@ -236,6 +236,7 @@ export interface MangaApi {
   downloadRemove: (id: string) => Promise<void>
   /** Deletes several downloads (their files too) at once. */
   downloadRemoveMany: (ids: string[]) => Promise<void>
+  titleAdd: (url: string) => Promise<Result<{ sourceId: string; sourceName: string; url: string; title: string; cover: string; chapters: number; siteIsNew: boolean; already: boolean }>>
   downloadGetPaused: () => Promise<boolean>
   downloadSetPaused: (on: boolean) => Promise<boolean>
   offlineGet: () => Promise<boolean>

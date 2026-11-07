@@ -17,6 +17,7 @@ import { parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover } from './s
 import { readSitemapFile } from './sitemap'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
+import { matchBuiltin } from './sources'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const hostOf = (url: string): string => new URL(url).hostname
@@ -205,6 +206,86 @@ export function debugSaveCost(): { entries: number; bytes: number; stringifyMs: 
 function clearScanState(id: string): void {
   const s = load()
   for (const k of Object.keys(s.scan)) if (k === id || k.startsWith(id + '#')) delete s.scan[k]
+}
+
+const bareHost = (h: string): string => h.replace(/^www\./i, '').toLowerCase()
+
+/**
+ * Adds ONE title from its page address (no scan of the whole site). If the site is already known its entry is used; if
+ * not, the site is added as a "titles only" site (it is never scanned) so only what you paste appears.
+ */
+export async function addTitleByUrl(input: string): Promise<{
+  sourceId: string
+  sourceName: string
+  url: string
+  title: string
+  cover: string
+  chapters: number
+  siteIsNew: boolean
+  already: boolean
+}> {
+  let u: URL
+  try {
+    u = new URL(/^https?:\/\//i.test(input.trim()) ? input.trim() : 'https://' + input.trim())
+  } catch {
+    throw new Error('That does not look like a web address.')
+  }
+  u.hash = ''
+  const s = load()
+  let src = s.sources.find((x) => {
+    try {
+      return bareHost(new URL(x.baseUrl).hostname) === bareHost(u.hostname)
+    } catch {
+      return false
+    }
+  })
+  const siteIsNew = !src
+  if (!src) {
+    const id = bareHost(u.hostname).replace(/[^a-z0-9]+/g, '-')
+    const host = bareHost(u.hostname)
+    const name = host.split('.').slice(0, -1).join('.') || host
+    const segs = u.pathname.split('/').filter(Boolean)
+    const esc = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const seriesRe =
+      segs.length <= 1 ? `^${esc(u.origin)}/[^/?#]+/?$` : `^${esc(u.origin)}/${esc(segs[0])}/${Array(segs.length - 1).fill('[^/?#]+').join('/')}/?$`
+    const builtin = matchBuiltin(u.origin + '/')
+    src = addSource({
+      ...(builtin ?? {
+        id,
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        baseUrl: u.origin + '/',
+        listTemplate: u.origin + '/',
+        seriesRe,
+        chapterRe: '(?:chapter|chap|ch|episode|ep|read)[-_/ ]?\\d'
+      }),
+      id,
+      maxPages: 0, // titles only: this site is never scanned
+      sitemaps: [],
+      sitemapChecked: true
+    }) as SourceDef
+  }
+  const url = u.toString()
+  const d = await getSeries(src.id, url)
+  // page titles often end with the site's name ("Title | Project Suki"): drop that part
+  {
+    const base = bareHost(u.hostname).split('.').slice(0, -1).join('').replace(/[^a-z0-9]/g, '')
+    const m = d.title.match(/^(.+?)\s+[|–—-]\s+([^|–—]{2,40})$/)
+    const tail = m?.[2].toLowerCase().replace(/[^a-z0-9]/g, '') ?? ''
+    if (m && base && tail.length >= 3 && (tail.includes(base) || base.includes(tail))) d.title = m[1].trim()
+  }
+  if (d.chapters.length === 0) throw new Error('No chapters were found at that address. Is it the page of one title (not a chapter or a list)?')
+  const list = (s.series[src.id] ??= [])
+  const old = list.find((e) => e.url === url)
+  const already = !!old
+  if (old) {
+    if (d.title) old.title = d.title
+    if (d.cover) old.cover = d.cover
+    old.slugTitle = false
+  } else {
+    list.push({ sourceId: src.id, url, title: d.title, cover: d.cover })
+  }
+  saveSoon(true)
+  return { sourceId: src.id, sourceName: src.name, url, title: d.title, cover: d.cover, chapters: d.chapters.length, siteIsNew, already }
 }
 
 export function getSource(id: string): SourceDef | undefined {

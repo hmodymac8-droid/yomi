@@ -5,6 +5,7 @@ import Reader from './components/Reader'
 import Downloads from './components/Downloads'
 import Following from './components/Following'
 import Sites from './components/Sites'
+import AddTitle from './components/AddTitle'
 import type { OpenChapter, OpenSeries } from './lib'
 
 type View =
@@ -12,6 +13,7 @@ type View =
   | { name: 'downloads' }
   | { name: 'following' }
   | { name: 'sites' }
+  | { name: 'addtitle' }
   | { name: 'series'; series: OpenSeries }
   | { name: 'reader'; series: OpenSeries; chapter: OpenChapter }
 
@@ -55,6 +57,7 @@ function AppInner(): React.JSX.Element {
           onDownloads={() => setView({ name: 'downloads' })}
           onFollowing={() => setView({ name: 'following' })}
           onSites={() => setView({ name: 'sites' })}
+          onAddTitle={() => setView({ name: 'addtitle' })}
         />
       </div>
       {view.name === 'following' && (
@@ -63,6 +66,11 @@ function AppInner(): React.JSX.Element {
             onBack={() => setView({ name: 'browse' })}
             onOpen={(series) => setView({ name: 'series', series })}
           />
+        </div>
+      )}
+      {view.name === 'addtitle' && (
+        <div className="pane">
+          <AddTitle onBack={() => setView({ name: 'browse' })} onOpen={(series) => setView({ name: 'series', series })} />
         </div>
       )}
       {view.name === 'sites' && (

@@ -11,9 +11,10 @@ interface Props {
   onDownloads: () => void
   onFollowing: () => void
   onSites: () => void
+  onAddTitle: () => void
 }
 
-export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites }: Props): React.JSX.Element {
+export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites, onAddTitle }: Props): React.JSX.Element {
   // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
   const [sitesOpen, setSitesOpen] = useState<boolean>(() => {
     try {
@@ -416,6 +417,7 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
         </button>
         <button onClick={onDownloads}>Downloads</button>
         <button onClick={onSites}>Sites</button>
+        <button onClick={onAddTitle}>Add title</button>
       </div>
 
       <div className="sitesbar">

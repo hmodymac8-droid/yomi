@@ -37,6 +37,7 @@ const api = {
   downloadGetConcurrency: () => ipcRenderer.invoke('download-get-concurrency'),
   downloadSetConcurrency: (n: number) => ipcRenderer.invoke('download-set-concurrency', n),
   downloadRemoveMany: (ids: string[]) => ipcRenderer.invoke('download-remove-many', ids),
+  titleAdd: (url: string) => ipcRenderer.invoke('title-add', url),
   downloadGetPaused: () => ipcRenderer.invoke('download-get-paused'),
   downloadSetPaused: (on: boolean) => ipcRenderer.invoke('download-set-paused', on),
   offlineGet: () => ipcRenderer.invoke('offline-get'),
