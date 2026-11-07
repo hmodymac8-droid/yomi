@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CrawlProgress, FollowInfo, ProgressRecord, SearchHit, SourceInfo, UpdateStatus } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, fallbackCover, proxied, timeAgo } from '../lib'
 import Featured from './Featured'
+import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
 
 const PAGE = 60
@@ -529,6 +530,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
           ))}
         </div>
       )}
+      {shelf === 'all' && <GenreProgress />}
       {shelf === 'all' && (
       <>
       <div className="addsite">

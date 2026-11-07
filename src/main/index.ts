@@ -3,7 +3,7 @@ import { join } from 'path'
 import { mkdirSync, writeFileSync } from 'fs'
 import { fetchHtml } from './http'
 import { startAutoUpdates } from './updater'
-import { discoverGenres, genreProgress, genreScanStatus, scanGenresNow, scanSiteGenres, startGenreScheduler, urlKey } from './genres'
+import { cancelGenreScan, runGenreJob, discoverGenres, genreJobs, genreProgress, genreScanStatus, scanGenresNow, scanSiteGenres, startGenreScheduler, urlKey } from './genres'
 import { optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { closeWarm, ensureSession, hiddenWindow, loadPage, probeLinks, refererHints, warmUp } from './grabber'
@@ -395,6 +395,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('offline-get', () => isOffline())
   ipcMain.handle('genre-status', () => ({ sites: genreScanStatus(), progress: genreProgress() }))
   ipcMain.handle('genre-scan-now', (_e, id: string) => scanGenresNow(id))
+  ipcMain.handle('genre-jobs', () => genreJobs())
   ipcMain.handle('offline-set', (_e, on: boolean) => setOffline(!!on))
   ipcMain.handle('download-export-cbz', async (_e, ids: string[]) => {
     const r = await dialog.showOpenDialog({ title: 'Choose a folder for the .cbz files', properties: ['openDirectory', 'createDirectory'] })
@@ -929,6 +930,23 @@ app.whenReady().then(async () => {
       await new Promise((r) => setTimeout(r, 12000))
       console.log('LOCK later ' + listSources().length + ' sites')
     })().finally(() => app.quit())
+    return
+  }
+  // Dev helper: MR_GENREJOB=<site id>,<seconds> runs that site's real genre job for a while and prints its progress.
+  if (process.env['MR_GENREJOB']) {
+    void (async () => {
+      warmUp()
+      const [id, secs] = process.env['MR_GENREJOB']!.split(',')
+      const src = getSource(id)!
+      const before = catalogUrls(id).length
+      const job = runGenreJob(src)
+      const show = (): void => { const j = genreJobs().find((x) => x.id === id); console.log('JOB ' + JSON.stringify({ ...j, etaMin: j?.etaMs ? Math.round(j.etaMs / 60000) : null, catalog: catalogUrls(id).length, before })) }
+      const timer = setInterval(show, 15000)
+      await Promise.race([job, new Promise((r) => setTimeout(r, Number(secs) * 1000))])
+      cancelGenreScan(id)
+      clearInterval(timer)
+      show()
+    })().finally(() => setTimeout(() => app.quit(), 3000))
     return
   }
   // Dev helper: MR_CHECKALL=1 runs the full site check (titles, chapter list, pages, image) on every site in the catalog.
@@ -1531,7 +1549,7 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_GENRETEST'] || process.env['MR_CHECKALL'] || process.env['MR_LOCKTEST'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_ADDTITLE'] || process.env['MR_PRELOAD'] || process.env['MR_GENRETEST'] || process.env['MR_CHECKALL'] || process.env['MR_GENREJOB'] || process.env['MR_LOCKTEST'] || process.env['MR_DLPAR'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

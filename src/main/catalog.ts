@@ -362,6 +362,29 @@ export function importAdded(list: AddedRec[]): void {
   saveSoon(true)
 }
 
+/**
+ * Adds titles a site lists somewhere other than its main list (its genre pages, for example: Projectsuki's own list
+ * stops at about 300 titles, its genre pages show all of them). Only addresses that look like the site's series pages,
+ * and only ones not already there. Returns how many were new.
+ */
+export function addCatalogEntries(id: string, items: { url: string; title: string; cover: string }[]): number {
+  const s = load()
+  const src = s.sources.find((x) => x.id === id)
+  if (!src) return 0
+  const re = new RegExp(src.seriesRe)
+  const list = (s.series[id] ??= [])
+  const have = new Set(list.map((e) => e.url))
+  let n = 0
+  for (const it of items) {
+    if (!it.url || have.has(it.url) || !re.test(it.url) || !it.title) continue
+    list.push({ sourceId: id, url: it.url, title: fixTitle(it.title), cover: it.cover })
+    have.add(it.url)
+    n++
+  }
+  if (n > 0) saveSoon()
+  return n
+}
+
 /** Every series address the catalog holds for one site. */
 export function catalogUrls(id: string): string[] {
   return (load().series[id] ?? []).map((e) => e.url)

@@ -48,6 +48,7 @@ const api = {
     return () => ipcRenderer.removeListener('update-ready', h)
   },
   genreScanNow: (id: string) => ipcRenderer.invoke('genre-scan-now', id),
+  genreJobs: () => ipcRenderer.invoke('genre-jobs'),
   titleList: () => ipcRenderer.invoke('title-list'),
   titleRemove: (url: string) => ipcRenderer.invoke('title-remove', url),
   titleImport: (list: unknown[]) => ipcRenderer.invoke('title-import', list),

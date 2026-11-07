@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import GenreProgress from './GenreProgress'
 import type { SiteHealth, SourceInfo } from '../../../preload/index.d'
 
 const ago = (t: number): string => {
@@ -97,6 +98,7 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
           </button>
         </div>
       </div>
+      <GenreProgress startOpen />
       {sources.length === 0 && <div className="hint">No sites yet. Add one from the main screen.</div>}
       {rows.map((s) => {
         const h = health[s.id]

@@ -545,3 +545,27 @@ select { cursor: pointer; }
 .fdesc[dir="auto"], .desc[dir="auto"] { text-align: start; }
 
 .nogenre-note { margin: 0 auto 16px; padding: 10px 14px; border: 1px dashed color-mix(in oklab, var(--primary) 40%, transparent); border-radius: 6px; background: color-mix(in oklab, var(--peach-soft) 45%, transparent); color: var(--peach-foreground); font-size: 12px; }
+
+/* background genre reading, shown on Discover and Sites */
+.genreprog { margin: 0 auto 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--paper); overflow: hidden; }
+.gp-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 0; background: transparent; color: var(--muted-foreground); font-size: 12px; text-align: left; }
+.gp-head:hover { background: var(--muted); }
+.gp-title { flex: 1; min-width: 0; }
+.gp-title b { color: var(--foreground); font-weight: 600; }
+.gp-eta { color: var(--primary-text); font-weight: 500; white-space: nowrap; }
+.gp-more { color: var(--muted-foreground); font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; }
+.gp-spin { width: 12px; height: 12px; flex: none; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--primary); animation: gp-spin 1s linear infinite; }
+@keyframes gp-spin { to { transform: rotate(360deg); } }
+.gp-list { border-top: 1px solid var(--border); padding: 8px 16px 12px; }
+.gp-note { margin: 4px 0 10px; font-size: 11px; color: var(--muted-foreground); line-height: 1.6; }
+.gp-row { display: grid; grid-template-columns: 130px 1fr 160px 150px 110px; gap: 12px; align-items: center; padding: 7px 0; border-top: 1px solid var(--border); font-size: 12px; }
+.gp-row:first-of-type { border-top: 0; }
+.gp-name { font-weight: 500; color: var(--foreground); }
+.gp-phase { color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gp-bar { height: 4px; background: var(--muted); overflow: hidden; }
+.gp-bar span { display: block; height: 100%; background: var(--primary); transition: width 0.3s; }
+.gp-row.done .gp-bar span { background: var(--success); }
+.gp-row.paused .gp-phase { color: var(--warning); }
+.gp-row.skipped { opacity: 0.55; }
+.gp-left { color: var(--primary-text); font-size: 11px; text-align: right; white-space: nowrap; }
+.gp-count { color: var(--muted-foreground); font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }

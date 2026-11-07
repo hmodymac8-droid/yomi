@@ -94,6 +94,23 @@ export interface CrawlProgress {
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string }
 
+/** One site's background genre reading, as the progress panel shows it. */
+export interface GenreJob {
+  id: string
+  name: string
+  state: 'waiting' | 'running' | 'done' | 'paused' | 'skipped'
+  phase: string
+  done: number
+  total: number
+  /** milliseconds left at the pace so far (null: not known yet) */
+  etaMs: number | null
+  tagged: number
+  titles: number
+  note?: string
+  /** what is being read right now ("Action, page 120") */
+  detail?: string
+}
+
 export interface SourceInfo extends SourceDef {
   count: number
   crawling: boolean
@@ -258,6 +275,8 @@ export interface MangaApi {
   /** How far the genre scan of each site has got. */
   genreStatus: () => Promise<{ sites: Record<string, { at: number; genres: number; titles: number; note?: string; running?: boolean }>; progress: Record<string, string> }>
   genreScanNow: (id: string) => Promise<boolean>
+  /** The background genre reading, one entry per site (for the progress panel). */
+  genreJobs: () => Promise<GenreJob[]>
   /** A newer Yomi downloaded from GitHub and waiting to be installed (null when there is none). */
   updateStatus: () => Promise<{ version: string } | null>
   /** Restarts Yomi into the downloaded update. */
