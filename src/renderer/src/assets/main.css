@@ -175,3 +175,14 @@ button:disabled { opacity: .5; cursor: default; }
 .readerview .bar { position: absolute; top: 0; left: 0; right: 0; z-index: 10; transition: transform .2s ease, opacity .2s ease; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
 .readerview .bar.hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
 .reader .title { padding-top: 64px; }
+
+/* following shelves */
+.shelftabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 8px; }
+.shelftabs button { padding: 7px 14px; border-radius: 999px; border: 0; background: var(--panel); color: var(--text); cursor: pointer; font-size: 13px; }
+.shelftabs button span { color: var(--muted); margin-left: 4px; }
+.shelftabs button.on { background: var(--accent); color: #fff; }
+.shelftabs button.on span { color: #fff; opacity: .85; }
+.shelftools { display: flex; align-items: center; gap: 14px; margin: 4px 0 12px; }
+.shelftools .search { max-width: 360px; }
+.shelfpick { width: 100%; margin-top: 6px; padding: 5px 8px; font-size: 12px; border-radius: 8px; }
+.newcard.wide { display: flex; flex-direction: column; }

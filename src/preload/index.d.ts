@@ -176,8 +176,12 @@ export interface NewChapter {
   at: number
 }
 
+export type FollowCategory = 'reading' | 'plan' | 'finished' | 'dropped'
+
 export interface FollowRecord extends FollowMeta {
   following: boolean
+  /** Your shelf for this series. Missing means Reading. Finished and Dropped are not checked for new chapters. */
+  category?: FollowCategory
   /** Identities of every chapter seen so far; anything else that shows up is "new". */
   known: string[]
   newChapters: NewChapter[]
@@ -216,6 +220,7 @@ export interface MangaApi {
   followGet: (seriesUrl: string) => Promise<FollowInfo | null>
   followSet: (meta: FollowMeta, following: boolean) => Promise<void>
   followDismiss: (seriesUrl: string) => Promise<void>
+  followCategory: (seriesUrl: string, category: FollowCategory) => Promise<void>
   updatesCheck: () => Promise<void>
   updatesStatus: () => Promise<UpdateStatus>
   updatesSetAutoDownload: (on: boolean) => Promise<void>

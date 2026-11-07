@@ -691,6 +691,8 @@ export function search(q: string, sourceIds: string[], sort: 'site' | 'az', offs
           g.coverE = e
           g.coverSrc = src
         }
+        // the same site listing the title twice is still one place to read it: show each site once
+        if (g.src.id === src.id || (g.more ?? []).some((m) => m.src.id === src.id)) continue
         ;(g.more ??= []).push({ e, src })
       }
     }

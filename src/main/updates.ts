@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Notification } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
-import type { DownloadRequest, FollowInfo, FollowMeta, FollowRecord, NewChapter, UpdateStatus } from '../preload/index.d'
+import type { DownloadRequest, FollowCategory, FollowInfo, FollowMeta, FollowRecord, NewChapter, UpdateStatus } from '../preload/index.d'
 import { getSeries, getSeriesCached, getSource, mergeNewest } from './catalog'
 import { enqueueDownloads } from './downloads'
 import { getProgress } from './progress'
@@ -113,6 +113,15 @@ export function autoFollow(meta: FollowMeta): void {
   setFollow(meta, true)
 }
 
+export function setCategory(seriesUrl: string, category: FollowCategory): void {
+  const rec = load().follows[seriesUrl]
+  if (!rec) return
+  rec.category = category
+  if (category === 'finished' || category === 'dropped') rec.newChapters = [] // nothing to tell you about any more
+  saveSoon()
+  emit()
+}
+
 export function dismissNew(seriesUrl: string): void {
   const rec = load().follows[seriesUrl]
   if (!rec) return
@@ -157,7 +166,8 @@ export async function checkAll(manual: boolean): Promise<void> {
   const found: { rec: FollowRecord; fresh: NewChapter[] }[] = []
   try {
     const s = load()
-    for (const rec of Object.values(s.follows).filter((f) => f.following)) {
+    // (series on your Finished or Dropped shelf are not checked: fewer requests to the sites)
+    for (const rec of Object.values(s.follows).filter((f) => f.following && f.category !== 'finished' && f.category !== 'dropped')) {
       if (!getSource(rec.sourceId)) continue
       try {
         const d = await getSeries(rec.sourceId, rec.seriesUrl, true) // newest chapters only

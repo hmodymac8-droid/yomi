@@ -94,3 +94,7 @@ Following screen by hand (built, never opened). Everything above was verified wi
   Written and typechecked, never tried in the window.
 - Reader top bar floats and auto-hides (hides 2.2 s after it shows, at once when scrolling down; shows when the mouse
   is within 60 px of the top). Ctrl + mouse wheel / pinch changes page size (width fit: page width; height fit: page height).
+- **Library shelves**: Following has tabs (All / Reading / Plan to read / Finished / Dropped) with counts, a title search,
+  "New chapters only", and a per-card shelf picker. Finished and Dropped series are not checked for updates. Data:
+  `FollowRecord.category` in updates.json, IPC `follow-category`. A site that lists one title twice now shows once in
+  "Read from". Typechecked and built, never clicked by hand.

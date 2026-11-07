@@ -18,6 +18,7 @@ const api = {
   followList: () => ipcRenderer.invoke('follow-list'),
   followGet: (seriesUrl: string) => ipcRenderer.invoke('follow-get', seriesUrl),
   followSet: (meta: unknown, following: boolean) => ipcRenderer.invoke('follow-set', meta, following),
+  followCategory: (seriesUrl: string, category: string) => ipcRenderer.invoke('follow-category', seriesUrl, category),
   followDismiss: (seriesUrl: string) => ipcRenderer.invoke('follow-dismiss', seriesUrl),
   updatesCheck: () => ipcRenderer.invoke('updates-check'),
   updatesStatus: () => ipcRenderer.invoke('updates-status'),

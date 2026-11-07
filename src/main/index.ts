@@ -31,7 +31,7 @@ import { grabChapterFast, prefetchChapter, settleVerifications } from './fastgra
 import { flushModes } from './hostmode'
 import { detectSource } from './sources'
 import { flushProgress, getProgress, hideProgress, recentProgress, saveProgress } from './progress'
-import type { CrawlProgress, DownloadRequest, FollowMeta, ProgressPatch } from '../preload/index.d'
+import type { CrawlProgress, DownloadRequest, FollowCategory, FollowMeta, ProgressPatch } from '../preload/index.d'
 import {
   autoFollow,
   checkAll,
@@ -41,6 +41,7 @@ import {
   getFollow,
   listFollows,
   setAutoDownload,
+  setCategory,
   setFollow,
   startUpdateScheduler,
   updateStatus
@@ -270,6 +271,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('follow-get', (_e, url: string) => getFollow(url))
   ipcMain.handle('follow-set', (_e, meta: FollowMeta, following: boolean) => setFollow(meta, following))
   ipcMain.handle('follow-dismiss', (_e, url: string) => dismissNew(url))
+  ipcMain.handle('follow-category', (_e, url: string, category: FollowCategory) => setCategory(url, category))
   ipcMain.handle('updates-check', () => checkAll(true))
   ipcMain.handle('updates-status', () => updateStatus())
   ipcMain.handle('updates-auto-download', (_e, on: boolean) => setAutoDownload(on))
