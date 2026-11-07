@@ -405,3 +405,7 @@ select { cursor: pointer; }
 .head .back:hover { background: transparent; color: var(--primary-text); }
 .info h2 { font-size: clamp(30px, 3.2vw, 44px); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .info .resume { display: inline-flex; margin-right: 10px; vertical-align: middle; }
+
+.dlstat .pct { color: var(--primary-text); }
+.dlstat .bad { color: var(--destructive); }
+.shelftabs { max-width: 1600px; }

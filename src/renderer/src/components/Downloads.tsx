@@ -46,11 +46,24 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
   }, [])
 
   const all = useMemo(() => Object.values(items).sort((a, b) => a.queuedAt - b.queuedAt), [items])
+  // Two lists: what is still on its way (queued, downloading, failed) and what is saved on this PC.
+  const [tab, setTabState] = useState<'queue' | 'library'>('library')
+  const pickedTab = useRef(false)
+  const setTab = (t: 'queue' | 'library'): void => {
+    pickedTab.current = true
+    setTabState(t)
+    setSelected(new Set())
+  }
+  // open on the queue while something is downloading (until you choose a tab yourself)
+  useEffect(() => {
+    if (!pickedTab.current && all.some((i) => i.status !== 'done')) setTabState('queue')
+  }, [all])
+  const visible = useMemo(() => all.filter((i) => (tab === 'library' ? i.status === 'done' : i.status !== 'done')), [all, tab])
   const bySeries = useMemo(() => {
     const m = new Map<string, DownloadItem[]>()
-    for (const i of all) m.set(i.seriesTitle, [...(m.get(i.seriesTitle) ?? []), i])
+    for (const i of visible) m.set(i.seriesTitle, [...(m.get(i.seriesTitle) ?? []), i])
     return m
-  }, [all])
+  }, [visible])
   const ordered = useMemo(() => [...bySeries.values()].flat(), [bySeries]) // the order rows appear on screen
   const active = all.filter((i) => i.status === 'queued' || i.status === 'downloading').length
   const total = all.filter((i) => i.status === 'done').reduce((s, i) => s + i.bytes, 0)
@@ -188,7 +201,7 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
       if ((e.target as HTMLElement).closest('input, select, textarea')) return
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault()
-        setSelected(new Set(all.map((i) => i.id)))
+        setSelected(new Set(visible.map((i) => i.id)))
       } else if (e.key === 'Delete' && selected.size > 0) {
         void deleteIds([...selected], 'the selected downloads')
       } else if (e.key === 'Escape' && selected.size > 0) {
@@ -198,7 +211,7 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, all])
+  }, [selected, visible])
 
   const failed = all.filter((i) => i.status === 'error')
 
@@ -219,7 +232,18 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
         <div>
           <div className="kicker">ダウンロード</div>
           <h1>Downloads</h1>
+          <p>
+            {active} in queue · {all.filter((i) => i.status === 'done').length} chapters offline · {mb(total)} used
+          </p>
         </div>
+      </div>
+      <div className="shelftabs">
+        <button className={tab === 'queue' ? 'on' : ''} onClick={() => setTab('queue')}>
+          Queue <span>{all.length - all.filter((i) => i.status === 'done').length}</span>
+        </button>
+        <button className={tab === 'library' ? 'on' : ''} onClick={() => setTab('library')}>
+          Offline library <span>{all.filter((i) => i.status === 'done').length}</span>
+        </button>
       </div>
       <div className="meta">
         {all.filter((i) => i.status === 'done').length} saved · {mb(total)} on disk
@@ -241,7 +265,7 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
               )
             }
           >
-            retry failed
+            Retry failed
           </button>
         )}
       </div>
@@ -282,9 +306,9 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
           </select>
         </label>
       </div>
-      {all.length > 0 && (
+      {visible.length > 0 && (
         <div className="seltools">
-          <button className="mini big" onClick={() => setSelected(new Set(all.map((i) => i.id)))}>
+          <button className="mini big" onClick={() => setSelected(new Set(visible.map((i) => i.id)))}>
             Select all
           </button>
           {selected.size > 0 && (
@@ -298,21 +322,29 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
               </button>
             </>
           )}
-          <button className="mini big" onClick={() => void exportCbz(selected.size > 0 ? [...selected] : all.map((i) => i.id))} title="Save finished chapters as .cbz files (open them in any comic reader)">
-            Export as CBZ{selected.size > 0 ? ' (selected)' : ' (all)'}
-          </button>
+          {tab === 'library' && (
+            <button className="mini big" onClick={() => void exportCbz(selected.size > 0 ? [...selected] : visible.map((i) => i.id))} title="Save finished chapters as .cbz files (open them in any comic reader)">
+              Export CBZ{selected.size > 0 ? ' (selected)' : ' (all)'}
+            </button>
+          )}
           {note && <span className="sub">{note}</span>}
           <span className="grow" />
-          <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds(all.map((i) => i.id), 'ALL downloads')}>
+          <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds(visible.map((i) => i.id), tab === 'library' ? 'ALL saved chapters' : 'everything in the queue')}>
             {deleting ? 'Deleting…' : 'Delete all'}
           </button>
         </div>
       )}
-      {all.length > 0 && (
+      {visible.length > 0 && (
         <div className="sub seltip">Tip: press and drag across the list to select several, like in Windows. Ctrl keeps the earlier picks, Shift selects a range.</div>
       )}
 
-      {all.length === 0 && <div className="hint">Nothing downloaded yet. Open a series and press ⬇ on a chapter.</div>}
+      {visible.length === 0 && (
+        <div className="hint">
+          {tab === 'queue'
+            ? 'Nothing waiting. Open a series and press Download on a chapter, or Download unread.'
+            : 'No chapters saved yet. Finished downloads show up here and read without the internet.'}
+        </div>
+      )}
       {[...bySeries.entries()].map(([title, list]) => (
         <section key={title} className="dlgroup">
           <h3 className="dlgrouphead" onClick={() => toggleGroup(list)} title="Click to select every chapter of this series">
@@ -333,27 +365,34 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
               }}
             >
               <span className="dlname">{i.chapterTitle}</span>
-              <span className="dlbar">
+              <span className="dlbar" style={i.status === 'done' ? { visibility: 'hidden' } : undefined}>
                 <span
                   className={`fill ${i.status}`}
                   style={{ width: `${i.status === 'done' ? 100 : i.total ? (i.done / i.total) * 100 : 0}%` }}
                 />
               </span>
               <span className="dlstat">
-                {i.status === 'done' && mb(i.bytes)}
-                {i.status === 'downloading' && `${i.done}/${i.total || '?'}`}
-                {i.status === 'queued' && 'queued'}
+                {i.status === 'done' && `${i.files.length} pages · ${mb(i.bytes)}`}
+                {i.status === 'downloading' && <span className="pct">{i.total ? `${Math.round((i.done / i.total) * 100)}%` : 'Starting'}</span>}
+                {i.status === 'queued' && 'Waiting'}
                 {i.status === 'error' && <span className="bad">{i.error}</span>}
               </span>
               {(i.status === 'queued' || i.status === 'downloading') && (
                 <button className="mini" onClick={() => window.api.downloadCancel(i.id)}>
-                  cancel
+                  Cancel
                 </button>
               )}
               {i.status !== 'downloading' && (
-                <button className="mini" onClick={() => void deleteIds([i.id], i.chapterTitle)}>
-                  {i.status === 'done' ? 'delete' : 'remove'}
-                </button>
+                <>
+                  {i.status === 'done' && (
+                    <button className="mini" onClick={() => void exportCbz([i.id])}>
+                      Export CBZ
+                    </button>
+                  )}
+                  <button className="mini" onClick={() => void deleteIds([i.id], i.chapterTitle)}>
+                    {i.status === 'done' ? 'Delete' : 'Remove'}
+                  </button>
+                </>
               )}
             </div>
           ))}
