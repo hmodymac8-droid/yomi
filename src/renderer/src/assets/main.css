@@ -409,3 +409,34 @@ select { cursor: pointer; }
 .dlstat .pct { color: var(--primary-text); }
 .dlstat .bad { color: var(--destructive); }
 .shelftabs { max-width: 1600px; }
+
+/* reader top bar (56px), width control, settings menu, end of chapter */
+.readerview .bar { gap: 6px; }
+.readerview .bar .grow { flex: 1; }
+.readerview .bar .iconbtn { padding: 0; border: 0; background: transparent; }
+.readerview .bar .iconbtn:hover:not(:disabled) { background: var(--muted); }
+.readerview .bar .iconbtn.on { background: var(--accent); color: var(--accent-foreground); }
+.iconbtn.round { border-radius: 50%; border: 1px solid var(--border) !important; }
+.rtitle { display: flex; flex-direction: column; min-width: 0; margin-left: 6px; }
+.rtitle b { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34vw; }
+.rtitle span { font-size: 11px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.readerview .bar .chpill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--paper); font-size: 11px; white-space: nowrap; max-width: 160px; overflow: hidden; }
+.chpill svg, .rmenu svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.vdiv { width: 1px; height: 22px; background: var(--border); margin: 0 6px; }
+.widthctl { display: inline-flex; align-items: center; gap: 2px; }
+.widthctl span { font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; min-width: 52px; text-align: center; }
+.rmenu { position: relative; }
+.rmenupop { position: absolute; top: 44px; right: 0; z-index: 30; min-width: 250px; background: var(--popover); border: 1px solid var(--border); border-radius: 6px; padding: 6px; box-shadow: var(--shadow-cover); display: flex; flex-direction: column; gap: 2px; }
+.readerview .bar .rmenupop button { display: flex; justify-content: space-between; gap: 14px; border: 0; background: transparent; padding: 9px 10px; border-radius: 4px; font-size: 12px; color: var(--muted-foreground); text-align: left; }
+.readerview .bar .rmenupop button b { color: var(--foreground); font-weight: 500; }
+.readerview .bar .rmenupop button:hover { background: var(--secondary); }
+.rmenupop .sub { padding: 6px 10px 2px; font-size: 11px; }
+.readpct { position: absolute; right: 20px; bottom: 16px; z-index: 9; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border); background: color-mix(in oklab, var(--background) 95%, transparent); font-size: 10px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.page { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+.endch { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 64px 20px 96px; text-align: center; }
+.endk { font-family: var(--font-display); font-size: 14px; color: var(--primary-text); }
+.upnext { font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -0.02em; }
+.endact { display: flex; gap: 10px; margin-top: 10px; }
+.secondary { padding: 10px 20px; border-radius: 6px; border: 1px solid var(--border); background: var(--paper); color: var(--foreground); font-size: 12px; font-weight: 500; transition: background 0.3s; }
+.secondary:hover { background: var(--muted); }
+.reader.bg-sepia .endch { color: #3b2f1a; }

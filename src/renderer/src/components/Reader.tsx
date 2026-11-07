@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { OpenChapter, OpenSeries, localPage, pageSrc } from '../lib'
+import { Icon } from './Icon'
+import { ThemeToggle } from './ThemeToggle'
+
+// Page width control: 480 to 1100 px in steps of 80 (Ctrl + wheel and the + / - keys use the same steps).
+const WMIN = 480
+const WMAX = 1100
+const WSTEP = 80
+const clampW = (n: number): number => Math.max(WMIN, Math.min(WMAX, n))
 
 type Mode = 'webtoon' | 'paged'
 type Dir = 'ltr' | 'rtl'
@@ -47,7 +55,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const [fit, setFit] = useState<'width' | 'height'>(() => saved('fit', ['width', 'height'] as const, 'width'))
   const [dir, setDir] = useState<Dir>(() => saved('dir', ['ltr', 'rtl'] as const, 'ltr'))
   const [bg, setBg] = useState<Bg>(() => saved('bg', ['dark', 'black', 'sepia'] as const, 'dark'))
-  const [zoom, setZoom] = useState(() => savedNum('zoom', 400, 2000, 900)) // page width in px when fitting width
+  const [zoom, setZoom] = useState(() => clampW(savedNum('zoom', 400, 2000, 900))) // page width in px when fitting width
+  const [pct, setPct] = useState(0)
+  const [menu, setMenu] = useState(false)
   const [index, setIndex] = useState(0)
   const [eager, setEager] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
@@ -83,7 +93,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     const onWheel = (e: WheelEvent): void => {
       if (!e.ctrlKey) return
       e.preventDefault()
-      setZoom((z) => Math.max(400, Math.min(2000, z + (e.deltaY < 0 ? 50 : -50))))
+      setZoom((z) => clampW(z + (e.deltaY < 0 ? WSTEP : -WSTEP)))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -212,6 +222,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     if (max <= 0) return
     const f = Math.min(1, el.scrollTop / max)
     root.current?.style.setProperty('--prog', String(f))
+    setPct(Math.round(f * 100))
     const now = Date.now()
     if (f > 0.9 && !finished.current) {
       finished.current = true
@@ -253,8 +264,8 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       if (e.key === 'm') setMode((m) => (m === 'webtoon' ? 'paged' : 'webtoon'))
       if (e.key === 'f') setFit((f) => (f === 'width' ? 'height' : 'width'))
       if (e.key === 'd') setDir((d) => (d === 'ltr' ? 'rtl' : 'ltr'))
-      if (e.key === '+' || e.key === '=') setZoom((z) => Math.min(2000, z + 100))
-      if (e.key === '-') setZoom((z) => Math.max(400, z - 100))
+      if (e.key === '+' || e.key === '=') setZoom((z) => clampW(z + WSTEP))
+      if (e.key === '-') setZoom((z) => clampW(z - WSTEP))
       const forward = dir === 'ltr' ? 'ArrowRight' : 'ArrowLeft'
       const back = dir === 'ltr' ? 'ArrowLeft' : 'ArrowRight'
       if (mode === 'paged') {
@@ -295,39 +306,88 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
           showBar() // starts the countdown to hide again
         }}
       >
-        <button onClick={onBack}>← Back</button>
-        <button onClick={() => go(prevCh)} disabled={!prevCh}>
-          ‹ Prev
+        <button className="iconbtn round" onClick={onBack} title="Back to the chapter list (Esc)" aria-label="Back">
+          <Icon name="back" />
         </button>
-        <span className="count grow">{chapter.title}</span>
-        <button onClick={() => go(nextCh)} disabled={!nextCh}>
-          Next ›
+        <div className="rtitle">
+          <b>{series.title}</b>
+          <span>
+            {chapter.title} · {series.entries.find((e) => e.sourceId === chapter.sourceId)?.sourceName ?? chapter.sourceId}
+          </span>
+        </div>
+        <span className="grow" />
+        <button className="iconbtn" onClick={() => go(prevCh)} disabled={!prevCh} title="Previous chapter" aria-label="Previous chapter">
+          <Icon name="left" />
         </button>
-        <button onClick={() => setMode(mode === 'webtoon' ? 'paged' : 'webtoon')}>
-          {mode === 'webtoon' ? 'Webtoon' : 'Paged'}
+        <button className="chpill" onClick={onBack} title="All chapters">
+          <Icon name="list" />
+          {chapter.title.replace(/^chapter\s*/i, 'Ch. ')}
         </button>
-        <button onClick={() => setFit(fit === 'width' ? 'height' : 'width')} title="Shortcut: F">
-          Fit {fit}
+        <button className="iconbtn" onClick={() => go(nextCh)} disabled={!nextCh} title="Next chapter" aria-label="Next chapter">
+          <Icon name="right" />
         </button>
-        {(
-          <>
-            <button onClick={() => setZoom((z) => Math.max(400, z - 100))} title="Smaller pages (- or Ctrl + wheel down)">
-              −
-            </button>
-            <button onClick={() => setZoom((z) => Math.min(2000, z + 100))} title="Bigger pages (+ or Ctrl + wheel up)">
-              +
-            </button>
-          </>
-        )}
-        <button onClick={() => setDir(dir === 'ltr' ? 'rtl' : 'ltr')} title="Reading direction. Shortcut: D">
-          {dir === 'ltr' ? 'Left → Right' : 'Right → Left'}
+        <span className="vdiv" />
+        <div className="widthctl" title="Page width (- / + keys, or Ctrl + wheel)">
+          <button className="iconbtn" onClick={() => setZoom((z) => clampW(z - WSTEP))} disabled={zoom <= WMIN} aria-label="Narrower pages">
+            <Icon name="minus" />
+          </button>
+          <span>{zoom}px</span>
+          <button className="iconbtn" onClick={() => setZoom((z) => clampW(z + WSTEP))} disabled={zoom >= WMAX} aria-label="Wider pages">
+            <Icon name="plus" />
+          </button>
+        </div>
+        <button
+          className="iconbtn"
+          title="Download this chapter"
+          aria-label="Download this chapter"
+          onClick={() => {
+            const cur = chapter.chapters.find((c) => c.url === chapter.url)
+            void window.api.downloadEnqueue([
+              {
+                chapterUrl: chapter.url,
+                alts: cur?.alts,
+                chapterTitle: chapter.title,
+                seriesUrl: chapter.seriesUrl,
+                seriesTitle: series.title,
+                sourceId: chapter.sourceId,
+                referer: chapter.referer
+              }
+            ])
+          }}
+        >
+          <Icon name="download" />
         </button>
-        <button onClick={() => setBg(bg === 'dark' ? 'black' : bg === 'black' ? 'sepia' : 'dark')} title="Background colour">
-          {bg === 'dark' ? 'Dark' : bg === 'black' ? 'Black' : 'Sepia'}
+        <button
+          className="iconbtn"
+          title="Full screen"
+          aria-label="Full screen"
+          onClick={() => (document.fullscreenElement ? void document.exitFullscreen() : void document.documentElement.requestFullscreen())}
+        >
+          <Icon name="expand" />
         </button>
-        {pages.length > 0 && (
-          <span className="count">{mode === 'paged' ? `${index + 1} / ${pages.length}` : `${pages.length} pages`}</span>
-        )}
+        <div className="rmenu">
+          <button className={`iconbtn${menu ? ' on' : ''}`} onClick={() => setMenu((m) => !m)} title="Reading settings" aria-label="Reading settings">
+            <Icon name="settings" />
+          </button>
+          {menu && (
+            <div className="rmenupop">
+              <button onClick={() => setMode(mode === 'webtoon' ? 'paged' : 'webtoon')} title="Shortcut: M">
+                Layout <b>{mode === 'webtoon' ? 'Vertical scroll' : 'One page at a time'}</b>
+              </button>
+              <button onClick={() => setFit(fit === 'width' ? 'height' : 'width')} title="Shortcut: F">
+                Fit <b>{fit === 'width' ? 'Width' : 'Height'}</b>
+              </button>
+              <button onClick={() => setDir(dir === 'ltr' ? 'rtl' : 'ltr')} title="Shortcut: D">
+                Direction <b>{dir === 'ltr' ? 'Left to right' : 'Right to left'}</b>
+              </button>
+              <button onClick={() => setBg(bg === 'dark' ? 'black' : bg === 'black' ? 'sepia' : 'dark')}>
+                Background <b>{bg === 'dark' ? 'Theme' : bg === 'black' ? 'Black' : 'Sepia'}</b>
+              </button>
+              {pages.length > 0 && <div className="sub">{mode === 'paged' ? `Page ${index + 1} of ${pages.length}` : `${pages.length} pages`}</div>}
+            </div>
+          )}
+        </div>
+        <ThemeToggle />
       </header>
       <div className="progline">
         <span />
@@ -336,6 +396,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       {loading && <div className="hint">Opening chapter and collecting pages…</div>}
       {error && <div className="error">{error}</div>}
 
+      {pages.length > 0 && mode === 'webtoon' && <div className="readpct">{pct}%</div>}
       {pages.length > 0 && (
         <div className={`reader bg-${bg}`} ref={scroller} onScroll={onScroll}>
           <div className="title">{title}</div>
@@ -350,11 +411,20 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                   loading={eager || i < 3 ? 'eager' : 'lazy'}
                 />
               ))}
-              {nextCh && (
-                <button className="nextbig" onClick={() => go(nextCh)}>
-                  Next chapter: {nextCh.title} ›
-                </button>
-              )}
+              <div className="endch">
+                <div className="endk">終 · End of {chapter.title}</div>
+                <div className="upnext">{nextCh ? `Up next: ${nextCh.title}` : "You're all caught up"}</div>
+                <div className="endact">
+                  {nextCh && (
+                    <button className="primary" onClick={() => go(nextCh)}>
+                      Next chapter
+                    </button>
+                  )}
+                  <button className="secondary" onClick={onBack}>
+                    All chapters
+                  </button>
+                </div>
+              </div>
             </>
           ) : (
             <img
