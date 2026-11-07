@@ -78,3 +78,7 @@ Following screen by hand (built, never opened). Everything above was verified wi
   series opens (fine / cut short / failed), and Re-check (title list, chapter list, chapter pages, one image; saved in
   site-health.json), Re-scan titles, Re-check all. Code: `src/main/health.ts`, `runSiteCheck` in index.ts, `Sites.tsx`.
   Dev test: MR_HEALTHTEST=<site url> (use a fresh MR_DATADIR per site). Screen itself never clicked by hand.
+- MangaK (constant 11 chapters) FIXED: the page's own JSON data requests are repeated and read (`HARVEST_DATA`), embedded
+  data with root-relative chapter addresses is parsed, `DECLARED_TOTAL` ignores years ("Released 2025 Chapters 96")
+  and prefers the most trusted pattern. Olympustaff: a link back to the series page ("latest: Chapter 204" banner) is no
+  longer a chapter, and a paging style that returns page 1 again no longer counts as a new slice. Cache version 7.

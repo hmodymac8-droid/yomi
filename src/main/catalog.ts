@@ -727,6 +727,7 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
     const href = a.href.split('#')[0];
     let t = text(a);
     const sn = slugNum(href);
+    try { if (new URL(href).pathname.replace(/\\/$/, '') === base) continue; } catch (e) { /* keep going */ }
     if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t) || seen.has(href)) continue;
     // a whole card of text is no title: name it by its number
     if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.');
@@ -810,8 +811,48 @@ const CLICK_MORE = `(() => {
 // The number of chapters the page says the series has ("Chapters (198)", "198 chapters", "Showing 50 of 198 chapters"), or 0.
 const DECLARED_TOTAL = `(() => {
   const t = (document.body.innerText || '').replace(/\\s+/g, ' ');
-  const m = t.match(/showing\\s+\\d+\\s+of\\s+(\\d+)\\s+chapters?/i) || t.match(/chapters?\\s*\\(\\s*(\\d{1,5})\\s*\\)/i) || t.match(/\\b(\\d{1,5})\\s+chapters\\b/i) || t.match(/\\bchapters\\s+(\\d{1,5})\\b/i);
-  return m ? Number(m[1]) : 0;
+  // Several numbers can sit next to the word "chapters" (a tab label "Chapters 70", "+3 chapters" in a review): the
+  // page's own total is the biggest of them.
+  const pats = [/showing\\s+\\d+\\s+of\\s+(\\d+)\\s+chapters?/gi, /\\bchapters(\\d{1,5})(?!\\d)/gi, /chapters?\\s*\\(\\s*(\\d{1,5})\\s*\\)/gi, /\\b(\\d{1,5})\\s+chapters\\b/gi, /\\bchapters\\s+(\\d{1,5})\\b/gi];
+  // the patterns are in order of trust: the first one that matches anything decides (its biggest number)
+  for (const re of pats) {
+    let best = 0;
+    // (a year right before the word, as in "Released 2025 Chapters 96", is not a chapter count)
+    for (const m of t.matchAll(re)) { const n = Number(m[1]); if (n >= 1990 && n <= 2099) continue; best = Math.max(best, n); }
+    if (best > 0) return best < 20000 ? best : 0;
+  }
+  return 0;
+})()`
+
+// Repeats the data requests the page made that look like chapter lists (JSON) and collects every object in the answer
+// that has a chapter-looking address. Returns [{title, url}] (absolute addresses).
+const HARVEST_DATA = `(async () => {
+  const skip = (u) => /[.](js|css|png|jpe?g|webp|svg|woff2?|ico|gif|avif|map)$/i.test(u.split('?')[0]);
+  const urls = [...new Set(performance.getEntriesByType('resource').map((e) => e.name))]
+    .filter((u) => /chapter|episode|chap/i.test(u) && !/comment|review|bookmark|view/i.test(u) && !skip(u))
+    .slice(0, 4);
+  const found = [];
+  const walk = (o, depth) => {
+    if (!o || depth > 8) return;
+    if (Array.isArray(o)) { for (const x of o) walk(x, depth + 1); return; }
+    if (typeof o !== 'object') return;
+    const link = ['url', 'href', 'link', 'path', 'permalink'].map((k) => o[k]).find((v) => typeof v === 'string' && v.length > 2);
+    if (link && /(chapter|chap|episode|ep|ch)[-_/ ]?[0-9]/i.test(link)) {
+      try {
+        const nm = o.name || o.title || o.chapter_title || '';
+        found.push({ title: typeof nm === 'string' ? nm.slice(0, 80) : '', url: new URL(link, location.href).href.split('#')[0] });
+      } catch (e) { /* not an address */ }
+    }
+    for (const k of Object.keys(o)) walk(o[k], depth + 1);
+  };
+  for (const u of urls) {
+    try {
+      const r = await fetch(u, { credentials: 'include' });
+      if (!r.ok || !/json/i.test(r.headers.get('content-type') || '')) continue;
+      walk(await r.json(), 0);
+    } catch (e) { /* skip this request */ }
+  }
+  return found;
 })()`
 
 // Many sites keep the chapter list in a box that scrolls by itself and load the next slice when you reach its
@@ -941,9 +982,18 @@ async function queryPaging(
   declared: number
 ): Promise<void> {
   const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
-  const ownNew = (list: { title: string; url: string }[]): { title: string; url: string }[] =>
-    list.filter((c) => !acc.has(c.url) && (!slug || flat(c.url).includes(slug)))
   const base = url.split('#')[0].split('?')[0]
+  // What the plain page itself holds: a slicing style that just hands back this same page (it ignores the parameter)
+  // must not count as "found a new slice".
+  let page1 = new Set<string>()
+  try {
+    const r1 = await fetchHtml(base)
+    if (r1.status === 200) page1 = new Set(parseSeries(r1.html, base, src.chapterRe).chapters.map((c) => c.url))
+  } catch {
+    /* no baseline: the acc check below still applies */
+  }
+  const ownNew = (list: { title: string; url: string }[]): { title: string; url: string }[] =>
+    list.filter((c) => !acc.has(c.url) && !page1.has(c.url) && (!slug || flat(c.url).includes(slug)))
   const styles = ['?tab=chapters&chapter_page=', '?chapter_page=', '?chapters_page=', '?cpage=', '?tab=chapters&page=', '?page=']
   const fetchPage = async (style: string, n: number): Promise<{ title: string; url: string }[]> => {
     const r = await fetchHtml(base + style + n)
@@ -954,6 +1004,7 @@ async function queryPaging(
     let first: { title: string; url: string }[] = []
     for (const st of styles) {
       const got = ownNew(await fetchPage(st, 2))
+      if (process.env['MR_PAGERDEBUG']) console.log('QPAGE style=' + st + ' page2 new=' + got.length + ' slug=' + slug)
       if (got.length > 0) {
         style = st
         first = got
@@ -1013,10 +1064,25 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     // Chapters can be spread over pager pages or behind "show more" buttons, and the DOM only shows
     // the current page, so collect links across rounds.
     const acc = new Map<string, { title: string; url: string }>()
+    // The page itself usually asks the site's server for the chapter list (a JSON data request). Ask the same question
+    // and read the answer: it holds the WHOLE list even when the page draws only the newest chapters.
+    if (!firstPageOnly && slug) {
+      const flatSlug = (u: string): string => u.toLowerCase().replace(/[^a-z0-9]+/g, '')
+      const got: { title: string; url: string }[] = await win.webContents.executeJavaScript(HARVEST_DATA).catch(() => [])
+      for (const c of got)
+        if (!acc.has(c.url) && flatSlug(c.url).includes(slug)) acc.set(c.url, { url: c.url, title: c.title || decodeURIComponent(c.url.split('/').pop() ?? '') })
+      if (process.env['MR_PAGERDEBUG']) console.log('HARVEST ' + got.length + ' kept=' + acc.size)
+    }
     let idleRounds = 0
     for (let round = 0; round < 80 && Date.now() < deadline; round++) {
       const before = acc.size
       for (const c of out.chapters) if (!acc.has(c.url)) acc.set(c.url, c)
+      // The page's own data can list chapters that are not drawn as links yet (only the newest are): read them too.
+      if (!firstPageOnly && slug) {
+        const html: string = await win.webContents.executeJavaScript('document.documentElement.outerHTML').catch(() => '')
+        const flatSlug = (u: string): string => u.toLowerCase().replace(/[^a-z0-9]+/g, '')
+        if (html) for (const c of parseSeries(html, url, src.chapterRe).chapters) if (!acc.has(c.url) && flatSlug(c.url).includes(slug)) acc.set(c.url, c)
+      }
       // Clicking on but nothing new arrives (e.g. a pager that keeps "working" past its last page): stop.
       if (round > 0 && acc.size === before) {
         if (++idleRounds >= 2) break
@@ -1082,6 +1148,7 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
       const hasPagerLinks: boolean = await win.webContents
         .executeJavaScript(`[...document.querySelectorAll('a[href]')].some((a) => a.origin === location.origin && a.pathname === location.pathname && /[?&](page|chapter_page|chapters_page|cpage)=2(&|$)/.test(a.search))`)
         .catch(() => false)
+  if (process.env['MR_PAGERDEBUG']) console.log('PAGERLINKS ' + hasPagerLinks)
       if (hasPagerLinks) {
         pagingTried = true
         await queryPaging(src, url, slug, acc, 100000)
@@ -1167,7 +1234,7 @@ let seriesCache: Record<string, SeriesCacheEntry> | null = null
 let seriesTimer: NodeJS.Timeout | undefined
 const seriesCachePath = (): string => join(app.getPath('userData'), 'series-cache.json')
 
-const SERIES_CACHE_VERSION = 6
+const SERIES_CACHE_VERSION = 7
 
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   if (seriesCache) return seriesCache

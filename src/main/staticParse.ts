@@ -164,6 +164,12 @@ export function parseSeries(
     if (!href || seen.has(href)) return
     let t = textOf(a).slice(0, 80)
     const sn = slugNum(href)
+    // a link back to the series page itself (a "latest: Chapter 204" banner) is not a chapter
+    try {
+      if (new URL(href).pathname.replace(/\/$/, '') === basePath) return
+    } catch {
+      /* keep going */
+    }
     if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t)) return
     if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.')
     seen.add(href)
@@ -180,6 +186,22 @@ export function parseSeries(
       if (sn === null || seen.has(href)) continue
       seen.add(href)
       chapters.push({ title: 'Chapter ' + sn.replace(/[_-]/g, '.'), url: href })
+    }
+  }
+  // Same for data that carries root-relative addresses ("url":"/series/chapter-68"): any address below this series'
+  // own path that looks like a chapter counts, even when the page draws only some of them as links.
+  if (basePath) {
+    const raw = html.replace(/\\\//g, '/').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    const esc = basePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const found = raw.match(new RegExp('["\'(](?:https?://[^"\'\\s<>\\\\]*)?' + esc + '/[^"\'\\s<>\\\\?#,)]+(?=["\')])', 'gi')) ?? []
+    for (const f of found) {
+      const href = abs(f.slice(1), pageUrl).split('#')[0]
+      if (!href || seen.has(href)) continue
+      if (!re.test(href) && !underBase(href)) continue
+      const sn = slugNum(href)
+      const num = /(?:chapter|chap|ch|episode|ep)[-_ ]?(\d+(?:[._-]\d+)?)/i.exec(href)?.[1]
+      seen.add(href)
+      chapters.push({ title: sn ?? num ? 'Chapter ' + (sn ?? num)!.replace(/[_-]/g, '.') : decodeURIComponent(href.split('/').pop() ?? ''), url: href })
     }
   }
   const meta = (p: string): string => $(`meta[property="${p}"]`).attr('content') ?? ''

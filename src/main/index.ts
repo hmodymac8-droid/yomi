@@ -645,7 +645,7 @@ app.whenReady().then(async () => {
             try {
               const d = await getSeries(def.id, h.entries[0].url)
               tried++
-              if (process.env['MR_PIPEDEBUG']) console.log('PIPETRY', h.entries[0].url, d.chapters.length, !!d.incomplete)
+              if (process.env['MR_PIPEDEBUG']) console.log('PIPETRY', h.entries[0].url, d.chapters.length, !!d.incomplete, d.chapters.slice(0, 3).map((c) => c.title).join(' / '), '...', d.chapters.slice(-3).map((c) => c.title).join(' / '))
               if (d.chapters.length > chapters.length) {
                 chapters = d.chapters
                 seriesUrl = h.entries[0].url
