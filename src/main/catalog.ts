@@ -84,7 +84,12 @@ export function fixTitle(t: string): string {
   return m ? m[1] : t
 }
 
+// Bumped whenever the catalog changes (every change is followed by a save), so cached search results know when
+// they are out of date.
+let catalogVersion = 0
+
 function saveSoon(immediate = false): void {
+  catalogVersion++
   if (saveTimer) clearTimeout(saveTimer)
   const write = (): void => {
     try {
@@ -162,6 +167,18 @@ function applyMeta(url: string, d: SeriesDetail): void {
 /** The first network request of a program run is slow (proxy lookup, TLS). Do it at startup, not on your first click. */
 export function primeNetwork(): void {
   for (const s of load().sources) fetchHtml(s.baseUrl, 8000).catch(() => undefined)
+}
+
+/** Dev/test helper: how big the catalog file is and how long it takes to serialise (what every save costs). */
+export function debugSaveCost(): { entries: number; bytes: number; stringifyMs: number } {
+  const s = load()
+  const t = Date.now()
+  const text = JSON.stringify(s)
+  return {
+    entries: Object.values(s.series).reduce((n, l) => n + l.length, 0),
+    bytes: text.length,
+    stringifyMs: Date.now() - t
+  }
 }
 
 /** Forget how far the scans of a site got (one entry per list: "id", "id#1", "id#2" ...). */
@@ -566,54 +583,93 @@ const norm = (t: string): string =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
 
-export function search(q: string, sourceId: string, sort: 'site' | 'az', offset: number, limit: number): SearchResult {
+// Normalising a title (accents, punctuation, case) is the slow part of a search across 300,000 entries, so it is done
+// once per title and remembered (and redone only if the title changes).
+const keyMemo = new WeakMap<SeriesEntry, { t: string; k: string }>()
+function titleKey(e: SeriesEntry): string {
+  const m = keyMemo.get(e)
+  if (m && m.t === e.title) return m.k
+  const k = norm(e.title)
+  keyMemo.set(e, { t: e.title, k })
+  return k
+}
+
+// A group is one title as it appears across the searched sites. It only points at the entries (cheap); the full
+// result object the screen needs is built for the 60 titles on the page being shown, not for all 168,000.
+interface Grp {
+  key: string
+  e: SeriesEntry // the first entry: its title is the one shown
+  src: SourceDef
+  coverE: SeriesEntry | null // the first entry that has a cover
+  coverSrc: SourceDef | null
+  more?: { e: SeriesEntry; src: SourceDef }[] // the same title on other sites
+}
+
+// The last full list of groups, so turning pages (or re-asking the same thing) costs nothing until the catalog changes.
+let lastSearch: { sig: string; groups: Grp[] } | null = null
+
+function toHit(g: Grp): SearchHit {
+  // Covers are stored as scanned (often tiny thumbnails). Show the bigger original, keep the thumbnail as a fallback.
+  const withCover = g.coverE
+  return {
+    key: g.key,
+    title: g.e.title,
+    cover: withCover ? upgradeCover(withCover.cover) : '',
+    coverFallback: withCover ? withCover.cover : g.e.cover,
+    needsInfo: withCover ? !!withCover.slugTitle : true,
+    coverReferer: (g.coverSrc ?? g.src).baseUrl,
+    entries: [
+      { sourceId: g.src.id, sourceName: g.src.name, url: g.e.url },
+      ...(g.more ?? []).map((m) => ({ sourceId: m.src.id, sourceName: m.src.name, url: m.e.url }))
+    ]
+  }
+}
+
+/** `sourceIds` are the sites to search; an empty list means all of them. */
+export function search(q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number): SearchResult {
+  const sig = `${catalogVersion}|${q}|${sourceIds.join(',')}|${sort}`
+  if (lastSearch && lastSearch.sig === sig) {
+    return { total: lastSearch.groups.length, hits: lastSearch.groups.slice(offset, offset + limit).map(toHit) }
+  }
   const s = load()
   const tokens = norm(q).split(' ').filter(Boolean)
-  const names = new Map(s.sources.map((x) => [x.id, x]))
-  const groups = new Map<string, SearchHit>()
+  const only = sourceIds.length > 0 ? new Set(sourceIds) : null
+  const map = new Map<string, Grp>()
   for (const src of s.sources) {
-    if (sourceId !== 'all' && src.id !== sourceId) continue
+    if (only && !only.has(src.id)) continue
     for (const e of s.series[src.id] ?? []) {
-      const key = norm(e.title)
+      const key = titleKey(e)
       if (!key) continue
       if (tokens.length && !tokens.every((t) => key.includes(t))) continue
-      let g = groups.get(key)
+      const g = map.get(key)
       if (!g) {
-        // Covers are stored as scanned (often tiny thumbnails). Show the bigger original, keep the thumbnail as a fallback.
-        g = {
-          key,
-          title: e.title,
-          cover: upgradeCover(e.cover),
-          coverFallback: e.cover,
-          needsInfo: !!e.slugTitle || !e.cover,
-          coverReferer: src.baseUrl,
-          entries: []
+        map.set(key, { key, e, src, coverE: e.cover ? e : null, coverSrc: e.cover ? src : null })
+      } else {
+        if (!g.coverE && e.cover) {
+          g.coverE = e
+          g.coverSrc = src
         }
-        groups.set(key, g)
-      } else if (!g.cover && e.cover) {
-        g.cover = upgradeCover(e.cover)
-        g.coverFallback = e.cover
-        g.coverReferer = src.baseUrl
-        g.needsInfo = !!e.slugTitle
+        ;(g.more ??= []).push({ e, src })
       }
-      g.entries.push({ sourceId: src.id, sourceName: names.get(src.id)!.name, url: e.url })
     }
   }
-  const hits = [...groups.values()]
+  const groups = [...map.values()]
   // In "site order" put titles that have a cover first (sitemap-only titles have none until they're filled in).
-  if (sort === 'site' && !tokens.length) hits.sort((a, b) => Number(!!b.cover) - Number(!!a.cover))
+  if (sort === 'site' && !tokens.length) groups.sort((a, b) => Number(!!b.coverE) - Number(!!a.coverE))
   if (sort === 'az' || tokens.length) {
     const first = tokens[0] ?? ''
-    hits.sort((a, b) => {
+    groups.sort((a, b) => {
       if (first) {
         const as = a.key.startsWith(first) ? 0 : 1
         const bs = b.key.startsWith(first) ? 0 : 1
         if (as !== bs) return as - bs
       }
-      return sort === 'az' || first ? a.key.localeCompare(b.key) : 0
+      // (keys are plain a-z / 0-9 / space, so a direct comparison orders them the same way and is much faster)
+      return sort === 'az' || first ? (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) : 0
     })
   }
-  return { total: hits.length, hits: hits.slice(offset, offset + limit) }
+  lastSearch = { sig, groups }
+  return { total: groups.length, hits: groups.slice(offset, offset + limit).map(toHit) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -807,9 +863,13 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     // whose chapter URLs don't contain the series name, wait until the list stops changing.
     // First let the page finish its own data requests (many sites fetch the chapter list a moment after load),
     // then scroll to the bottom (lazy lists), then wait for those requests too.
-    await waitXhrIdle(win, 600, 8000)
-    await win.webContents.executeJavaScript('window.scrollTo(0, document.documentElement.scrollHeight)').catch(() => undefined)
-    await waitXhrIdle(win, 500, 3500)
+    // (the quick newest-chapters check settles faster: it only needs what the page shows first)
+    await (firstPageOnly ? waitXhrIdle(win, 300, 5000, 350) : waitXhrIdle(win, 450, 8000, 700))
+    if (!firstPageOnly) {
+      // (the newest-chapters check only needs what is on screen; a full read also wakes up lazy lists)
+      await win.webContents.executeJavaScript('window.scrollTo(0, document.documentElement.scrollHeight)').catch(() => undefined)
+      await waitXhrIdle(win, 350, 3000, 200)
+    }
     let out = await run()
     let prevSig = ''
     let stableRounds = 0
@@ -854,7 +914,7 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
       if (!clicked) break
       // wait for the list to actually change after that instead of a fixed pause
       let changed = false
-      await waitXhrIdle(win, 350, 2500) // the next slice is usually a data request: let it finish
+      await waitXhrIdle(win, 250, 2500, 120) // the next slice is usually a data request: let it finish
       for (let i = 0; i < 20; i++) {
         await sleep(100)
         out = await run()

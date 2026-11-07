@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Component, useState, type ReactNode } from 'react'
 import Browse from './components/Browse'
 import Series from './components/Series'
 import Reader from './components/Reader'
@@ -13,7 +13,34 @@ type View =
   | { name: 'series'; series: OpenSeries }
   | { name: 'reader'; series: OpenSeries; chapter: OpenChapter }
 
+/** If a screen ever crashes while drawing, show a message and a way back instead of a blank window. */
+class Boundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null }
+  static getDerivedStateFromError(error: Error): { error: Error } {
+    return { error }
+  }
+  render(): ReactNode {
+    if (!this.state.error) return this.props.children
+    return (
+      <div className="hint">
+        <p>Something went wrong on this screen: {this.state.error.message}</p>
+        <button className="primary" onClick={() => window.location.reload()}>
+          Reload the app
+        </button>
+      </div>
+    )
+  }
+}
+
 export default function App(): React.JSX.Element {
+  return (
+    <Boundary>
+      <AppInner />
+    </Boundary>
+  )
+}
+
+function AppInner(): React.JSX.Element {
   const [view, setView] = useState<View>({ name: 'browse' })
 
   // Browse stays mounted (hidden) so scroll position, search and results survive opening a series.

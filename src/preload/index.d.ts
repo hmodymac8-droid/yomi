@@ -213,7 +213,8 @@ export interface MangaApi {
   removeSite: (id: string) => Promise<void>
   crawl: (id: string) => Promise<void>
   cancelCrawl: (id: string) => Promise<void>
-  search: (q: string, sourceId: string, sort: 'site' | 'az', offset: number, limit: number) => Promise<SearchResult>
+  /** `sourceIds`: the sites to search; an empty list searches all of them. */
+  search: (q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number) => Promise<SearchResult>
   /** auto: saved list (a quick look at the newest chapters if it is old); check: that look now; full: read everything again. */
   getSeries: (sourceId: string, url: string, mode?: 'auto' | 'check' | 'full') => Promise<Result<SeriesDetail>>
   onProgress: (cb: (p: CrawlProgress) => void) => () => void

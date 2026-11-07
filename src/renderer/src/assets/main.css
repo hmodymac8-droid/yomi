@@ -62,6 +62,17 @@ button:disabled { opacity: .5; cursor: default; }
 
 .newcard.wide { flex: initial; }
 .newcard.wide .card { width: 100%; }
+/* site picker */
+.picker { position: relative; }
+.pickbtn { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: #0f0f11; color: var(--text); cursor: pointer; font: inherit; white-space: nowrap; }
+.pickshade { position: fixed; inset: 0; z-index: 20; }
+.pickmenu { position: absolute; top: 44px; right: 0; z-index: 21; min-width: 280px; max-height: 60vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+.pickhead { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; padding: 2px 4px 8px; }
+.pickrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 4px; border-radius: 6px; font-size: 14px; }
+.pickrow:hover { background: #26262c; }
+.pickrow label { cursor: pointer; flex: 1; }
+.pickrow em { font-style: normal; color: var(--muted); font-size: 12px; margin-left: 4px; }
+
 /* pages */
 .gridtop { scroll-margin-top: 84px; }
 .pager { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 8px 0 14px; font-size: 13px; color: var(--muted); }

@@ -17,9 +17,29 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
   const [follows, setFollows] = useState<FollowInfo[]>([])
   const [upd, setUpd] = useState<UpdateStatus | null>(null)
   const [q, setQ] = useState('')
-  const [sourceId, setSourceId] = useState('all')
+  // Which sites are searched. null means all of them; otherwise the chosen ones (remembered between launches).
+  const [picked, setPicked] = useState<string[] | null>(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem('pickedSites') ?? 'null')
+      return Array.isArray(v) && v.length > 0 ? (v as string[]) : null
+    } catch {
+      return null
+    }
+  })
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const choose = (next: string[] | null): void => {
+    setPicked(next)
+    try {
+      localStorage.setItem('pickedSites', JSON.stringify(next))
+    } catch {
+      /* not critical */
+    }
+  }
   const [sort, setSort] = useState<'site' | 'az'>('site')
   const [sources, setSources] = useState<SourceInfo[]>([])
+  // The sites actually searched (a site that was removed can't stay ticked). Empty = all of them.
+  const sourceIds = picked ? picked.filter((id) => sources.some((s) => s.id === id)) : []
+  const sourceKey = sourceIds.join(',')
   const [hits, setHits] = useState<SearchHit[]>([])
   const [total, setTotal] = useState(0)
   const [siteUrl, setSiteUrl] = useState('')
@@ -65,14 +85,19 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
 
   const runSearch = useCallback(async () => {
     const myGen = ++gen.current
-    const res = await window.api.search(q, sourceId, sort, page * PAGE, PAGE)
+    let res: Awaited<ReturnType<typeof window.api.search>>
+    try {
+      res = await window.api.search(q, sourceKey ? sourceKey.split(',') : [], sort, page * PAGE, PAGE)
+    } catch {
+      return // a failed search leaves the grid as it is; the next one tries again
+    }
     if (myGen !== gen.current) return // replaced while we waited
     setTotal(res.total)
     setHits(res.hits)
     // the list got shorter (a site was removed, a filter changed): don't sit on a page that no longer exists
     const last = Math.max(0, Math.ceil(res.total / PAGE) - 1)
     if (page > last) setPage(last)
-  }, [q, sourceId, sort, page])
+  }, [q, sourceKey, sort, page])
 
   const goPage = (n: number): void => {
     const target = Math.min(Math.max(0, n), pages - 1)
@@ -85,7 +110,7 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
   // A new query / site / sort starts again from page 1.
   useEffect(() => {
     setPage(0)
-  }, [q, sourceId, sort])
+  }, [q, sourceKey, sort])
 
   // Mouse wheel past the bottom of the page: keep scrolling and the next page opens. A short pause after reaching
   // the bottom keeps the momentum of getting there from flipping the page by accident.
@@ -294,14 +319,17 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
     setAdding(false)
     if (!res.ok) return setAddError(res.error)
     setSiteUrl('')
-    setSourceId('all')
+    choose(null) // show everything, so the new site is visible
     refreshSources()
   }
 
   const removeSite = async (s: SourceInfo): Promise<void> => {
     if (!confirm(`Remove ${s.name} and its ${s.count} saved titles?`)) return
     await window.api.removeSite(s.id)
-    if (sourceId === s.id) setSourceId('all')
+    if (picked?.includes(s.id)) {
+      const rest = picked.filter((id) => id !== s.id)
+      choose(rest.length > 0 ? rest : null)
+    }
     refreshSources()
     runSearch()
   }
@@ -316,14 +344,51 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <select value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
-          <option value="all">All sites</option>
-          {sources.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <div className="picker">
+          <button className="pickbtn" onClick={() => setPickerOpen((o) => !o)} title="Choose which sites to search">
+            {sourceIds.length === 0 || sourceIds.length === sources.length
+              ? `All sites (${sources.length})`
+              : `${sourceIds.length} of ${sources.length} sites`}{' '}
+            ▾
+          </button>
+          {pickerOpen && (
+            <>
+              <div className="pickshade" onClick={() => setPickerOpen(false)} />
+              <div className="pickmenu">
+                <div className="pickhead">
+                  <button className="mini" onClick={() => choose(null)}>
+                    all
+                  </button>
+                  <span>tick the sites to search</span>
+                </div>
+                {sources.map((s) => {
+                  const on = sourceIds.length === 0 || sourceIds.includes(s.id)
+                  return (
+                    <div key={s.id} className="pickrow">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => {
+                            // from "all" the first click unticks that one site; always keep at least one ticked
+                            const current = sourceIds.length === 0 ? sources.map((x) => x.id) : sourceIds
+                            const next = on ? current.filter((id) => id !== s.id) : [...current, s.id]
+                            if (next.length === 0) return
+                            choose(next.length === sources.length ? null : next)
+                          }}
+                        />{' '}
+                        {s.name} <em>{s.count.toLocaleString()}</em>
+                      </label>
+                      <button className="mini" title="Search only this site" onClick={() => { choose([s.id]); setPickerOpen(false) }}>
+                        only
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </div>
         <select value={sort} onChange={(e) => setSort(e.target.value as 'site' | 'az')}>
           <option value="site">Site order</option>
           <option value="az">A – Z</option>

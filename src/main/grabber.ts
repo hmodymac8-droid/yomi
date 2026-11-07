@@ -60,14 +60,14 @@ function xhrBump(id: number, delta: number): void {
  * Waits until the page has finished its data requests (none running for `quietMs`), at least ~1 s after the call
  * so that requests which start a moment after load are caught. Gives up after `maxMs`.
  */
-export async function waitXhrIdle(win: BrowserWindow, quietMs = 700, maxMs = 9000): Promise<void> {
+export async function waitXhrIdle(win: BrowserWindow, quietMs = 700, maxMs = 9000, minMs = 1000): Promise<void> {
   const id = win.webContents.id
   const start = Date.now()
   while (Date.now() - start < maxMs) {
-    await new Promise((r) => setTimeout(r, 120))
+    await new Promise((r) => setTimeout(r, 100))
     if (
       (xhrPending.get(id) ?? 0) === 0 &&
-      Date.now() - start >= 1000 &&
+      Date.now() - start >= minMs &&
       Date.now() - (xhrLast.get(id) ?? 0) >= quietMs
     )
       return

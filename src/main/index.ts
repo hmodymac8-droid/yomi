@@ -8,6 +8,7 @@ import {
   addSource,
   cancelCrawl,
   crawlSource,
+  debugSaveCost,
   debugTrimSeries,
   enrichEntries,
   flushSeriesCache,
@@ -50,6 +51,10 @@ import {
   resumeDownloads,
   setDownloadEmitter
 } from './downloads'
+
+// A background task that fails must never take the app down or pop up an error box: log it and carry on.
+process.on('uncaughtException', (e) => console.error('[uncaught]', e))
+process.on('unhandledRejection', (e) => console.error('[unhandled rejection]', e))
 
 // Dev/test runs (any MR_* variable) get their own throw-away data folder, so they never touch your catalog,
 // reading progress or caches, and never fight a running copy of the app over the same files.
@@ -189,8 +194,8 @@ app.whenReady().then(async () => {
   ipcMain.handle('remove-site', (_e, id: string) => removeSource(id))
   ipcMain.handle('crawl', (_e, id: string) => void crawlSource(id, emit))
   ipcMain.handle('cancel-crawl', (_e, id: string) => cancelCrawl(id))
-  ipcMain.handle('search', (_e, q: string, sourceId: string, sort: 'site' | 'az', offset: number, limit: number) =>
-    search(q, sourceId, sort, offset, limit)
+  ipcMain.handle('search', (_e, q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number) =>
+    search(q, sourceIds, sort, offset, limit)
   )
   // Nothing the screens wait for may hang forever: give up with a clear message instead.
   const withTimeout = <T>(p: Promise<T>, ms: number, what: string): Promise<T> =>
@@ -241,12 +246,12 @@ app.whenReady().then(async () => {
       const t0 = Date.now()
       await crawlSource(def.id, (p) => (last = p.found))
       const crawlMs = Date.now() - t0
-      const r = search('', def.id, 'site', 0, 3)
+      const r = search('', [def.id], 'site', 0, 3)
       const sample = r.hits.map((h) => ({ t: h.title.slice(0, 40), c: h.cover.slice(-70), u: h.entries[0].url }))
       console.log('CRAWL_RESULT ' + JSON.stringify({ site: def.name, tpl: def.listTemplate, re: def.seriesRe, pages: def.maxPages, found: last, crawlMs, mode: process.env['MR_FORCE_MODE'] ?? 'auto', sample }))
       if (process.env['MR_CRAWL_ENRICH']) {
         // titles that came from a sitemap (URL-derived): fill in the real ones from the pages
-        const all = search('', def.id, 'az', 0, 5000).hits
+        const all = search('', [def.id], 'az', 0, 5000).hits
         const slugOnes = all.filter((h) => !h.cover).slice(0, 4)
         const before = slugOnes.map((h) => h.title)
         const got = await enrichEntries(slugOnes.map((h) => h.entries[0].url))
@@ -409,6 +414,35 @@ app.whenReady().then(async () => {
     return
   }
 
+  // Dev helper: MR_SEARCHBENCH=1 times loading the catalog and a set of searches (use MR_DATADIR=bench with a copy of
+  // the real catalog.json in %TEMP%\manga-reader-devtestbench).
+  if (process.env['MR_SEARCHBENCH']) {
+    ;(async () => {
+      const t0 = Date.now()
+      const sources = listSources()
+      const loadMs = Date.now() - t0
+      console.log('BENCH_LOAD ' + JSON.stringify({ loadMs, sources: sources.length, ...debugSaveCost() }))
+      const all: string[] = []
+      const time = (label: string, q: string, ids: string[], sort: 'site' | 'az', offset: number): void => {
+        const t = Date.now()
+        const r = search(q, ids, sort, offset, 60)
+        console.log('BENCH_SEARCH ' + JSON.stringify({ label, ms: Date.now() - t, total: r.total, returned: r.hits.length }))
+      }
+      time('all sites, empty query, page 1', '', all, 'site', 0)
+      time('all sites, empty query, page 50', '', all, 'site', 3000)
+      time('all sites, A-Z, page 1', '', all, 'az', 0)
+      time('all sites, "a" (1 letter)', 'a', all, 'site', 0)
+      time('all sites, "one piece"', 'one piece', all, 'site', 0)
+      time('all sites, "zzzzq" (no match)', 'zzzzq', all, 'site', 0)
+      time('one site, empty query', '', [sources[0].id], 'site', 0)
+      time('2 sites, "love"', 'love', sources.slice(0, 2).map((s) => s.id), 'site', 0)
+      time('all sites, empty query, page 1 AGAIN', '', all, 'site', 0)
+    })()
+      .catch((e) => console.log('BENCH_ERROR ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => app.quit())
+    return
+  }
+
   // Dev helper: MR_ANCH=<series url> loads the page, scrolls it, and reports which links look like chapters.
   if (process.env['MR_ANCH']) {
     ;(async () => {
@@ -474,7 +508,7 @@ app.whenReady().then(async () => {
           def.maxPages = Math.min(def.maxPages, 2)
           addSource(def)
           await crawlSource(def.id, () => undefined)
-          const hits = search('', def.id, 'site', 0, 60).hits
+          const hits = search('', [def.id], 'site', 0, 60).hits
           o.titles = hits.length
           o.withCovers = hits.filter((h) => h.cover).length
           lap('listMs')
@@ -890,6 +924,14 @@ app.whenReady().then(async () => {
   createWindow()
   warmUp()
   primeNetwork()
+  // Build the title index in the background while the app is idle, so the first search you type is quick.
+  setTimeout(() => {
+    try {
+      search('', [], 'site', 0, 1)
+    } catch {
+      /* it is only a warm-up */
+    }
+  }, 4000)
 
   // Sites added by an older version: look once for a sitemap, and for a better way to list the site than just
   // its home page (100 titles). If either turns up, start a scan that uses it.
@@ -940,7 +982,7 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_ANCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }
