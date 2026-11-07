@@ -13,7 +13,7 @@ import type {
 } from '../preload/index.d'
 import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
-import { canonGenres, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
+import { canonGenres, dataChapters, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
 import { readSitemapFile } from './sitemap'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
@@ -1544,10 +1544,13 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
         }
       }
     }
-    const chapters = finalizeChapters([...acc.values()], slug)
-    const short = declaredEnd >= 10 && chapters.length < declaredEnd * 0.9
     // type / genres / status, from the page as it is now (read once, while the page is open anyway)
-    const html: string = await win.webContents.executeJavaScript('document.documentElement.outerHTML.slice(0, 1500000)').catch(() => '')
+    const html: string = await win.webContents.executeJavaScript('document.documentElement.outerHTML.slice(0, 3000000)').catch(() => '')
+    const listed = [...acc.values()]
+    // chapters the page keeps in its data without drawing them as links
+    const extra = dataChapters(html, url, listed)
+    const chapters = finalizeChapters([...listed, ...extra], slug)
+    const short = declaredEnd >= 10 && chapters.length < declaredEnd * 0.9
     return { ...out, ...parseMeta(html, url), chapters, incomplete: looksIncomplete(chapters) || short || undefined }
   } finally {
     if (!win.isDestroyed()) win.destroy()
@@ -1587,7 +1590,7 @@ async function staticSeries(src: SourceDef, url: string, slug: string): Promise<
     // The static HTML may only hold other series' chapter links (the real list is added by JavaScript).
     const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
     if (slug && !p.chapters.some((c) => flat(c.url).includes(slug))) return null
-    const chapters = finalizeChapters(p.chapters, slug)
+    const chapters = finalizeChapters([...p.chapters, ...dataChapters(r.html, url, p.chapters)], slug)
     // The page handed over only a slice (the rest is added by JavaScript after load): not a usable answer.
     if (looksIncomplete(chapters)) return null
     return { url, title: p.title, cover: p.cover, description: p.description, ...parseMeta(r.html, url), chapters }

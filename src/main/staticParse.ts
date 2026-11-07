@@ -421,7 +421,7 @@ const CANON: Record<string, string[]> = {
   Medical: ['medical', 'طبي'],
   Magic: ['magic', 'magical', 'سحر'],
   Reincarnation: ['reincarnation', 'reincarnated', 'rebirth', 'تناسخ', 'اعاده تجسد', 'تجسد'],
-  Regression: ['regression', 'regressor', 'عوده بالزمن'],
+  Regression: ['regression', 'regressor', 'عوده بالزمن', 'تراجع', 'تراجعي'],
   'Time Travel': ['time travel', 'سفر عبر الزمن'],
   Cultivation: ['cultivation', 'xianxia', 'xuanhuan', 'wuxia', 'صقل', 'زراعه'],
   Murim: ['murim', 'موريم'],
@@ -484,6 +484,42 @@ export function canonGenres(list: string[]): string[] {
   for (const g of list) {
     const c = canonGenre(g)
     if (c && !out.includes(c)) out.push(c)
+  }
+  return out
+}
+
+/**
+ * Chapters that are in the page's data but not drawn as links (some sites draw the first and the newest chapters and
+ * keep the rest in a script: `slug:"chapter-7",number:7`). Only used when the page's own chapter links are
+ * <series address>/<slug>, so the missing addresses can be written the same way.
+ */
+export function dataChapters(html: string, seriesUrl: string, have: { url: string }[]): { title: string; url: string }[] {
+  if (!html) return []
+  const base = seriesUrl.replace(/[?#].*$/, '').replace(/\/+$/, '')
+  const trim = (u: string): string => u.replace(/[?#].*$/, '').replace(/\/+$/, '')
+  const haveUrls = new Set(have.map((c) => trim(c.url)))
+  const sameShape = have.some((c) => {
+    const u = trim(c.url)
+    return u.startsWith(base + '/') && !u.slice(base.length + 1).includes('/')
+  })
+  if (!sameShape) return []
+  const raw = html.replace(/\\"/g, '"').replace(/&quot;/g, '"')
+  const found = new Map<string, string>() // slug -> number
+  const add = (slug: string, num: string): void => {
+    if (!/\d/.test(slug) || slug.length > 80 || /[\s/]/.test(slug)) return
+    if (!found.has(slug)) found.set(slug, num)
+  }
+  const q = '["\']?'
+  const slugFirst = new RegExp(q + 'slug' + q + '\\s*:\\s*["\']([^"\']+)["\']\\s*,\\s*' + q + '(?:number|chapter_number|chapterNumber|chapter|num)' + q + '\\s*:\\s*["\']?(\\d+(?:\\.\\d+)?)', 'g')
+  const numFirst = new RegExp(q + '(?:number|chapter_number|chapterNumber|num)' + q + '\\s*:\\s*["\']?(\\d+(?:\\.\\d+)?)["\']?\\s*,\\s*' + q + 'slug' + q + '\\s*:\\s*["\']([^"\']+)["\']', 'g')
+  for (const m of raw.matchAll(slugFirst)) add(m[1], m[2])
+  for (const m of raw.matchAll(numFirst)) add(m[2], m[1])
+  // the slugs must look like this series' chapter slugs (at least one of them is already a link)
+  if (![...found.keys()].some((s) => haveUrls.has(base + '/' + s))) return []
+  const out: { title: string; url: string }[] = []
+  for (const [slug, num] of found) {
+    const url = base + '/' + slug
+    if (!haveUrls.has(url)) out.push({ title: 'Chapter ' + num, url })
   }
   return out
 }
