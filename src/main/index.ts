@@ -713,6 +713,7 @@ app.whenReady().then(async () => {
           lap('chaptersMs')
           if (chapters.length === 0) throw new Error('no chapters found')
           const g = await grabChapterFast(chapters[0].url)
+          if (process.env['MR_PIPEDEBUG']) console.log('PIPECH', chapters[0].url, g.pages.length, g.pages.slice(0, 2).join(' '), g.pages.slice(-2).join(' '))
           o.pages = g.pages.length
           lap('pagesMs')
           if (g.pages.length === 0) throw new Error('no pages found in the newest chapter')

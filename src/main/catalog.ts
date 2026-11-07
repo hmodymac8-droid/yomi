@@ -53,6 +53,24 @@ function load(): Store {
  * Drops saved entries that don't fit their site's own idea of a series page. This clears out leftovers from an
  * earlier, wrong way of listing a site (e.g. a home page's "latest chapters" cards that were mistaken for series).
  */
+/**
+ * Pages of a site's own menu (Browse, Top rated, Most popular...) look like series addresses on some sites but are lists.
+ */
+const NAV_SLUGS = new Set([
+  'browse', 'top-rated', 'most-popular', 'most-favorited', 'most-viewed', 'trending', 'latest', 'latest-updates', 'popular',
+  'new', 'new-releases', 'recent', 'hot', 'random', 'genres', 'genre', 'search', 'az-list', 'a-z', 'all', 'list', 'completed',
+  'ongoing', 'bookmarks', 'history', 'login', 'register', 'contact', 'about', 'faq', 'terms', 'privacy', 'dmca', 'profile',
+  'rss', 'sitemap', 'advanced-search', 'manga-list', 'series', 'comics', 'directory'
+])
+export function isNavUrl(url: string): boolean {
+  try {
+    const segs = new URL(url).pathname.split('/').filter(Boolean)
+    return segs.length > 0 && NAV_SLUGS.has(segs[segs.length - 1].toLowerCase())
+  } catch {
+    return false
+  }
+}
+
 function pruneForeignEntries(s: Store): void {
   let changed = false
   for (const src of s.sources) {
@@ -64,7 +82,7 @@ function pruneForeignEntries(s: Store): void {
     } catch {
       continue
     }
-    const keep = list.filter((e) => re.test(e.url))
+    const keep = list.filter((e) => re.test(e.url) && !isNavUrl(e.url))
     if (keep.length !== list.length) {
       s.series[src.id] = keep
       changed = true
@@ -456,6 +474,7 @@ async function importSitemaps(
               if (!old.cover && r.image) old.cover = r.image
               continue
             }
+            if (isNavUrl(url)) continue
             known.set(url, { sourceId: src.id, url, title: titleOf(url), cover: r.image ?? '', slugTitle: true })
           }
         }
@@ -577,6 +596,7 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
             }
             continue
           }
+          if (isNavUrl(it.url)) continue
           known.set(it.url, { sourceId: id, url: it.url, title: fixTitle(it.title) || titleFromUrl(it.url), cover: it.cover })
           added++
         }

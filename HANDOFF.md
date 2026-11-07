@@ -109,3 +109,15 @@ Following screen by hand (built, never opened). Everything above was verified wi
 - Bulk delete no longer freezes the app: `removeDownloads` (downloads.ts) updates the saved list once and removes folders
   in the background (async, 4 at a time); the screen drops the rows in one step. Also fixed: a deleted chapter could not
   be downloaded again (a leftover "cancelled" flag). Test: MR_DLPAR prints DLDEL / DLAGAIN.
+## Open-problem review (after the 'fix what you can' pass)
+- Odd page counts (Manganato.gg 453/104, PandaToons 92): NOT a bug. The pages are one folder numbered 0..N in order,
+  i.e. long webtoon chapters. Nyx/Projectsuki "3 pages": the newest chapter was locked and the list held only site icons
+  (apple-touch-icon). FIXED: `NOT_PAGE` in staticParse.ts now drops icons/logos/favicons wherever they sit in the file
+  name, so a locked chapter shows "no pages" instead of icons.
+- Toonz: its "series" were menu pages (/manga/top-rated, /browse...). FIXED: `isNavUrl` (catalog.ts) keeps menu pages out
+  of catalogs and prunes them on load. Toonz is behind Cloudflare (403 to plain HTTP) so it now honestly fails: no titles.
+- Spirit Suppressing Museum 79 vs 66: NOT a bug (half chapters such as 1.5, 2.5 count as chapters).
+- Fropi: works now (50 chapters, 11 pages); the earlier timeout was temporary.
+- Swarm: chapter table stays empty (even in a normal browser pane); only a few "latest" chapters are found. OPEN.
+- Still blocked by the sites: comix.to (403 for chapter lists), mangadot.net (human check).
+- Debug aids: MR_PIPEDEBUG prints PIPETRY (per series) and PIPECH (newest chapter + pages).

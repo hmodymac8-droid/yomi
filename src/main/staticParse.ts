@@ -225,7 +225,9 @@ export function parseSeries(
   }
 }
 
-const NOT_PAGE = /\/(logo|favicon|icon|avatar|banner|sprite|emoji|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)/i
+// Site furniture, not manga pages: logos, favicons, "apple-touch-icon", avatars, sprites... (the name may START with
+// something else: apple-touch-icon-152x152.png, site-logo.png)
+const NOT_PAGE = /\/[^/]*(?:^|[-_.])?(logo|favicon|icon|avatar|sprite|emoji|apple-touch)[^/]*\.(png|jpe?g|webp|gif|avif|ico|svg)(?:\?|$)|\/(banner|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)/i
 
 /** Manga pages sit in one folder of one CDN host: take the biggest such group (covers/ads are scattered). */
 export function pickPageGroup(urls: string[]): string[] {
