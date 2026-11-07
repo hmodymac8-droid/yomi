@@ -3,6 +3,7 @@ import { join } from 'path'
 import { createHash } from 'crypto'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { readdir, rm, writeFile } from 'fs/promises'
+import { readJson, writeAtomic } from './safefile'
 import { readFile } from 'fs/promises'
 import type { SeriesDetail } from '../preload/index.d'
 import type { DownloadItem, DownloadRequest } from '../preload/index.d'
@@ -201,11 +202,7 @@ export function setDownloadEmitter(fn: (item: DownloadItem) => void): void {
 
 function load(): Record<string, DownloadItem> {
   if (items) return items
-  try {
-    if (existsSync(indexFile())) items = JSON.parse(readFileSync(indexFile(), 'utf8'))
-  } catch {
-    items = null
-  }
+  items = readJson<Record<string, DownloadItem>>(indexFile())
   items ??= {}
   // Anything that was mid-download when the app closed goes back in the queue.
   for (const i of Object.values(items)) if (i.status === 'downloading') i.status = 'queued'
@@ -216,7 +213,7 @@ function saveSoon(immediate = false): void {
   if (saveTimer) clearTimeout(saveTimer)
   const write = (): void => {
     try {
-      writeFileSync(indexFile(), JSON.stringify(load()))
+      writeAtomic(indexFile(), JSON.stringify(load()))
     } catch (e) {
       console.error('downloads save failed', e)
     }

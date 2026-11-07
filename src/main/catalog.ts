@@ -15,6 +15,7 @@ import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
 import { canonGenres, dataChapters, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
 import { readSitemapFile } from './sitemap'
+import { readJson, writeAtomic } from './safefile'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
@@ -51,11 +52,7 @@ const storePath = (): string => join(app.getPath('userData'), 'catalog.json')
 
 function load(): Store {
   if (store) return store
-  try {
-    if (existsSync(storePath())) store = JSON.parse(readFileSync(storePath(), 'utf8')) as Store
-  } catch {
-    store = null
-  }
+  store = readJson<Store>(storePath())
   if (!store) store = { sources: [], series: {}, scan: {} }
   store.scan ??= {} // catalogs saved by older versions have no scan state
   pruneForeignEntries(store)
@@ -166,7 +163,7 @@ function saveSoon(immediate = false): void {
   if (saveTimer) clearTimeout(saveTimer)
   const write = (): void => {
     try {
-      writeFileSync(storePath(), JSON.stringify(load()))
+      writeAtomic(storePath(), JSON.stringify(load()))
     } catch (e) {
       console.error('catalog save failed', e)
     }

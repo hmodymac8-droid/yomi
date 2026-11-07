@@ -205,7 +205,7 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
       </button>
     )
     if (d.status === 'done') return (
-      <button className="dl done" title="Saved on this PC. Click to delete the download" onClick={() => window.api.downloadRemove(d.id)}>
+      <button className="dl done" title="Saved on this PC. Click to delete the download" onClick={() => window.confirm(`Delete the saved copy of "${c.title}" from this PC?`) && window.api.downloadRemove(d.id)}>
         ✓
       </button>
     )

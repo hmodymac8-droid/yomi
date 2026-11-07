@@ -88,6 +88,19 @@ if (Object.keys(process.env).some((k) => k.startsWith('MR_'))) {
   // Your library lives in the same folder whatever the program is called ("Yomi" when installed, "manga-reader"
   // while developing), so installing never starts you over with an empty catalog.
   app.setPath('userData', join(app.getPath('appData'), 'manga-reader'))
+  // Only one Yomi at a time: two copies saving the same files could undo each other's changes. Opening it again
+  // just brings the open window to the front.
+  if (!app.requestSingleInstanceLock()) {
+    app.quit()
+    process.exit(0)
+  }
+  app.on('second-instance', () => {
+    const w = BrowserWindow.getAllWindows()[0]
+    if (w) {
+      if (w.isMinimized()) w.restore()
+      w.focus()
+    }
+  })
 }
 
 registerImageScheme()
