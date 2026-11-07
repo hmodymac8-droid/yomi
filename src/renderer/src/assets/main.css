@@ -496,3 +496,5 @@ select { cursor: pointer; }
 .kindtabs button:hover { color: var(--foreground); }
 .kindtabs button span { margin-left: 5px; font-size: 10px; font-variant-numeric: tabular-nums; }
 .kindtabs button.on { border-bottom-color: var(--primary); color: var(--primary-text); }
+
+.sechead.gridtop { text-transform: none; letter-spacing: normal; color: var(--foreground); font-size: 14px; font-weight: 400; }

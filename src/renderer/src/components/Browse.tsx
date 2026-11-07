@@ -66,7 +66,23 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
       /* not critical */
     }
   }
-  const [sort, setSort] = useState<'site' | 'az'>('site')
+  const [sort, setSort] = useState<'site' | 'az' | 'za' | 'sites' | 'genre'>(() => {
+    try {
+      const v = localStorage.getItem('browse.sort')
+      return v === 'az' || v === 'za' || v === 'sites' || v === 'genre' ? v : 'site'
+    } catch {
+      return 'site'
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('browse.sort', sort)
+    } catch {
+      /* not critical */
+    }
+  }, [sort])
+  const [genre, setGenre] = useState('')
+  const [genreList, setGenreList] = useState<{ name: string; count: number }[]>([])
   // All / Manga / Manhwa / Manhua: only titles whose type a series page has stated are in the three type tabs
   const [kind, setKind] = useState<'' | 'manga' | 'manhwa' | 'manhua'>('')
   const [counts, setCounts] = useState<{ manga: number; manhwa: number; manhua: number } | null>(null)
@@ -120,7 +136,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
     const myGen = ++gen.current
     let res: Awaited<ReturnType<typeof window.api.search>>
     try {
-      res = await window.api.search(q, sourceKey ? sourceKey.split(',') : [], sort, page * PAGE, PAGE, kind || undefined)
+      res = await window.api.search(q, sourceKey ? sourceKey.split(',') : [], sort, page * PAGE, PAGE, kind || undefined, genre || undefined)
     } catch {
       return // a failed search leaves the grid as it is; the next one tries again
     }
@@ -128,10 +144,11 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
     setTotal(res.total)
     setHits(res.hits)
     setCounts(res.counts ?? null)
+    setGenreList(res.genres ?? [])
     // the list got shorter (a site was removed, a filter changed): don't sit on a page that no longer exists
     const last = Math.max(0, Math.ceil(res.total / PAGE) - 1)
     if (page > last) setPage(last)
-  }, [q, sourceKey, sort, page, kind])
+  }, [q, sourceKey, sort, page, kind, genre])
 
   const goPage = (n: number): void => {
     const target = Math.min(Math.max(0, n), pages - 1)
@@ -144,7 +161,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   // A new query / site / sort starts again from page 1.
   useEffect(() => {
     setPage(0)
-  }, [q, sourceKey, sort, kind])
+  }, [q, sourceKey, sort, kind, genre])
 
   // Mouse wheel past the bottom of the page: keep scrolling and the next page opens. A short pause after reaching
   // the bottom keeps the momentum of getting there from flipping the page by accident.
@@ -722,9 +739,26 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                   </>
                 )}
               </div>
-              <select value={sort} onChange={(e) => setSort(e.target.value as 'site' | 'az')}>
-                <option value="site">Site order</option>
+              <select
+                className="genresel"
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                title="Genres come from the series pages the app has read so far"
+              >
+                <option value="">All genres</option>
+                {genre && !genreList.some((x) => x.name.toLowerCase() === genre.toLowerCase()) && <option value={genre}>{genre}</option>}
+                {genreList.map((x) => (
+                  <option key={x.name} value={x.name}>
+                    {x.name} ({x.count.toLocaleString()})
+                  </option>
+                ))}
+              </select>
+              <select value={sort} onChange={(e) => setSort(e.target.value as 'site' | 'az' | 'za' | 'sites' | 'genre')}>
+                <option value="site">{sourceIds.length === 1 || sources.length === 1 ? 'Site order' : 'Mixed'}</option>
+                <option value="sites">On most sites</option>
+                <option value="genre">By genre</option>
                 <option value="az">A – Z</option>
+                <option value="za">Z – A</option>
               </select>
             </div>
           </div>

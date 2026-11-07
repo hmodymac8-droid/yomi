@@ -342,6 +342,7 @@ export function parseMeta(html: string, pageUrl: string): SeriesMeta {
   const typed = genres.filter((g) => TYPE_WORD[g.toLowerCase()])
   if (!type && typed.length === 1) type = TYPE_WORD[typed[0].toLowerCase()]
   genres = genres.filter((g) => !TYPE_WORD[g.toLowerCase()])
+  genres = canonGenres(genres)
   // a site whose own name says what it hosts (manhwatop, manhuatop)
   if (!type) {
     try {
@@ -360,4 +361,121 @@ export function parseMeta(html: string, pageUrl: string): SeriesMeta {
     ...(genres.length ? { genres: genres.slice(0, 12) } : {}),
     ...(status ? { status } : {})
   }
+}
+
+// ---- genre names: one standard name per genre, whatever the site calls it (and in whatever language) ----
+
+/** Lower-case, no punctuation, Arabic letter variants folded (أ إ آ → ا, ة → ه, ى → ي), leading "ال" dropped. */
+function genreKey(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[ً-ٰٟ]/g, '') // Arabic marks (hamza, harakat) split off by NFKD
+    .replace(/[’'`´]/g, '')
+    .replace(/[-_/.&+]/g, ' ')
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((w) => (w.length > 3 && w.startsWith('ال') ? w.slice(2) : w))
+    .join(' ')
+}
+
+const CANON: Record<string, string[]> = {
+  Action: ['action', 'اكشن', 'حركه'],
+  Adventure: ['adventure', 'adventures', 'مغامرات', 'مغامره'],
+  Comedy: ['comedy', 'comedic', 'humor', 'humour', 'كوميدي', 'كوميديا'],
+  Drama: ['drama', 'دراما'],
+  Fantasy: ['fantasy', 'خيال', 'فانتازيا', 'فنتازيا'],
+  Horror: ['horror', 'رعب'],
+  Mystery: ['mystery', 'mysteries', 'غموض'],
+  Romance: ['romance', 'romantic', 'رومانسي', 'رومانسيه'],
+  'Sci-Fi': ['sci fi', 'scifi', 'science fiction', 'خيال علمي'],
+  'Slice of Life': ['slice of life', 'sol', 'شريحه من الحياه'],
+  Sports: ['sports', 'sport', 'رياضه', 'رياضي'],
+  Supernatural: ['supernatural', 'خارق للطبيعه', 'خوارق'],
+  Thriller: ['thriller', 'suspense', 'اثاره', 'تشويق'],
+  Psychological: ['psychological', 'نفسي'],
+  Tragedy: ['tragedy', 'ماساه', 'ماساوي'],
+  Historical: ['historical', 'history', 'تاريخي'],
+  'Martial Arts': ['martial arts', 'martial art', 'فنون قتال', 'فنون قتاليه'],
+  'School Life': ['school life', 'school', 'مدرسي', 'حياه مدرسيه', 'مدرسه'],
+  Shounen: ['shounen', 'shonen', 'شونين'],
+  Shoujo: ['shoujo', 'shojo', 'شوجو'],
+  Seinen: ['seinen', 'سينين'],
+  Josei: ['josei', 'جوسي'],
+  Isekai: ['isekai', 'ايسيكاي', 'عالم اخر'],
+  Harem: ['harem', 'حريم'],
+  Ecchi: ['ecchi', 'ايتشي'],
+  Mature: ['mature', 'ناضج', 'للكبار'],
+  Adult: ['adult', '18+', 'r18'],
+  Smut: ['smut'],
+  'Gender Bender': ['gender bender', 'genderswap', 'gender swap', 'تحول جنسي'],
+  Mecha: ['mecha', 'mech', 'ميكا', 'روبوتات'],
+  Military: ['military', 'war', 'عسكري', 'حرب'],
+  Music: ['music', 'موسيقي'],
+  Cooking: ['cooking', 'food', 'طبخ'],
+  Medical: ['medical', 'طبي'],
+  Magic: ['magic', 'magical', 'سحر'],
+  Reincarnation: ['reincarnation', 'reincarnated', 'rebirth', 'تناسخ', 'اعاده تجسد', 'تجسد'],
+  Regression: ['regression', 'regressor', 'عوده بالزمن'],
+  'Time Travel': ['time travel', 'سفر عبر الزمن'],
+  Cultivation: ['cultivation', 'xianxia', 'xuanhuan', 'wuxia', 'صقل', 'زراعه'],
+  Murim: ['murim', 'موريم'],
+  Game: ['game', 'games', 'gaming', 'video games', 'العاب', 'لعبه'],
+  System: ['system', 'نظام'],
+  Dungeons: ['dungeons', 'dungeon', 'زنزانات', 'زنزانه'],
+  Demons: ['demons', 'demon', 'شياطين'],
+  Monsters: ['monsters', 'monster', 'وحوش'],
+  Vampire: ['vampire', 'vampires', 'مصاصي دماء', 'مصاص دماء'],
+  Zombies: ['zombies', 'zombie', 'زومبي'],
+  'Post-Apocalyptic': ['post apocalyptic', 'apocalypse', 'apocalyptic', 'نهايه عالم'],
+  Survival: ['survival', 'نجاه'],
+  Revenge: ['revenge', 'انتقام'],
+  Villainess: ['villainess', 'شريره'],
+  Crime: ['crime', 'جريمه'],
+  Detective: ['detective', 'تحقيق', 'محقق'],
+  Police: ['police', 'شرطه'],
+  'Super Power': ['super power', 'superpower', 'superpowers', 'super powers', 'قوه خارقه', 'قوي خارقه'],
+  Overpowered: ['overpowered', 'op mc', 'بطل غير اعتيادي', 'بطل قوي'],
+  Gore: ['gore', 'دموي'],
+  "Boys' Love": ['boys love', 'bl', 'yaoi', 'shounen ai', 'shonen ai'],
+  "Girls' Love": ['girls love', 'gl', 'yuri', 'shoujo ai', 'shojo ai'],
+  'Office Workers': ['office workers', 'office', 'workplace'],
+  'One Shot': ['one shot', 'oneshot'],
+  Doujinshi: ['doujinshi'],
+  'Full Color': ['full color', 'colored', 'full colour', 'ملون'],
+  Hentai: ['hentai']
+}
+const CANON_BY_KEY = new Map<string, string>()
+for (const [name, words] of Object.entries(CANON)) for (const w of [name, ...words]) CANON_BY_KEY.set(genreKey(w), name)
+
+/** Words sites put among genres that are not genres. */
+const NOT_GENRE = new Set(
+  ['manga', 'manhwa', 'manhua', 'webtoon', 'webtoons', 'comic', 'comics', 'novel', 'raw', 'english', 'hot', 'new', 'latest',
+    'popular', 'trending', 'updated', 'completed', 'ongoing', 'other', 'others', 'misc', 'unknown', 'genre', 'genres',
+    'مانجا', 'مانهوا', 'مانها', 'ويبتون', 'مكتمل', 'مستمر', 'جديد', 'رائج'].map(genreKey)
+)
+
+/** One standard name for a genre ("shonen", "Shōnen", "شونين" → "Shounen"); null for words that aren't genres. */
+export function canonGenre(raw: string): string | null {
+  const k = genreKey(raw)
+  if (!k || NOT_GENRE.has(k)) return null
+  const hit = CANON_BY_KEY.get(k) ?? CANON_BY_KEY.get(k.replace(/s$/, ''))
+  if (hit) return hit
+  // keep the site's own word, tidied: "slow  burn" → "Slow Burn" (Arabic and other scripts kept as written)
+  const t = raw.replace(/\s+/g, ' ').trim()
+  return /^[\x20-\x7e]+$/.test(t) ? t.replace(/\b[a-z]/g, (c) => c.toUpperCase()) : t
+}
+
+export function canonGenres(list: string[]): string[] {
+  const out: string[] = []
+  for (const g of list) {
+    const c = canonGenre(g)
+    if (c && !out.includes(c)) out.push(c)
+  }
+  return out
 }

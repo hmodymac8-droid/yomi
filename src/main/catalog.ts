@@ -13,7 +13,7 @@ import type {
 } from '../preload/index.d'
 import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
-import { parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
+import { canonGenres, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
 import { readSitemapFile } from './sitemap'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
@@ -849,16 +849,26 @@ function toHit(g: Grp): SearchHit {
 }
 
 /** `sourceIds` are the sites to search; an empty list means all of them. */
+// A new mix of the sites every time the app starts (the same one while it runs, so turning pages is stable).
+const MIX_SEED = (Math.random() * 0xffffffff) >>> 0
+function mixHash(key: string): number {
+  let h = MIX_SEED ^ 0x9e3779b9
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 0x85ebca6b) >>> 0
+  h ^= h >>> 15
+  return h >>> 0
+}
+
 export function search(
   q: string,
   sourceIds: string[],
-  sort: 'site' | 'az',
+  sort: 'site' | 'az' | 'za' | 'sites' | 'genre',
   offset: number,
   limit: number,
-  kind?: SeriesType
+  kind?: SeriesType,
+  genre?: string
 ): SearchResult {
   const sig = `${catalogVersion}|${metaVersion}|${q}|${sourceIds.join(',')}|${sort}`
-  if (lastSearch && lastSearch.sig === sig) return pick(lastSearch.groups, kind, offset, limit)
+  if (lastSearch && lastSearch.sig === sig) return pick(lastSearch.groups, kind, genre, offset, limit)
   const s = load()
   const tokens = norm(q).split(' ').filter(Boolean)
   const only = sourceIds.length > 0 ? new Set(sourceIds) : null
@@ -885,21 +895,49 @@ export function search(
   }
   const groups = [...map.values()]
   // In "site order" put titles that have a cover first (sitemap-only titles have none until they're filled in).
-  if (sort === 'site' && !tokens.length) groups.sort((a, b) => Number(!!b.coverE) - Number(!!a.coverE))
-  if (sort === 'az' || tokens.length) {
+  if (sort === 'site' && !tokens.length) {
+    // Several sites: their titles are mixed together (a fixed shuffle for this session, so pages stay stable),
+    // instead of one whole site after another. One site: that site's own order.
+    const mixed = s.sources.filter((x) => !only || only.has(x.id)).length > 1
+    const rank = new Map<Grp, number>()
+    if (mixed) for (const g of groups) rank.set(g, mixHash(g.key))
+    groups.sort((a, b) => Number(!!b.coverE) - Number(!!a.coverE) || (mixed ? rank.get(a)! - rank.get(b)! : 0))
+  }
+  if (sort === 'genre' && !tokens.length) {
+    // grouped by each title's main genre (the first its page lists), genres A-Z, titles without one last
+    const main = new Map<Grp, string>()
+    for (const g of groups) main.set(g, genresOf(g)[0] ?? '\uffff')
+    groups.sort((a, b) => {
+      const ga = main.get(a)!
+      const gb = main.get(b)!
+      if (ga !== gb) return ga < gb ? -1 : 1
+      return Number(!!b.coverE) - Number(!!a.coverE) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+    })
+    lastSearch = { sig, groups }
+    return pick(groups, kind, genre, offset, limit)
+  }
+  if (sort !== 'site' || tokens.length) {
     const first = tokens[0] ?? ''
+    const dir = sort === 'za' ? -1 : 1
+    // "On most sites": titles more of your sites carry come first (a fair sign of how popular a title is)
+    const places = (g: Grp): number => 1 + (g.more?.length ?? 0)
     groups.sort((a, b) => {
       if (first) {
         const as = a.key.startsWith(first) ? 0 : 1
         const bs = b.key.startsWith(first) ? 0 : 1
         if (as !== bs) return as - bs
       }
+      if (sort === 'sites') {
+        const d = places(b) - places(a)
+        if (d !== 0) return d
+        if (!!b.coverE !== !!a.coverE) return Number(!!b.coverE) - Number(!!a.coverE)
+      }
       // (keys are plain a-z / 0-9 / space, so a direct comparison orders them the same way and is much faster)
-      return sort === 'az' || first ? (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) : 0
+      return sort !== 'site' || first ? (a.key < b.key ? -dir : a.key > b.key ? dir : 0) : 0
     })
   }
   lastSearch = { sig, groups }
-  return pick(groups, kind, offset, limit)
+  return pick(groups, kind, genre, offset, limit)
 }
 
 // ---- type / genres / status of series, as their pages stated them (kept apart from the chapter-list cache) ----
@@ -966,17 +1004,40 @@ function kindOf(g: Grp): SeriesType | null {
   }
   return null
 }
-const kindMemo = new WeakMap<Grp[], { v: number; kinds: (SeriesType | null)[] }>()
-function pick(groups: Grp[], kind: SeriesType | undefined, offset: number, limit: number): SearchResult {
+/** Genres a title's pages listed (lower-case keys, any of its sites). */
+function genresOf(g: Grp): string[] {
+  const m = loadMeta()
+  const out = new Set<string>()
+  for (const x of [g.e, ...(g.more ?? []).map((y) => y.e)]) for (const n of canonGenres(m[x.url]?.genres ?? [])) out.add(n)
+  return [...out]
+}
+const kindMemo = new WeakMap<Grp[], { v: number; kinds: (SeriesType | null)[]; genres: string[][] }>()
+function pick(groups: Grp[], kind: SeriesType | undefined, genre: string | undefined, offset: number, limit: number): SearchResult {
   let memo = kindMemo.get(groups)
   if (!memo || memo.v !== metaVersion) {
-    memo = { v: metaVersion, kinds: groups.map(kindOf) }
+    memo = { v: metaVersion, kinds: groups.map(kindOf), genres: groups.map(genresOf) }
     kindMemo.set(groups, memo)
   }
+  const g = genre ? canonGenres([genre])[0] : undefined
+  // type counts follow the chosen genre, genre counts follow the chosen type
   const counts = { manga: 0, manhwa: 0, manhua: 0 }
-  for (const k of memo.kinds) if (k) counts[k]++
-  const list = kind ? groups.filter((_, i) => memo!.kinds[i] === kind) : groups
-  return { total: list.length, hits: list.slice(offset, offset + limit).map(toHit), counts }
+  const byGenre = new Map<string, number>()
+  const keep: Grp[] = []
+  for (let i = 0; i < groups.length; i++) {
+    const k = memo.kinds[i]
+    const gs = memo.genres[i]
+    const genreOk = !g || gs.includes(g)
+    const kindOk = !kind || k === kind
+    if (k && genreOk) counts[k]++
+    if (kindOk) for (const x of gs) byGenre.set(x, (byGenre.get(x) ?? 0) + 1)
+    if (genreOk && kindOk) keep.push(groups[i])
+  }
+  const genres = [...byGenre.entries()]
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 80)
+    .map(([name, count]) => ({ name, count }))
+  return { total: keep.length, hits: keep.slice(offset, offset + limit).map(toHit), counts, genres }
 }
 
 // ---------------------------------------------------------------------------------------------

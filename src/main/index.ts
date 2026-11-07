@@ -313,8 +313,8 @@ app.whenReady().then(async () => {
   })
   ipcMain.handle('crawl', (_e, id: string) => void crawlSource(id, emit))
   ipcMain.handle('cancel-crawl', (_e, id: string) => cancelCrawl(id))
-  ipcMain.handle('search', (_e, q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number, kind?: 'manga' | 'manhwa' | 'manhua') =>
-    search(q, sourceIds, sort, offset, limit, kind)
+  ipcMain.handle('search', (_e, q: string, sourceIds: string[], sort: 'site' | 'az' | 'za' | 'sites' | 'genre', offset: number, limit: number, kind?: 'manga' | 'manhwa' | 'manhua', genre?: string) =>
+    search(q, sourceIds, sort, offset, limit, kind, genre)
   )
   // Nothing the screens wait for may hang forever: give up with a clear message instead.
   const withTimeout = <T>(p: Promise<T>, ms: number, what: string): Promise<T> =>
@@ -1201,9 +1201,11 @@ app.whenReady().then(async () => {
           '(() => { const t = ' + JSON.stringify(text.toLowerCase()) + '; const el = [...document.querySelectorAll(' + JSON.stringify(sel) + ')].find((e) => !t || (e.textContent || "").toLowerCase().includes(t)); if (el) { el.click(); return true } return false })()'
         )
       const shot = async (name: string): Promise<void> => {
-        await js("document.querySelectorAll('.browse').forEach((e) => e.scrollTo(0, 0))")
+        if (!name.includes('all-titles')) await js("document.querySelectorAll('.browse').forEach((e) => e.scrollTo(0, 0))")
         await wait(800)
-        const img = await win.webContents.capturePage()
+        let img: Electron.NativeImage | null = null
+        for (let i = 0; i < 4 && !img; i++) img = await win.webContents.capturePage().catch(async () => (await wait(700), null))
+        if (!img) throw new Error('capture failed: ' + name)
         mkdirSync(dir, { recursive: true })
         writeFileSync(join(dir, name + '.png'), img.toPNG())
         console.log('SHOT ' + name)
@@ -1217,6 +1219,9 @@ app.whenReady().then(async () => {
         win.center()
         await wait(10000)
         await shot('01-main-page')
+        console.log('GENRES ' + (await js("[...document.querySelectorAll('.genresel option')].map((o) => o.textContent).join(' | ')")))
+        console.log('FIRST ' + (await js("[...document.querySelectorAll('.grid .card .from')].slice(0, 16).map((o) => o.textContent.split(' · ')[0]).join(' | ')")))
+        console.log('KINDS ' + (await js("[...document.querySelectorAll('.kindtabs button')].map((o) => o.textContent).join(' | ')")))
         await click('.winctl button[aria-label=Maximize]')
         await wait(800)
         console.log('MAXIMIZED ' + win.isMaximized())
@@ -1231,6 +1236,12 @@ app.whenReady().then(async () => {
         await wait(600)
         console.log('THEME ' + (await js('document.documentElement.className')))
         console.log('added', await click('.navitem', 'added by me'))
+        await wait(1500)
+        await fresh()
+        await js("document.querySelector('.gridtop')?.scrollIntoView()")
+        await wait(1500)
+        await shot('01c-all-titles')
+        await click('.navitem', 'added by me')
         await wait(1500)
         await shot('02-added-by-me')
         await fresh()
@@ -1255,7 +1266,7 @@ app.whenReady().then(async () => {
         await wait(500)
         await shot('07-reader')
         for (let i = 0; i < 8; i++) {
-          await js("(() => { const r = document.querySelector('.reader'); r.scrollTop = r.scrollHeight })()")
+          await js("(() => { const r = document.querySelector('.reader'); if (r) r.scrollTop = r.scrollHeight })()")
           await wait(1500)
         }
         await wait(2500)

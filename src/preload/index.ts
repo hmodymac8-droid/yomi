@@ -65,8 +65,8 @@ const api = {
   removeSite: (id: string) => ipcRenderer.invoke('remove-site', id),
   crawl: (id: string) => ipcRenderer.invoke('crawl', id),
   cancelCrawl: (id: string) => ipcRenderer.invoke('cancel-crawl', id),
-  search: (q: string, sourceIds: string[], sort: string, offset: number, limit: number, kind?: string) =>
-    ipcRenderer.invoke('search', q, sourceIds, sort, offset, limit, kind),
+  search: (q: string, sourceIds: string[], sort: string, offset: number, limit: number, kind?: string, genre?: string) =>
+    ipcRenderer.invoke('search', q, sourceIds, sort, offset, limit, kind, genre),
   getSeries: (sourceId: string, url: string, mode?: string) => ipcRenderer.invoke('get-series', sourceId, url, mode),
   onProgress: (cb: (p: unknown) => void) => {
     const h = (_e: unknown, p: unknown): void => cb(p)
