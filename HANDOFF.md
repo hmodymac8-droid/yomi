@@ -74,3 +74,7 @@ Following screen by hand (built, never opened). Everything above was verified wi
   incomplete, `browserSeries` tries plain-address paging (`queryPaging`) before giving up. Known open: MangaK series
   often come back with a constant 11 chapters flagged incomplete (same before this change; not a regression).
   Next for this idea: capture the page's own JSON data requests and use a chapter array from them.
+- **Sites screen** (Browse top bar > Sites): per site a status dot (Working / Needs a look / Broken), title count, your last 20
+  series opens (fine / cut short / failed), and Re-check (title list, chapter list, chapter pages, one image; saved in
+  site-health.json), Re-scan titles, Re-check all. Code: `src/main/health.ts`, `runSiteCheck` in index.ts, `Sites.tsx`.
+  Dev test: MR_HEALTHTEST=<site url> (use a fresh MR_DATADIR per site). Screen itself never clicked by hand.

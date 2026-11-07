@@ -24,6 +24,8 @@ import {
   search,
   sourcesWithChapterTitles
 } from './catalog'
+import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen } from './health'
+import type { HealthStep } from '../preload/index.d'
 import { grabChapterFast, prefetchChapter, settleVerifications } from './fastgrab'
 import { flushModes } from './hostmode'
 import { detectSource } from './sources'
@@ -98,6 +100,86 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+const checking = new Map<string, Promise<void>>()
+
+/**
+ * Tests one site end to end like you would use it: its title list, a chapter list, a chapter's pages, one image.
+ * Result is saved (site-health.json) and shown on the Sites screen.
+ */
+async function runSiteCheck(id: string): Promise<void> {
+  const src = getSource(id)
+  if (!src) return
+  const steps: HealthStep[] = []
+  const step = async (name: string, fn: () => Promise<{ status: HealthStep['status']; detail: string }>): Promise<boolean> => {
+    const t = Date.now()
+    try {
+      const r = await Promise.race([fn(), new Promise<never>((_, rej) => setTimeout(() => rej(new Error('took longer than 60 s')), 60000))])
+      steps.push({ name, status: r.status, detail: r.detail, ms: Date.now() - t })
+      return r.status !== 'fail'
+    } catch (e) {
+      steps.push({ name, status: 'fail', detail: (e instanceof Error ? e.message : String(e)).slice(0, 140), ms: Date.now() - t })
+      return false
+    }
+  }
+  let hits: ReturnType<typeof search>['hits'] = []
+  let chapters: { title: string; url: string }[] = []
+  let seriesUrl = ''
+  let pages: string[] = []
+  let go = await step('Title list', async () => {
+    hits = search('', [id], 'site', 0, 30).hits
+    if (hits.length === 0) return { status: 'fail', detail: 'No titles saved for this site. Try "Re-scan titles".' }
+    const total = listSources().find((x) => x.id === id)?.count ?? hits.length
+    return { status: 'ok', detail: total.toLocaleString() + ' titles saved' }
+  })
+  if (go)
+    go = await step('Chapter list', async () => {
+      let bestIncomplete = false
+      // up to 3 series: some are short or new, so judge by the best one
+      for (const h of hits.slice(0, 3)) {
+        try {
+          const d = await getSeries(id, h.entries[0].url)
+          if (d.chapters.length > chapters.length) {
+            chapters = d.chapters
+            seriesUrl = h.entries[0].url
+            bestIncomplete = !!d.incomplete
+          }
+          if (chapters.length >= 8 && !bestIncomplete) break
+        } catch {
+          /* try the next one */
+        }
+      }
+      if (chapters.length === 0) return { status: 'fail', detail: 'No chapters found on the 3 series tried' }
+      if (bestIncomplete) return { status: 'warn', detail: chapters.length + ' chapters, but the list looks cut short or has gaps' }
+      return { status: 'ok', detail: chapters.length + ' chapters on the best of up to 3 series' }
+    })
+  if (go)
+    go = await step('Chapter pages', async () => {
+      const g = await grabChapterFast(chapters[0].url)
+      pages = g.pages
+      if (pages.length === 0) return { status: 'fail', detail: 'The newest chapter gave no pages' }
+      if (pages.length < 4) return { status: 'warn', detail: 'Only ' + pages.length + ' pages in the newest chapter (may be correct)' }
+      return { status: 'ok', detail: pages.length + ' pages in the newest chapter' }
+    })
+  if (go)
+    await step('Image', async () => {
+      const ses = session.fromPartition('persist:sources')
+      ensureSession()
+      refererHints.set(pages[0], new URL(seriesUrl).origin + '/')
+      try {
+        const r = await ses.fetch(pages[0])
+        const buf = await r.arrayBuffer()
+        const type = (r.headers.get('content-type') ?? '').split(';')[0]
+        if (!r.ok || !type.startsWith('image/') || buf.byteLength < 5000)
+          return { status: 'fail', detail: 'First page did not download (HTTP ' + r.status + ', ' + (type || 'no type') + ')' }
+        return { status: 'ok', detail: 'First page downloaded (' + Math.round(buf.byteLength / 1024) + ' KB)' }
+      } finally {
+        refererHints.delete(pages[0])
+      }
+    })
+  const overall = steps.some((x) => x.status === 'fail') ? 'fail' : steps.some((x) => x.status === 'warn') ? 'warn' : 'ok'
+  recordCheck(id, { at: Date.now(), overall, steps })
 }
 
 /**
@@ -193,7 +275,17 @@ app.whenReady().then(async () => {
   startUpdateScheduler()
   ipcMain.handle('progress-recent', (_e, limit: number) => recentProgress(limit))
   ipcMain.handle('progress-hide', (_e, seriesUrl: string) => hideProgress(seriesUrl))
-  ipcMain.handle('remove-site', (_e, id: string) => removeSource(id))
+  ipcMain.handle('remove-site', (_e, id: string) => {
+    removeSource(id)
+    dropHealth(id)
+  })
+  ipcMain.handle('site-health', () => allHealth())
+  ipcMain.handle('site-check', async (_e, id: string) => {
+    // one check per site at a time: a second click joins the first
+    if (!checking.has(id)) checking.set(id, runSiteCheck(id).finally(() => checking.delete(id)))
+    await checking.get(id)
+    return healthOf(id)
+  })
   ipcMain.handle('crawl', (_e, id: string) => void crawlSource(id, emit))
   ipcMain.handle('cancel-crawl', (_e, id: string) => cancelCrawl(id))
   ipcMain.handle('search', (_e, q: string, sourceIds: string[], sort: 'site' | 'az', offset: number, limit: number) =>
@@ -206,7 +298,16 @@ app.whenReady().then(async () => {
       new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`${what} took too long. Try again in a moment.`)), ms))
     ])
   ipcMain.handle('get-series', (_e, sourceId: string, url: string, mode?: 'auto' | 'check' | 'full') =>
-    wrap(() => withTimeout(openSeries(sourceId, url, mode), 60000, 'Loading the chapter list'))
+    wrap(async () => {
+      try {
+        const d = await withTimeout(openSeries(sourceId, url, mode), 60000, 'Loading the chapter list')
+        recordOpen(sourceId, d.chapters.length === 0 ? 'failed' : d.incomplete ? 'incomplete' : 'ok', d.chapters.length === 0 ? 'No chapters found' : undefined)
+        return d
+      } catch (e) {
+        recordOpen(sourceId, 'failed', e instanceof Error ? e.message : String(e))
+        throw e
+      }
+    })
   )
   ipcMain.handle('get-series-cached', (_e, url: string) => getSeriesCached(url))
   ipcMain.handle('prefetch-series', (_e, sourceId: string, url: string) => void prefetchSeries(sourceId, url))
@@ -688,6 +789,24 @@ app.whenReady().then(async () => {
     return
   }
 
+  // Dev helper: MR_HEALTHTEST=<site url> adds the site, runs the Sites "Re-check" on it and prints the result.
+  if (process.env['MR_HEALTHTEST']) {
+    void (async () => {
+      warmUp()
+      await new Promise((r) => setTimeout(r, 2500))
+      const def = await detectSource(process.env['MR_HEALTHTEST']!)
+      def.id = 'health-test'
+      if (def.sitemaps && def.sitemaps.length > 1) def.sitemaps = def.sitemaps.slice(0, 1)
+      def.maxPages = Math.min(def.maxPages, 2)
+      addSource(def)
+      await crawlSource(def.id, () => undefined)
+      await runSiteCheck(def.id)
+      console.log('HEALTH ' + JSON.stringify(healthOf(def.id)))
+    })()
+      .catch((e) => console.log('HEALTH_ERROR ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => app.quit())
+    return
+  }
   // Dev helper: MR_OPENTEST=<site>,<series url> checks that a series is read once and then only checked for new chapters.
   if (process.env['MR_OPENTEST']) {
     ;(async () => {
@@ -1016,12 +1135,13 @@ app.on('before-quit', () => {
   flushDownloads()
   flushSeriesCache()
   flushModes()
+  flushHealth()
   flushUpdates()
 })
 
 app.on('window-all-closed', () => {
   // Dev smoke modes run with hidden windows only; they call app.quit() themselves when done.
-  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
+  if (process.env['MR_CRAWL'] || process.env['MR_SMOKE'] || process.env['MR_PROBE'] || process.env['MR_DUMP'] || process.env['MR_DLTEST'] || process.env['MR_FTEST'] || process.env['MR_STATIC'] || process.env['MR_BODY'] || process.env['MR_IMGTEST'] || process.env['MR_UPDTEST'] || process.env['MR_SITEMAP'] || process.env['MR_META'] || process.env['MR_DISCOVER'] || process.env['MR_ROBOTS'] || process.env['MR_VISIBLE'] || process.env['MR_QUICK'] || process.env['MR_BENCH'] || process.env['MR_VISAPI'] || process.env['MR_OPENTEST'] || process.env['MR_MOELIST'] || process.env['MR_SITECHECK'] || process.env['MR_SITEPIPE'] || process.env['MR_HEALTHTEST'] || process.env['MR_ANCH'] || process.env['MR_SEARCHBENCH']) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

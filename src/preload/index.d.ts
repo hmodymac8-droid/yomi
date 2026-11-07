@@ -85,6 +85,30 @@ export interface SourceInfo extends SourceDef {
   crawling: boolean
 }
 
+export interface HealthStep {
+  name: string
+  status: 'ok' | 'warn' | 'fail'
+  detail: string
+  ms: number
+}
+
+export interface HealthCheck {
+  at: number
+  overall: 'ok' | 'warn' | 'fail'
+  steps: HealthStep[]
+}
+
+/** How a site is doing: outcome of the last 20 series opens, plus the last "Re-check". */
+export interface SiteHealth {
+  sourceId: string
+  ok: number
+  incomplete: number
+  failed: number
+  lastAt: number
+  lastError?: string
+  check?: HealthCheck
+}
+
 export interface ProgressRecord {
   seriesUrl: string
   sourceId: string
@@ -212,6 +236,9 @@ export interface MangaApi {
   progressHide: (seriesUrl: string) => Promise<void>
   grabChapter: (url: string) => Promise<GrabResponse>
   listSources: () => Promise<SourceInfo[]>
+  siteHealth: () => Promise<SiteHealth[]>
+  /** Tests one site end to end (titles, chapter list, chapter pages, an image). */
+  siteCheck: (id: string) => Promise<SiteHealth>
   addSite: (url: string) => Promise<Result<SourceInfo>>
   removeSite: (id: string) => Promise<void>
   crawl: (id: string) => Promise<void>

@@ -10,9 +10,10 @@ interface Props {
   active: boolean
   onDownloads: () => void
   onFollowing: () => void
+  onSites: () => void
 }
 
-export default function Browse({ onOpen, active, onDownloads, onFollowing }: Props): React.JSX.Element {
+export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites }: Props): React.JSX.Element {
   const [recent, setRecent] = useState<ProgressRecord[]>([])
   const [follows, setFollows] = useState<FollowInfo[]>([])
   const [upd, setUpd] = useState<UpdateStatus | null>(null)
@@ -397,6 +398,7 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing }: Pro
           Following{upd && upd.following > 0 ? ` (${upd.following})` : ''}
         </button>
         <button onClick={onDownloads}>Downloads</button>
+        <button onClick={onSites}>Sites</button>
       </div>
 
       <div className="sites">
