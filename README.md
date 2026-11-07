@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-000000?style=flat-square&logo=windows&logoColor=white" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/x64%20%2B%20ARM-one%20installer-dcbc33?style=flat-square" alt="x64 and ARM">
-  <img src="https://img.shields.io/badge/version-1.1.0-dcbc33?style=flat-square" alt="Version 1.1.0">
+  <img src="https://img.shields.io/badge/version-1.1.1-dcbc33?style=flat-square" alt="Version 1.1.1">
 </p>
 
 <p align="center">

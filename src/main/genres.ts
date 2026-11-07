@@ -501,14 +501,22 @@ async function runOne(src: SourceDef): Promise<void> {
  */
 export function startGenreScheduler(): void {
   if (Object.keys(process.env).some((k) => k.startsWith('MR_'))) return // dev test runs: never in the background
+  // One site after another (a 2-minute break between sites), so every site's genres are read within a few hours of
+  // installing; once all are done it looks again every hour (each site is re-read weekly).
   const tick = async (): Promise<void> => {
-    if (runningId || isOffline()) return
-    const next = listSources().find((s) => !s.crawling && genreScanDue(s.id))
-    const src = next && getSource(next.id)
-    if (src) await runOne(src)
+    let wait = 60 * 60 * 1000
+    try {
+      if (!runningId && !isOffline()) {
+        const next = listSources().find((s) => !s.crawling && genreScanDue(s.id))
+        const src = next && getSource(next.id)
+        if (src) {
+          await runOne(src)
+          wait = 2 * 60 * 1000
+        }
+      }
+    } finally {
+      setTimeout(() => void tick(), wait)
+    }
   }
-  setTimeout(() => {
-    void tick()
-    setInterval(() => void tick(), 60 * 60 * 1000)
-  }, 5 * 60 * 1000)
+  setTimeout(() => void tick(), 3 * 60 * 1000)
 }
