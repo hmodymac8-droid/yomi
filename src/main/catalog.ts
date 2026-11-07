@@ -26,6 +26,8 @@ interface Store {
   series: Record<string, SeriesEntry[]>
   /** Per site: did a scan reach the end of the list, and how far did it get if not. */
   scan: Record<string, { complete: boolean; lastPage: number }>
+  /** Per site: when the last scan attempt ended (not cancelled). Drives the automatic background scans. */
+  scanAt?: Record<string, number>
 }
 
 let store: Store | null = null
@@ -246,6 +248,22 @@ export function sourcesWithChapterTitles(): string[] {
     if (bad > list.length * 0.4) out.push(src.id)
   }
   return out
+}
+
+/**
+ * Is it time for an automatic background scan of this site? A site whose last scan did not reach the end of its list is
+ * tried again after 30 minutes (it resumes where it stopped); a finished one is refreshed every 12 hours for new titles.
+ */
+export function scanDue(id: string): boolean {
+  const s = load()
+  const src = s.sources.find((x) => x.id === id)
+  if (!src || crawling.has(id)) return false
+  if (src.maxPages <= 0 && !src.sitemaps?.length) return false // nothing to scan
+  const at = s.scanAt?.[id] ?? 0
+  const incomplete = Object.keys(s.scan).some((k) => (k === id || k.startsWith(id + '#')) && !s.scan[k].complete)
+  const never = !s.scan[id] && !src.sitemaps?.length
+  const fast = !!process.env['MR_AUTOSCAN_FAST'] // dev tests: every wait is 1 s
+  return Date.now() - at > (fast ? 1000 : incomplete || never ? 30 * 60 * 1000 : 12 * 3600 * 1000)
 }
 
 export function removeSource(id: string): void {
@@ -588,6 +606,7 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
   } finally {
     lister.close()
     crawling.delete(id)
+    if (!ctl.cancel) (s.scanAt ??= {})[id] = Date.now()
     s.series[id] = [...known.values()]
     saveSoon(true)
     emit({ sourceId: id, pages, found: known.size, done: true, error })

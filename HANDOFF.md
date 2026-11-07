@@ -82,3 +82,9 @@ Following screen by hand (built, never opened). Everything above was verified wi
   data with root-relative chapter addresses is parsed, `DECLARED_TOTAL` ignores years ("Released 2025 Chapters 96")
   and prefers the most trusted pattern. Olympustaff: a link back to the series page ("latest: Chapter 204" banner) is no
   longer a chapter, and a paging style that returns page 1 again no longer counts as a new slice. Cache version 7.
+- **Automatic title scans**: 25 s after launch and every 30 min, `autoScan` (index.ts) scans each site that is due, one at
+  a time (`scanDue` in catalog.ts): unfinished scans retry after 30 min and resume where they stopped; finished ones
+  refresh every 12 h for new titles. Dev: MR_AUTOSCAN_FAST=1 (1 s waits), MR_NOAUTOSCAN=1 (off). Tested by script only.
+- Order of work agreed with the user: self-checking lists (done), Sites screen (done), MangaK (done), auto scans (done),
+  then reading features, library, downloads (CBZ/queue), preload followed series, Arabic display, settings,
+  teach-a-site builder, and the INSTALLER LAST (user said so).

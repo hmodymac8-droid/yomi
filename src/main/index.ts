@@ -21,6 +21,7 @@ import {
   setSeriesPartialEmitter,
   primeNetwork,
   removeSource,
+  scanDue,
   search,
   sourcesWithChapterTitles
 } from './catalog'
@@ -1065,6 +1066,26 @@ app.whenReady().then(async () => {
   createWindow()
   warmUp()
   primeNetwork()
+  // Keep every site's title list complete and fresh without being asked: one site at a time, resuming unfinished scans
+  // and refreshing finished ones twice a day. Starts a little after launch so the app is responsive first.
+  const autoScan = async (): Promise<void> => {
+    try {
+      for (const s of listSources()) {
+        if (!scanDue(s.id)) continue
+        console.log('AUTOSCAN', s.name)
+        await crawlSource(s.id, emit)
+        await new Promise((r) => setTimeout(r, 5000)) // a pause between sites
+      }
+    } catch (e) {
+      console.log('AUTOSCAN failed', e instanceof Error ? e.message : String(e))
+    }
+  }
+  if (!process.env['MR_NOAUTOSCAN']) {
+    setTimeout(() => {
+      void autoScan()
+      setInterval(() => void autoScan(), 30 * 60 * 1000)
+    }, process.env['MR_AUTOSCAN_FAST'] ? 3000 : 25000)
+  }
   // Sites saved with chapter links as titles (older detection) are rebuilt from scratch in the background.
   setTimeout(async () => {
     for (const id of sourcesWithChapterTitles()) {
