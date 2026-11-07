@@ -5,7 +5,6 @@ import Reader from './components/Reader'
 import Downloads from './components/Downloads'
 import Following from './components/Following'
 import Sites from './components/Sites'
-import AddTitle from './components/AddTitle'
 import type { OpenChapter, OpenSeries } from './lib'
 
 type View =
@@ -13,9 +12,8 @@ type View =
   | { name: 'downloads' }
   | { name: 'following' }
   | { name: 'sites' }
-  | { name: 'addtitle' }
-  | { name: 'series'; series: OpenSeries; back?: 'addtitle' }
-  | { name: 'reader'; series: OpenSeries; chapter: OpenChapter; back?: 'addtitle' }
+  | { name: 'series'; series: OpenSeries }
+  | { name: 'reader'; series: OpenSeries; chapter: OpenChapter }
 
 /** If a screen ever crashes while drawing, show a message and a way back instead of a blank window. */
 class Boundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -57,7 +55,6 @@ function AppInner(): React.JSX.Element {
           onDownloads={() => setView({ name: 'downloads' })}
           onFollowing={() => setView({ name: 'following' })}
           onSites={() => setView({ name: 'sites' })}
-          onAddTitle={() => setView({ name: 'addtitle' })}
         />
       </div>
       {view.name === 'following' && (
@@ -66,11 +63,6 @@ function AppInner(): React.JSX.Element {
             onBack={() => setView({ name: 'browse' })}
             onOpen={(series) => setView({ name: 'series', series })}
           />
-        </div>
-      )}
-      {view.name === 'addtitle' && (
-        <div className="pane">
-          <AddTitle onBack={() => setView({ name: 'browse' })} onOpen={(series) => setView({ name: 'series', series, back: 'addtitle' })} />
         </div>
       )}
       {view.name === 'sites' && (
@@ -87,8 +79,8 @@ function AppInner(): React.JSX.Element {
         <div className="pane">
           <Series
             series={view.series}
-            onBack={() => setView(view.back === 'addtitle' ? { name: 'addtitle' } : { name: 'browse' })}
-            onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter, back: view.back })}
+            onBack={() => setView({ name: 'browse' })}
+            onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter })}
           />
         </div>
       )}
@@ -97,8 +89,8 @@ function AppInner(): React.JSX.Element {
           <Reader
             chapter={view.chapter}
             series={view.series}
-            onBack={() => setView({ name: 'series', series: view.series, back: view.back })}
-            onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter, back: view.back })}
+            onBack={() => setView({ name: 'series', series: view.series })}
+            onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter })}
           />
         </div>
       )}

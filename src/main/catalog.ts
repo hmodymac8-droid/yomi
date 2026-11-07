@@ -29,6 +29,17 @@ interface Store {
   scan: Record<string, { complete: boolean; lastPage: number }>
   /** Per site: when the last scan attempt ended (not cancelled). Drives the automatic background scans. */
   scanAt?: Record<string, number>
+  /** Titles you added by their page address (shown on the main page under "Added by me"). */
+  added?: AddedRec[]
+}
+
+export interface AddedRec {
+  sourceId: string
+  sourceName: string
+  url: string
+  title: string
+  cover: string
+  chapters: number
 }
 
 let store: Store | null = null
@@ -284,8 +295,36 @@ export async function addTitleByUrl(input: string): Promise<{
   } else {
     list.push({ sourceId: src.id, url, title: d.title, cover: d.cover })
   }
+  const rec: AddedRec = { sourceId: src.id, sourceName: src.name, url, title: d.title, cover: d.cover, chapters: d.chapters.length }
+  s.added = [rec, ...(s.added ?? []).filter((x) => x.url !== url)]
   saveSoon(true)
-  return { sourceId: src.id, sourceName: src.name, url, title: d.title, cover: d.cover, chapters: d.chapters.length, siteIsNew, already }
+  return { ...rec, siteIsNew, already }
+}
+
+export function listAdded(): AddedRec[] {
+  return load().added ?? []
+}
+
+/** Takes a title off the "Added by me" list. On a titles-only site (never scanned) it also leaves the catalog. */
+export function removeAdded(url: string): void {
+  const s = load()
+  s.added = (s.added ?? []).filter((x) => x.url !== url)
+  for (const src of s.sources) {
+    if (src.maxPages === 0 && !(src.sitemaps && src.sitemaps.length) && s.series[src.id]) {
+      s.series[src.id] = s.series[src.id].filter((e) => e.url !== url)
+    }
+  }
+  saveSoon(true)
+}
+
+/** Brings in titles that an earlier version kept only inside the window's own storage. */
+export function importAdded(list: AddedRec[]): void {
+  const s = load()
+  const have = new Set((s.added ?? []).map((x) => x.url))
+  const more = list.filter((x) => x && x.url && !have.has(x.url))
+  if (more.length === 0) return
+  s.added = [...(s.added ?? []), ...more]
+  saveSoon(true)
 }
 
 export function getSource(id: string): SourceDef | undefined {

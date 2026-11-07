@@ -11,7 +11,6 @@ interface Props {
   onDownloads: () => void
   onFollowing: () => void
   onSites: () => void
-  onAddTitle: () => void
 }
 
 interface AddedTitle {
@@ -20,9 +19,10 @@ interface AddedTitle {
   url: string
   title: string
   cover: string
+  chapters: number
 }
 
-export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites, onAddTitle }: Props): React.JSX.Element {
+export default function Browse({ onOpen, active, onDownloads, onFollowing, onSites }: Props): React.JSX.Element {
   // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
   const [sitesOpen, setSitesOpen] = useState<boolean>(() => {
     try {
@@ -252,14 +252,75 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
     window.api.followList().then(setFollows)
     window.api.updatesStatus().then(setUpd)
   }, [active])
+  const [addUrl, setAddUrl] = useState('')
+  const [addBusy, setAddBusy] = useState(false)
+  const [addErr, setAddErr] = useState('')
+  const [addMsg, setAddMsg] = useState('')
   useEffect(() => {
     if (!active) return
-    try {
-      setAdded(JSON.parse(localStorage.getItem('addedTitles') ?? '[]'))
-    } catch {
-      setAdded([])
-    }
+    ;(async () => {
+      // titles an earlier version kept in the window's own storage move to the app's saved data (once)
+      try {
+        const old = JSON.parse(localStorage.getItem('addedTitles') ?? '[]')
+        if (Array.isArray(old) && old.length > 0) {
+          await window.api.titleImport(old)
+          localStorage.removeItem('addedTitles')
+        }
+      } catch {
+        /* nothing to move */
+      }
+      setAdded(await window.api.titleList())
+    })()
   }, [active])
+
+  const addTitle = async (andDownload: boolean): Promise<void> => {
+    if (!addUrl.trim() || addBusy) return
+    setAddBusy(true)
+    setAddErr('')
+    setAddMsg('')
+    try {
+      const r = await window.api.titleAdd(addUrl.trim())
+      if (!r.ok) {
+        setAddErr(r.error)
+        return
+      }
+      const a = r.data
+      setAdded(await window.api.titleList())
+      setAddUrl('')
+      if (andDownload) {
+        setAddMsg('Reading the chapter list…')
+        const d = await window.api.getSeries(a.sourceId, a.url, 'auto')
+        if (!d.ok) {
+          setAddErr(d.error)
+          setAddMsg('')
+          return
+        }
+        const ref = new URL(a.url).origin + '/'
+        window.api.downloadEnqueue(
+          d.data.chapters.map((c) => ({
+            chapterUrl: c.url,
+            alts: c.alts,
+            chapterTitle: c.title,
+            seriesUrl: a.url,
+            seriesTitle: d.data.title || a.title,
+            sourceId: a.sourceId,
+            referer: ref
+          }))
+        )
+        setAddMsg(`Queued ${d.data.chapters.length} chapters of "${a.title}". Watch them in Downloads.`)
+      } else {
+        setAddMsg(`${a.already ? 'Updated' : 'Added'} "${a.title}" (${a.chapters} chapters).`)
+      }
+    } finally {
+      setAddBusy(false)
+    }
+  }
+
+  const removeAddedTitle = async (a: AddedTitle): Promise<void> => {
+    if (!window.confirm(`Remove "${a.title}" from "Added by me"?\n\nDownloaded chapters are kept (delete them in Downloads).`)) return
+    await window.api.titleRemove(a.url)
+    setAdded(await window.api.titleList())
+  }
 
   // The background checker tells us when it starts, finds something or finishes.
   useEffect(() => {
@@ -436,7 +497,6 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
         </button>
         <button onClick={onDownloads}>Downloads</button>
         <button onClick={onSites}>Sites</button>
-        <button onClick={onAddTitle}>Add title</button>
       </div>
 
       <div className="sitesbar">
@@ -525,13 +585,32 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
         </div>
         {shelf === 'added' ? (
           <>
-            {added.length === 0 && <div className="hint">Nothing here yet. Use “Add title” to paste the address of a title.</div>}
+            <div className="sitesbar">
+              <span className="add" style={{ flex: 1 }}>
+                <input
+                  style={{ flex: 1, minWidth: 260 }}
+                  placeholder="Add a title: paste the address of its page"
+                  value={addUrl}
+                  onChange={(e) => setAddUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void addTitle(false)}
+                />
+                <button onClick={() => void addTitle(false)} disabled={addBusy || !addUrl.trim()}>
+                  {addBusy ? 'Reading…' : 'Add title'}
+                </button>
+                <button onClick={() => void addTitle(true)} disabled={addBusy || !addUrl.trim()} title="Add it and queue every chapter for download">
+                  Add + download all
+                </button>
+              </span>
+            </div>
+            {addErr && <div className="error small">{addErr}</div>}
+            {addMsg && <div className="stage">{addMsg}</div>}
+            {added.length === 0 && <div className="hint">Nothing here yet. Paste the address of one title above and it is saved here.</div>}
             <div className="grid">
               {added
                 .filter((a) => !q.trim() || a.title.toLowerCase().includes(q.trim().toLowerCase()))
                 .map((a) => (
+                  <div key={a.url} className="cwrap">
                   <button
-                    key={a.url}
                     className="card"
                     onClick={() =>
                       onOpen({
@@ -550,6 +629,10 @@ export default function Browse({ onOpen, active, onDownloads, onFollowing, onSit
                     </div>
                     <div className="from">{a.sourceName}</div>
                   </button>
+                  <button className="cremove" title="Remove from Added by me" onClick={() => void removeAddedTitle(a)}>
+                    ×
+                  </button>
+                  </div>
                 ))}
             </div>
           </>

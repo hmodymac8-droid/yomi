@@ -13,6 +13,10 @@ import {
   enrichEntries,
   flushSeriesCache,
   addTitleByUrl,
+  listAdded,
+  removeAdded,
+  importAdded,
+  type AddedRec,
   getSeries,
   getSource,
   getSeriesCached,
@@ -339,6 +343,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('download-set-concurrency', (_e, n: number) => setConcurrency(n))
   ipcMain.handle('download-remove-many', (_e, ids: string[]) => removeDownloads(ids))
   ipcMain.handle('title-add', (_e, url: string) => wrap(() => addTitleByUrl(url)))
+  ipcMain.handle('title-list', () => listAdded())
+  ipcMain.handle('title-remove', (_e, url: string) => removeAdded(url))
+  ipcMain.handle('title-import', (_e, list: AddedRec[]) => importAdded(list))
   ipcMain.handle('download-get-paused', () => isPaused())
   ipcMain.handle('download-set-paused', (_e, on: boolean) => setPaused(!!on))
   ipcMain.handle('offline-get', () => isOffline())
