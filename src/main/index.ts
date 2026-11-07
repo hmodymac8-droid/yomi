@@ -84,6 +84,10 @@ process.on('unhandledRejection', (e) => console.error('[unhandled rejection]', e
 if (Object.keys(process.env).some((k) => k.startsWith('MR_'))) {
   // (MR_DATADIR lets several test runs go side by side, each with its own folder)
   app.setPath('userData', join(app.getPath('temp'), 'manga-reader-devtest' + (process.env['MR_DATADIR'] ?? '')))
+} else {
+  // Your library lives in the same folder whatever the program is called ("Yomi" when installed, "manga-reader"
+  // while developing), so installing never starts you over with an empty catalog.
+  app.setPath('userData', join(app.getPath('appData'), 'manga-reader'))
 }
 
 registerImageScheme()
