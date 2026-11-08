@@ -5,6 +5,8 @@ import Reader from './components/Reader'
 import Downloads from './components/Downloads'
 import Following from './components/Following'
 import Sites, { levelOf } from './components/Sites'
+import Settings from './components/Settings'
+import NewChapters from './components/NewChapters'
 import type { OpenChapter, OpenSeries } from './lib'
 import type { SiteHealth, SourceInfo, UpdateStatus } from '../../preload/index.d'
 import logo from './assets/yomi-logo.png'
@@ -17,12 +19,14 @@ type View =
   | { name: 'downloads' }
   | { name: 'following' }
   | { name: 'sites' }
+  | { name: 'settings' }
+  | { name: 'new' }
   | { name: 'series'; series: OpenSeries; from: Tab }
   | { name: 'reader'; series: OpenSeries; chapter: OpenChapter; from: Tab }
 
 /** The screens in the top bar. A series remembers which one it was opened from, and Back returns there. */
-type Tab = 'browse' | 'added' | 'following' | 'downloads' | 'sites'
-const TAB_LABEL: Record<Tab, string> = { browse: 'Discover', added: 'Added by me', following: 'Following', downloads: 'Downloads', sites: 'Sites' }
+type Tab = 'browse' | 'new' | 'added' | 'following' | 'downloads' | 'sites' | 'settings'
+const TAB_LABEL: Record<Tab, string> = { browse: 'Discover', new: 'New', added: 'Added by me', following: 'Following', downloads: 'Downloads', sites: 'Sites', settings: 'Settings' }
 
 /** If a screen ever crashes while drawing, show a message and a way back instead of a blank window. */
 class Boundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -102,10 +106,21 @@ function AppInner(): React.JSX.Element {
   }, [])
   const [health, setHealth] = useState<Record<string, SiteHealth>>({})
 
+  // unread new chapters of the series you follow (the badge on New)
+  const [newCount, setNewCount] = useState(0)
   useEffect(() => {
+    const countNew = (): void => void window.api.followList().then((l) => setNewCount(l.reduce((n, f) => n + f.unread, 0)))
     window.api.updatesStatus().then(setUpd)
-    return window.api.onUpdates(setUpd)
+    countNew()
+    return window.api.onUpdates((s) => {
+      setUpd(s)
+      countNew()
+    })
   }, [])
+  useEffect(() => {
+    if (view.name === 'browse' || view.name === 'new' || view.name === 'following')
+      void window.api.followList().then((l) => setNewCount(l.reduce((n, f) => n + f.unread, 0)))
+  }, [view.name])
   useEffect(() => {
     const countQueue = (): void =>
       void window.api.downloadList().then((l) => setQueued(l.filter((i) => i.status === 'queued' || i.status === 'downloading').length))
@@ -123,7 +138,8 @@ function AppInner(): React.JSX.Element {
   // counts in the bars are refreshed whenever you move between screens
   useEffect(() => {
     window.api.titleList().then((l) => setAddedCount(l.length))
-    window.api.listSources().then(setSources)
+    // Yomi Library sites hidden in Settings are left out of the bars
+    window.api.listSources().then((l) => setSources(l.filter((s) => !s.hidden)))
     window.api.siteHealth().then((l) => setHealth(Object.fromEntries(l.map((h) => [h.sourceId, h]))))
   }, [view.name])
 
@@ -131,10 +147,12 @@ function AppInner(): React.JSX.Element {
   const onBrowse = view.name === 'browse' || view.name === 'added'
   const nav: { id: View['name']; label: string; icon: string; n?: number }[] = [
     { id: 'browse', label: 'Discover', icon: 'home' },
+    { id: 'new', label: 'New', icon: 'bell', n: newCount || undefined },
     { id: 'following', label: 'Following', icon: 'bookmark', n: upd?.following },
     { id: 'added', label: 'Added by me', icon: 'library', n: addedCount },
     { id: 'downloads', label: 'Downloads', icon: 'download', n: queued || undefined },
-    { id: 'sites', label: 'Sites', icon: 'globe' }
+    { id: 'sites', label: 'Sites', icon: 'globe' },
+    { id: 'settings', label: 'Settings', icon: 'settings' }
   ]
   const totalTitles = sources.reduce((n, s) => n + s.count, 0)
 
@@ -191,12 +209,29 @@ function AppInner(): React.JSX.Element {
         </div>
         {view.name === 'following' && (
           <div className="pane">
-            <Following onBack={() => setView({ name: 'browse' })} onOpen={(series) => setView({ name: 'series', series, from: 'following' })} />
+            <Following
+              onBack={() => setView({ name: 'browse' })}
+              onOpen={(series) => setView({ name: 'series', series, from: 'following' })}
+              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'following' })}
+            />
           </div>
         )}
         {view.name === 'sites' && (
           <div className="pane">
             <Sites onBack={() => setView({ name: 'browse' })} />
+          </div>
+        )}
+        {view.name === 'new' && (
+          <div className="pane">
+            <NewChapters
+              onOpen={(series) => setView({ name: 'series', series, from: 'new' })}
+              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'new' })}
+            />
+          </div>
+        )}
+        {view.name === 'settings' && (
+          <div className="pane">
+            <Settings />
           </div>
         )}
         {view.name === 'downloads' && (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import DeleteSite from './DeleteSite'
 import type { CrawlProgress, FollowInfo, ProgressRecord, SearchHit, SourceInfo, UpdateStatus } from '../../../preload/index.d'
-import { OpenChapter, OpenSeries, fallbackCover, proxied, timeAgo } from '../lib'
+import { OpenChapter, OpenSeries, fallbackCover, coverSrc, timeAgo } from '../lib'
 import Featured from './Featured'
 import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
@@ -154,7 +155,9 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   const pullTimer = useRef<number | undefined>(undefined)
   const bottomSince = useRef(0)
 
-  const refreshSources = useCallback(async () => setSources(await window.api.listSources()), [])
+  // Yomi Library sites hidden in Settings are left out here (search leaves them out too)
+  const refreshSources = useCallback(async () => setSources((await window.api.listSources()).filter((s) => !s.hidden)), [])
+  const [deleting, setDeleting] = useState<SourceInfo | null>(null)
 
   const runSearch = useCallback(async () => {
     const myGen = ++gen.current
@@ -475,7 +478,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   }
 
   const removeSite = async (s: SourceInfo): Promise<void> => {
-    if (!confirm(`Remove ${s.name} and its ${s.count} saved titles?`)) return
+    setDeleting(null)
     await window.api.removeSite(s.id)
     if (picked?.includes(s.id)) {
       const rest = picked.filter((id) => id !== s.id)
@@ -576,7 +579,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                   <button className="mini" title="Fetch new titles" onClick={() => window.api.crawl(s.id)}>
                     refresh
                   </button>
-                  <button className="mini" title="Remove site" onClick={() => removeSite(s)}>
+                  <button className="mini" title="Delete site" onClick={() => setDeleting(s)}>
                     ✕
                   </button>
                 </>
@@ -585,6 +588,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
           )
         })}
       </div>
+      {deleting && <DeleteSite site={deleting} onKeep={() => setDeleting(null)} onDelete={() => void removeSite(deleting)} />}
       {addError && <div className="error small">{addError}</div>}
       {adding && stage && <div className="stage">⏳ {stage}</div>}
 
@@ -659,7 +663,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                     }
                   >
                     <div className="cover">
-                      {a.cover ? <img loading="lazy" src={proxied(a.cover, new URL(a.url).origin + '/')} /> : <div className="ph">{a.title.trim().slice(0, 1).toUpperCase()}</div>}
+                      {a.cover ? <img loading="lazy" src={coverSrc(a.cover, new URL(a.url).origin + '/')} /> : <div className="ph">{a.title.trim().slice(0, 1).toUpperCase()}</div>}
                     </div>
                     <div className="name" title={a.title}>
                       {a.title}
@@ -684,7 +688,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                   <div key={f.seriesUrl} className="newcard">
                     <button className="card small" onClick={() => openFollow(f)}>
                       <div className="cover">
-                        {f.cover && <img loading="lazy" src={proxied(f.cover, f.coverReferer)} />}
+                        {f.cover && <img loading="lazy" src={coverSrc(f.cover, f.coverReferer)} />}
                         <span className="badge">+{f.unread}</span>
                       </div>
                       <div className="name" title={f.title}>
@@ -708,7 +712,7 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                   <div key={r.seriesUrl} className="cwrap">
                     <button className="card small" onClick={() => openRecent(r)}>
                       <div className="cover">
-                        {r.cover && <img loading="lazy" decoding="async" src={proxied(r.cover, r.coverReferer)} />}
+                        {r.cover && <img loading="lazy" decoding="async" src={coverSrc(r.cover, r.coverReferer)} />}
                         {r.pos > 0.02 && !r.read.includes(r.chapterUrl) && (
                           <div className="cprog">
                             <span style={{ width: `${Math.round(r.pos * 100)}%` }} />
@@ -841,12 +845,12 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
                 onMouseEnter={() => hoverPrefetch(h)}
                 onMouseLeave={() => window.clearTimeout(hoverTimer.current)}
               >
-                <div className="cover">
+                <div className="cover" data-letter={h.title.trim().slice(0, 1).toUpperCase()}>
                   {h.cover ? (
                     <img
                       loading="lazy"
                       decoding="async"
-                      src={proxied(h.cover, h.coverReferer)}
+                      src={coverSrc(h.cover, h.coverReferer)}
                       onError={(e) => fallbackCover(e, h.coverFallback, h.coverReferer)}
                     />
                   ) : (

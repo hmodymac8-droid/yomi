@@ -15,9 +15,26 @@ async function viaHttp(url: string): Promise<GrabResult | null> {
     const r = await fetchHtml(url)
     if (r.status !== 200) return null
     const p = parseChapterImages(r.html, url)
-    return { url, title: p.title, pages: p.pages }
+    return { url, title: p.title, pages: p.pages, landed: pageAddress(r.html, r.finalUrl) }
   } catch {
     return null
+  }
+}
+
+/**
+ * The address a page says it is (its canonical link or og:url), else the one it was fetched from. A redirect isn't
+ * always visible in the response, but a site's home page still names itself as the home page.
+ */
+function pageAddress(html: string, fetched: string): string {
+  const m =
+    html.match(/<link[^>]+rel=["']?canonical["']?[^>]*href=["']([^"']+)["']/i) ??
+    html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["']?canonical/i) ??
+    html.match(/<meta[^>]+property=["']og:url["'][^>]*content=["']([^"']+)["']/i)
+  if (!m) return fetched
+  try {
+    return new URL(m[1], fetched).href
+  } catch {
+    return fetched
   }
 }
 
@@ -180,12 +197,29 @@ async function extendSequence(res: GrabResult): Promise<GrabResult> {
 }
 
 /** Page list for a chapter: memory cache -> fastest verified method for the site. */
+/**
+ * A chapter address that ended up on the site's home page (the chapter is gone or moved). Its pictures are the home
+ * page's banners, not the chapter, so it counts as "no pages": the reader then looks for the chapter on another site.
+ */
+export function sentHome(asked: string, landed: string | undefined): boolean {
+  if (!landed) return false
+  try {
+    const a = new URL(asked)
+    const l = new URL(landed)
+    const home = (p: string): boolean => /^\/?(index\.(php|html?))?$|^\/home\/?$/i.test(p)
+    return !home(a.pathname) && home(l.pathname)
+  } catch {
+    return false
+  }
+}
+
 export function grabChapterFast(url: string): Promise<GrabResult> {
   const hit = cache.get(url)
   if (hit && Date.now() - hit.at < TTL) return Promise.resolve(hit.res)
   const running = inflight.get(url)
   if (running) return running
   const p = grab(url)
+    .then((res) => (sentHome(url, res.landed) ? { url, title: res.title, pages: [] } : res))
     .then((res) => extendSequence(res).catch(() => res))
     .then((res) => {
       if (res.pages.length > 0) cache.set(url, { at: Date.now(), res })

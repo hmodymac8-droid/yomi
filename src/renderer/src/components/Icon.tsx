@@ -1,6 +1,7 @@
 // Small line icons (lucide shapes), drawn with the current text colour.
 const PATHS: Record<string, string> = {
   home: 'M3 10.5 12 3l9 7.5M5 9v12h14V9',
+  bell: 'M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2 2 0 0 0 4 0',
   bookmark: 'M6 3h12v18l-6-4-6 4z',
   library: 'M4 4h4v16H4zM10 4h4v16h-4zM16 5l3.5-1 3 15.5-3.5 1z',
   download: 'M12 3v12m0 0-5-5m5 5 5-5M4 19h16',

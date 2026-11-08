@@ -1,4 +1,5 @@
 import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electron'
+import { getSettings, setSettings, type AppSettings } from './settings'
 import { join } from 'path'
 import { mkdirSync, writeFileSync } from 'fs'
 import { fetchHtml } from './http'
@@ -32,6 +33,7 @@ import {
   setSeriesPartialEmitter,
   primeNetwork,
   removeSource,
+  flushCatalog,
   scanDue,
   search,
   sourcesWithChapterTitles
@@ -333,6 +335,8 @@ app.whenReady().then(async () => {
     removeSource(id)
     dropHealth(id)
   })
+  ipcMain.handle('settings-get', () => getSettings())
+  ipcMain.handle('settings-set', (_e, patch: Partial<AppSettings>) => setSettings(patch))
   ipcMain.handle('site-health', () => allHealth())
   ipcMain.handle('site-check', async (_e, id: string) => {
     // one check per site at a time: a second click joins the first
@@ -1539,6 +1543,7 @@ app.whenReady().then(async () => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('before-quit', () => {
+  flushCatalog()
   flushProgress()
   flushDownloads()
   flushSeriesCache()

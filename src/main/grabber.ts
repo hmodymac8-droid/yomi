@@ -163,21 +163,29 @@ function createHidden(): BrowserWindow {
   return win
 }
 
-// Starting a browser window cold takes seconds. Keep one ready so the next page load starts right away.
+// Starting a browser window cold takes seconds. While pages are being read one after another, a spare is kept ready
+// so the next one starts right away. A spare is a whole Chromium page (~100 MB), so it is only made once hidden pages
+// are in use, and closed again after a minute with nothing to do.
 let warm: BrowserWindow | null = null
 let warmEnabled = false
+let warmTimer: NodeJS.Timeout | undefined
+const SPARE_IDLE_MS = 60 * 1000
 
 function prewarm(): void {
   if (!warmEnabled || (warm && !warm.isDestroyed())) return
   warm = createHidden()
   warm.loadURL('about:blank').catch(() => undefined)
+  if (warmTimer) clearTimeout(warmTimer)
+  warmTimer = setTimeout(() => {
+    if (warm && !warm.isDestroyed()) warm.destroy()
+    warm = null
+  }, SPARE_IDLE_MS)
 }
 
 /** Call once at startup (not in dev smoke modes). */
 export function warmUp(): void {
   installAdBlocker()
   warmEnabled = true
-  prewarm()
 }
 
 const CHALLENGE_RE = /just a moment|security verification|checking your browser|verify you are human|attention required/i
@@ -241,10 +249,8 @@ export function closeWarm(): void {
 export function hiddenWindow(opts: { light?: boolean } = {}): BrowserWindow {
   installAdBlocker()
   const win = warm && !warm.isDestroyed() ? warm : createHidden()
-  if (win === warm) {
-    warm = null
-    setTimeout(prewarm, 300) // replace the one we just handed out
-  }
+  if (win === warm) warm = null
+  setTimeout(prewarm, 300) // have a spare ready for the next page (it closes again after a minute unused)
   const id = win.webContents.id
   refusedRequests.delete(id) // a reused spare window starts with a clean slate
   xhrPending.delete(id)
@@ -314,6 +320,8 @@ export interface GrabResult {
   url: string
   title: string
   pages: string[]
+  /** The address the page ended up on (a site can send a chapter that's gone to its home page). */
+  landed?: string
 }
 
 // Runs inside the page: scroll to trigger lazy loading, then collect big images in DOM order.
@@ -454,7 +462,7 @@ export async function grabChapterLight(url: string): Promise<GrabResult> {
       imgs: { src: string; w: number; h: number }[]
     }
     const urls = r.imgs.filter((i) => !((i.w && i.w < 200) || (i.h && i.h < 200))).map((i) => i.src)
-    return { url, title: r.title, pages: pickPageGroup(urls) }
+    return { url, title: r.title, pages: pickPageGroup(urls), landed: win.webContents.getURL() }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }
@@ -485,7 +493,7 @@ export async function grabChapter(url: string): Promise<GrabResult> {
       title: string
       imgs: RawImg[]
     }
-    return { url, title: result.title, pages: pickPages(result.imgs) }
+    return { url, title: result.title, pages: pickPages(result.imgs), landed: win.webContents.getURL() }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }

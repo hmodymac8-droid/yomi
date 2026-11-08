@@ -3,6 +3,14 @@ export function proxied(img: string, referer: string): string {
   return `mr-img://img/?u=${encodeURIComponent(img)}&r=${encodeURIComponent(referer)}`
 }
 
+/**
+ * A cover picture: the app keeps a small copy (big covers are shrunk once, when first saved), which is all a card needs
+ * and takes far less memory than the original.
+ */
+export function coverSrc(img: string, referer: string): string {
+  return proxied(img, referer) + '&c=1'
+}
+
 export function timeAgo(ms: number): string {
   if (!ms) return 'never'
   const s = Math.max(0, (Date.now() - ms) / 1000)
@@ -32,9 +40,14 @@ export function fallbackCover(
   referer: string
 ): void {
   const img = e.currentTarget
-  if (!fallback || img.dataset.fb) return
+  if (!fallback || img.dataset.fb) {
+    // nothing more to try: hide the broken picture, the cover box shows the title's first letter (see .nocover)
+    img.style.visibility = 'hidden'
+    img.parentElement?.classList.add('nocover')
+    return
+  }
   img.dataset.fb = '1'
-  img.src = proxied(fallback, referer)
+  img.src = coverSrc(fallback, referer)
 }
 
 export interface OpenSeries {
@@ -53,4 +66,43 @@ export interface OpenChapter {
   /** The series page this chapter belongs to (the key progress is saved under). */
   seriesUrl: string
   sourceId: string
+}
+
+/** The chapter number in a chapter's name ("Chapter 12.5", "Ch. 7", "Episode 3", "الفصل 40"), or null if it has none. */
+export function chapterNumber(title: string): number | null {
+  const t = title.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+  const m =
+    t.match(/(?:chapter|chap|ch|episode|ep|الفصل|فصل|الحلقة)\s*\.?\s*#?\s*(\d+(?:\.\d+)?)/i) ?? t.match(/(\d+(?:\.\d+)?)(?!.*\d)/)
+  return m ? Number(m[1]) : null
+}
+
+type ChapterRef = { title: string; url: string; alts?: string[] }
+
+/**
+ * Where to carry on reading a series (chapters are listed newest first): the chapter you were in, or the next one if you
+ * finished it, or the first chapter if you never read it.
+ */
+export function continueChapter(chapters: ChapterRef[], rec: { chapterUrl: string; read: string[] } | null): ChapterRef | undefined {
+  if (chapters.length === 0) return undefined
+  if (!rec) return chapters[chapters.length - 1]
+  const i = chapters.findIndex((c) => c.url === rec.chapterUrl || c.alts?.includes(rec.chapterUrl))
+  if (i < 0) return chapters[chapters.length - 1]
+  const done = rec.read.includes(chapters[i].url) || rec.read.includes(rec.chapterUrl)
+  return done && i > 0 ? chapters[i - 1] : chapters[i]
+}
+
+/**
+ * Opens a series straight in the reader, at the chapter `pick` chooses from its chapter list (the saved list is used
+ * when there is one, so this is quick). Null when the list can't be read or `pick` finds nothing.
+ */
+export async function readerFor(
+  sourceId: string,
+  seriesUrl: string,
+  pick: (chapters: ChapterRef[]) => ChapterRef | undefined
+): Promise<OpenChapter | null> {
+  const res = await window.api.getSeries(sourceId, seriesUrl)
+  if (!res.ok) return null
+  const c = pick(res.data.chapters)
+  if (!c) return null
+  return { url: c.url, title: c.title, chapters: res.data.chapters, referer: new URL(seriesUrl).origin + '/', seriesUrl, sourceId }
 }

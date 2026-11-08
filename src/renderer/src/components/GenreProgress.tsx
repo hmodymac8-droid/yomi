@@ -21,7 +21,12 @@ export default function GenreProgress({ startOpen = false }: { startOpen?: boole
   const [open, setOpen] = useState(startOpen)
   useEffect(() => {
     let alive = true
-    const load = (): void => void window.api.genreJobs().then((j) => alive && setJobs(j))
+    // Yomi Library sites hidden in Settings are left out here too
+    const load = (): void =>
+      void Promise.all([window.api.genreJobs(), window.api.listSources()]).then(([j, s]) => {
+        const hidden = new Set(s.filter((x) => x.hidden).map((x) => x.id))
+        if (alive) setJobs(j.filter((x) => !hidden.has(x.id)))
+      })
     load()
     const t = setInterval(load, 3000)
     return () => {
@@ -49,6 +54,11 @@ export default function GenreProgress({ startOpen = false }: { startOpen?: boole
         <span className="gp-eta">{longest !== null ? timeLeft(longest) : 'starting…'}</span>
         <span className="gp-more">{open ? 'Hide' : 'Details'}</span>
       </button>
+      <p className="gp-once">
+        <b>This is a one-time setup.</b> Yomi is reading every site&apos;s genres once so you can sort and filter all your
+        titles by genre. You can keep reading while it runs, and it picks up where it stopped if you close the app. Once it
+        finishes, this panel goes away and Yomi only refreshes each site&apos;s genres about once a week in the background.
+      </p>
       {open && (
         <div className="gp-list">
           <p className="gp-note">

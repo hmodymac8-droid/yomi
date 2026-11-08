@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import GenreProgress from './GenreProgress'
+import DeleteSite from './DeleteSite'
 import type { SiteHealth, SourceInfo } from '../../../preload/index.d'
 
 const ago = (t: number): string => {
@@ -33,7 +34,15 @@ export function levelOf(h: SiteHealth | undefined): Level {
 const LABEL: Record<Level, string> = { ok: 'Working', warn: 'Needs a look', fail: 'Broken', unknown: 'Not checked yet' }
 
 export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Element {
-  const [sources, setSources] = useState<SourceInfo[]>([])
+  const [all, setSources] = useState<SourceInfo[]>([])
+  const sources = all.filter((s) => !s.hidden)
+  const hiddenCount = all.length - sources.length
+  const [deleting, setDeleting] = useState<SourceInfo | null>(null)
+  const remove = async (s: SourceInfo): Promise<void> => {
+    setDeleting(null)
+    await window.api.removeSite(s.id)
+    void refresh()
+  }
   const [health, setHealth] = useState<Record<string, SiteHealth>>({})
   const [busy, setBusy] = useState<Record<string, boolean>>({})
   const [open, setOpen] = useState<Record<string, boolean>>({})
@@ -99,6 +108,11 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
         </div>
       </div>
       <GenreProgress startOpen />
+      {hiddenCount > 0 && (
+        <div className="sub" style={{ margin: '0 8px 12px' }}>
+          {hiddenCount} Yomi Library {hiddenCount === 1 ? 'site is' : 'sites are'} hidden. Turn on &quot;Show the Yomi Library&quot; in Settings to see {hiddenCount === 1 ? 'it' : 'them'}.
+        </div>
+      )}
       {sources.length === 0 && <div className="hint">No sites yet. Add one from the main screen.</div>}
       {rows.map((s) => {
         const h = health[s.id]
@@ -144,6 +158,9 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
               <button className="mini on" disabled={!!busy[s.id]} onClick={() => void check(s.id)}>
                 {busy[s.id] ? 'Checking…' : 'Re-check'}
               </button>
+              <button className="mini danger" title="Delete this site from Yomi" onClick={() => setDeleting(s)}>
+                Delete
+              </button>
             </div>
             {open[s.id] && (
               <div className="sitebody">
@@ -174,6 +191,7 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
           </div>
         )
       })}
+      {deleting && <DeleteSite site={deleting} onKeep={() => setDeleting(null)} onDelete={() => void remove(deleting)} />}
     </div>
   )
 }

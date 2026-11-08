@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { OpenChapter, OpenSeries, localPage, pageSrc } from '../lib'
+import { OpenChapter, OpenSeries, chapterNumber, localPage, pageSrc } from '../lib'
 import { Icon } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -62,6 +62,16 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const [eager, setEager] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
   const root = useRef<HTMLDivElement>(null)
+  // Pages can come from another site when this one fails (see fromOtherSites): they need that site as Referer.
+  const [pageRef, setPageRef] = useState(chapter.referer)
+  const [stage, setStage] = useState('')
+  const [note, setNote] = useState('')
+  // Keep scrolling at the end of a chapter to open the next one (on/off in the reading settings).
+  const [autoNext, setAutoNext] = useState(() => saved('autonext', ['on', 'off'] as const, 'on') === 'on')
+  const [pull, setPull] = useState(0)
+  const pullAcc = useRef(0)
+  const bottomSince = useRef(0)
+  const pullTimer = useRef<number | undefined>(undefined)
 
   // The top bar is out of the way while you read: it shows when the mouse goes to the top edge (or when a chapter opens),
   // and hides again by itself after a moment, or at once when you scroll down.
@@ -104,6 +114,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   useEffect(() => remember('dir', dir), [dir])
   useEffect(() => remember('bg', bg), [bg])
   useEffect(() => remember('zoom', zoom), [zoom])
+  useEffect(() => remember('autonext', autoNext ? 'on' : 'off'), [autoNext])
 
   // Saves where you are (pos 0..1) for this series; markRead flags the chapter as finished.
   const persist = (pos: number, markRead = false): void => {
@@ -134,6 +145,12 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     setError('')
     setPages([])
     setIndex(0)
+    setNote('')
+    setStage('')
+    setPageRef(chapter.referer)
+    pullAcc.current = 0
+    bottomSince.current = 0
+    setPull(0)
     scroller.current?.scrollTo(0, 0)
     // Try the main link first, then any other providers that host the same chapter.
     const cur = chapter.chapters.find((c) => c.url === chapter.url)
@@ -146,8 +163,10 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       const rec = await window.api.progressGet(chapter.seriesUrl)
       const startPos = rec && rec.chapterUrl === chapter.url && !rec.read.includes(chapter.url) ? rec.pos : 0
       persist(startPos) // registers "last read" right away, before any scrolling
-      const show = (list: string[], ttl: string): void => {
+      const show = (list: string[], ttl: string, referer = chapter.referer): void => {
         const n = list.length
+        setPageRef(referer)
+        setStage('')
         setLoading(false)
         setTitle(ttl)
         setPages(list)
@@ -198,6 +217,18 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
         }
         if (!res.ok) lastError = res.error
       }
+      // This site didn't give the chapter: look for the same chapter (by its number) on your other sites that have
+      // this series, and read it from there.
+      const here = series.entries.find((e) => e.sourceId === chapter.sourceId)?.sourceName ?? chapter.sourceId
+      setStage(`${here} didn't open this chapter. Looking for it on your other sites…`)
+      const other = await fromOtherSites(() => cancelled)
+      if (cancelled) return
+      if (other) {
+        show(other.pages, other.title, other.referer)
+        setNote(`Opened from ${other.site}, because ${here} didn't load this chapter.`)
+        return
+      }
+      setStage('')
       setLoading(false)
       setError(lastError)
       restoring.current = false
@@ -206,6 +237,70 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       cancelled = true
     }
   }, [chapter.url])
+
+  /** The same chapter (same number) on another of your sites that has this series, read from there. */
+  async function fromOtherSites(
+    stop: () => boolean
+  ): Promise<{ pages: string[]; title: string; site: string; referer: string } | null> {
+    const num = chapterNumber(chapter.title)
+    if (num === null) return null
+    const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+    let entries = series.entries.filter((e) => e.sourceId !== chapter.sourceId)
+    if (entries.length === 0) {
+      // opened from Following / Continue reading (one site only): find the other sites by the title
+      const r = await window.api.search(series.title, [], 'az', 0, 10)
+      const hit = r.hits.find((h) => norm(h.title) === norm(series.title))
+      entries = hit ? hit.entries.filter((e) => e.sourceId !== chapter.sourceId) : []
+    }
+    for (const e of entries.slice(0, 5)) {
+      if (stop()) return null
+      setStage(`Trying ${e.sourceName}…`)
+      const res = await window.api.getSeries(e.sourceId, e.url)
+      if (!res.ok) continue
+      const c = res.data.chapters.find((x) => chapterNumber(x.title) === num)
+      if (!c) continue
+      for (const u of [c.url, ...(c.alts ?? [])]) {
+        if (stop()) return null
+        const g = await window.api.grabChapter(u)
+        if (g.ok && g.data.pages.length > 0)
+          return { pages: g.data.pages, title: g.data.title, site: e.sourceName, referer: new URL(e.url).origin + '/' }
+      }
+    }
+    return null
+  }
+
+  // Mouse wheel past the end of a chapter: keep scrolling and the next chapter opens. A short pause after reaching the
+  // end keeps the momentum of getting there from skipping a chapter by accident (like "next page" on Discover).
+  const PULL_NEED = 500
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>): void => {
+    if (mode !== 'webtoon' || e.ctrlKey) return
+    const el = e.currentTarget
+    const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+    if (!autoNext || !nextCh || !atEnd || e.deltaY <= 0) {
+      bottomSince.current = 0
+      if (pullAcc.current !== 0) {
+        pullAcc.current = 0
+        setPull(0)
+      }
+      return
+    }
+    const now = Date.now()
+    if (bottomSince.current === 0) bottomSince.current = now
+    if (now - bottomSince.current < 450) return
+    pullAcc.current += e.deltaY
+    setPull(Math.min(1, pullAcc.current / PULL_NEED))
+    window.clearTimeout(pullTimer.current)
+    pullTimer.current = window.setTimeout(() => {
+      pullAcc.current = 0
+      setPull(0)
+    }, 700)
+    if (pullAcc.current >= PULL_NEED) {
+      pullAcc.current = 0
+      bottomSince.current = 0
+      setPull(0)
+      go(nextCh)
+    }
+  }
 
   // Webtoon mode: save the scroll position (throttled) and mark the chapter read near the end.
   const onScroll = (): void => {
@@ -250,9 +345,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     for (const i of [index + 1, index + 2, index + 3, index - 1]) {
       if (i < 0 || i >= pages.length) continue
       const img = new Image()
-      img.src = pageSrc(pages[i], chapter.referer)
+      img.src = pageSrc(pages[i], pageRef)
     }
-  }, [index, mode, pages, chapter.referer])
+  }, [index, mode, pages, pageRef])
 
   // Turning pages: in right-to-left reading the next page is to the LEFT.
   const nextPage = (): void => (index >= pages.length - 1 ? go(nextCh) : setIndex((i) => i + 1))
@@ -380,6 +475,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
               <button onClick={() => setDir(dir === 'ltr' ? 'rtl' : 'ltr')} title="Shortcut: D">
                 Direction <b>{dir === 'ltr' ? 'Left to right' : 'Right to left'}</b>
               </button>
+              <button onClick={() => setAutoNext((a) => !a)} title="At the end of a chapter, keep scrolling down to open the next one">
+                Scroll on to next chapter <b>{autoNext ? 'On' : 'Off'}</b>
+              </button>
               <button onClick={() => setBg(bg === 'dark' ? 'black' : bg === 'black' ? 'sepia' : 'dark')}>
                 Background <b>{bg === 'dark' ? 'Theme' : bg === 'black' ? 'Black' : 'Sepia'}</b>
               </button>
@@ -393,12 +491,13 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
         <span />
       </div>
 
-      {loading && <div className="hint">Opening chapter and collecting pages…</div>}
+      {loading && <div className="hint">{stage || 'Opening chapter and collecting pages…'}</div>}
+      {note && <div className="readnote">{note}</div>}
       {error && <div className="error">{error}</div>}
 
       {pages.length > 0 && mode === 'webtoon' && <div className="readpct">{pct}%</div>}
       {pages.length > 0 && (
-        <div className={`reader bg-${bg}`} ref={scroller} onScroll={onScroll}>
+        <div className={`reader bg-${bg}`} ref={scroller} onScroll={onScroll} onWheel={onWheel}>
           <div className="title">{title}</div>
           {mode === 'webtoon' ? (
             <>
@@ -407,7 +506,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                   key={p}
                   className={`page fit-${fit}`}
                   style={fit === 'width' ? { width: `min(100%, ${zoom}px)` } : { height: `calc((100vh - 56px) * ${zoom / 900})` }}
-                  src={pageSrc(p, chapter.referer)}
+                  src={pageSrc(p, pageRef)}
                   loading={eager || i < 3 ? 'eager' : 'lazy'}
                 />
               ))}
@@ -424,6 +523,14 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                     All chapters
                   </button>
                 </div>
+                {nextCh && autoNext && (
+                  <div className="hint2 pullhint">
+                    or keep scrolling down
+                    <span className="pullbar">
+                      <span style={{ width: `${pull * 100}%` }} />
+                    </span>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -431,7 +538,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
               key={pages[index]}
               className={`page fit-${fit}`}
               style={fit === 'width' ? { width: `min(100%, ${zoom}px)` } : { height: `calc((100vh - 56px) * ${zoom / 900})` }}
-              src={pageSrc(pages[index], chapter.referer)}
+              src={pageSrc(pages[index], pageRef)}
               // click the left or right third to turn the page (which side is "next" depends on the direction)
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect()

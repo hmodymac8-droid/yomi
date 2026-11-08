@@ -1,8 +1,9 @@
-import { app, net, protocol, session } from 'electron'
+import { app, nativeImage, net, protocol, session } from 'electron'
 import { join, resolve, sep } from 'path'
 import { pathToFileURL } from 'url'
 import { createHash } from 'crypto'
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'fs'
+import { readdirSync, statSync, unlinkSync } from 'fs'
+import { mkdir, readFile, writeFile } from 'fs/promises'
 import { downloadsRoot } from './downloads'
 import { ensureSession, refererHints } from './grabber'
 
@@ -33,31 +34,36 @@ function cachePath(url: string, ext: string): string {
   return join(cacheDir(), key.slice(0, 2), `${key}.${ext}`)
 }
 
-function cacheGet(url: string): { buf: Buffer; type: string } | null {
-  for (const ext of Object.keys(MIME)) {
-    const p = cachePath(url, ext)
-    if (existsSync(p)) {
-      try {
-        return { buf: readFileSync(p), type: MIME[ext] }
-      } catch {
-        return null
-      }
+// The disk cache is read and written in the background (never while the app waits), so covers arriving while you
+// scroll don't make it stutter. extOf remembers which kind of file each cached image is, to find it in one go.
+const extOf = new Map<string, string>()
+
+async function cacheGet(url: string): Promise<{ buf: Buffer; type: string } | null> {
+  const known = extOf.get(url)
+  for (const ext of known ? [known] : Object.keys(MIME)) {
+    try {
+      const buf = await readFile(cachePath(url, ext))
+      extOf.set(url, ext)
+      return { buf, type: MIME[ext] }
+    } catch {
+      /* not this kind */
     }
   }
+  extOf.delete(url)
   return null
 }
 
 function cachePut(url: string, type: string, buf: Buffer): void {
   const ext = TYPES[type]
   if (!ext || buf.length < 200 || buf.length > 12 * 1024 * 1024) return
-  try {
-    const p = cachePath(url, ext)
-    mkdirSync(join(p, '..'), { recursive: true })
-    writeFileSync(p, buf)
-    if (++writes % 150 === 0) trimCache()
-  } catch {
-    /* cache is best-effort */
-  }
+  const p = cachePath(url, ext)
+  void mkdir(join(p, '..'), { recursive: true })
+    .then(() => writeFile(p, buf))
+    .then(() => {
+      extOf.set(url, ext)
+      if (++writes % 150 === 0) setTimeout(trimCache, 2000)
+    })
+    .catch(() => undefined) // the cache is best-effort
 }
 
 /** Delete the oldest cached images once the cache grows past its cap. */
@@ -125,6 +131,26 @@ async function fetchRemote(target: string, referer: string | undefined): Promise
   })
 }
 
+/*
+ * Covers (&c=1) are shown on cards about 200 px wide. Some sites send the full poster (up to 4,600 px), which the screen
+ * then keeps in memory at full size. A big JPEG or PNG cover is shrunk to COVER_W px wide once, when it is first
+ * downloaded, and the small copy is what gets cached and shown. Other kinds (WebP, AVIF, GIF) are passed on as they are.
+ */
+const COVER_W = 400
+function shrinkCover(buf: Buffer, type: string): { buf: Buffer; type: string } {
+  if (type !== 'image/jpeg' && type !== 'image/png') return { buf, type }
+  try {
+    const img = nativeImage.createFromBuffer(buf)
+    if (img.isEmpty()) return { buf, type }
+    const { width } = img.getSize()
+    if (width <= COVER_W * 1.2) return { buf, type }
+    const small = img.resize({ width: COVER_W, quality: 'good' }).toJPEG(86)
+    return small.length > 0 && small.length < buf.length ? { buf: small, type: 'image/jpeg' } : { buf, type }
+  } catch {
+    return { buf, type }
+  }
+}
+
 // Two kinds of URLs:
 //   mr-img://img/?u=<image url>&r=<referer url>   remote image (cached on disk after the first download)
 //   mr-img://local/?f=<dir>/<file>                a page saved by the download manager
@@ -151,16 +177,29 @@ export function installImageProxy(): void {
     const referer = url.searchParams.get('r') ?? undefined
     if (!target || !/^https?:/i.test(target)) return new Response('bad request', { status: 400 })
 
-    const cached = cacheGet(target)
+    const cover = url.searchParams.get('c') === '1'
+    const key = cover ? target + '#cover' : target // the small cover copy is cached apart from the original
+    const cached = await cacheGet(key)
     if (cached) return new Response(new Uint8Array(cached.buf), { headers: { 'content-type': cached.type, 'cache-control': 'max-age=31536000' } })
+    if (cover) {
+      // the original is already saved from before: make the small copy from it instead of downloading again
+      const orig = await cacheGet(target)
+      if (orig) {
+        const s = shrinkCover(orig.buf, orig.type)
+        cachePut(key, s.type, s.buf)
+        return new Response(new Uint8Array(s.buf), { headers: { 'content-type': s.type, 'cache-control': 'max-age=31536000' } })
+      }
+    }
 
     try {
       const res = await fetchRemote(target, referer)
       const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
       if (!res.ok || !type.startsWith('image/')) return new Response(`upstream ${res.status}`, { status: res.ok ? 502 : res.status })
-      const buf = Buffer.from(await res.arrayBuffer())
-      cachePut(target, type, buf)
-      return new Response(new Uint8Array(buf), { headers: { 'content-type': type, 'cache-control': 'max-age=31536000' } })
+      let buf: Buffer = Buffer.from(await res.arrayBuffer())
+      let outType = type
+      if (cover) ({ buf, type: outType } = shrinkCover(buf, type))
+      cachePut(key, outType, buf)
+      return new Response(new Uint8Array(buf), { headers: { 'content-type': outType, 'cache-control': 'max-age=31536000' } })
     } catch {
       return new Response('fetch failed', { status: 502 })
     }

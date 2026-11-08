@@ -569,3 +569,50 @@ select { cursor: pointer; }
 .gp-row.skipped { opacity: 0.55; }
 .gp-left { color: var(--primary-text); font-size: 11px; text-align: right; white-space: nowrap; }
 .gp-count { color: var(--muted-foreground); font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Delete-site dialog */
+.modalback { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: color-mix(in oklab, var(--background) 70%, transparent); backdrop-filter: blur(3px); }
+.modal { width: min(460px, 100%); background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: calc(var(--radius) * 2); padding: 24px; box-shadow: 0 20px 60px rgb(0 0 0 / 0.4); }
+.modal h2 { margin: 0 0 10px; font-family: var(--font-display); font-size: 22px; font-weight: 500; }
+.modal p { margin: 0 0 12px; color: var(--muted-foreground); font-size: 14px; line-height: 1.5; }
+.modal .sub { font-size: 12px; }
+.modalact { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+/* Settings screen */
+.setting { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; padding: 4px 8px 24px; border-bottom: 1px solid var(--border); }
+.setting .settext { max-width: 620px; }
+.setting h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 22px; font-weight: 500; }
+.setting p { margin: 0 0 8px; color: var(--muted-foreground); font-size: 14px; line-height: 1.5; }
+.setting .sub { font-size: 12px; }
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; white-space: nowrap; font-size: 14px; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { position: relative; width: 40px; height: 22px; border-radius: 999px; background: var(--muted); border: 1px solid var(--border); transition: background 0.2s; flex: none; }
+.switch .track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted-foreground); transition: transform 0.2s, background 0.2s; }
+.switch input:checked + .track { background: var(--primary); border-color: transparent; }
+.switch input:checked + .track::after { transform: translateX(18px); background: var(--primary-foreground); }
+.switch input:focus-visible + .track { outline: 2px solid var(--ring); outline-offset: 3px; }
+@media (max-width: 700px) { .setting { flex-direction: column; gap: 16px; } }
+.gp-once { margin: 0; padding: 0 16px 12px 44px; font-size: 12px; line-height: 1.6; color: var(--muted-foreground); }
+.gp-once b { color: var(--foreground); font-weight: 600; }
+.cover.nocover { position: relative; background: var(--muted); }
+.cover.nocover::after { content: attr(data-letter); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 44px; color: var(--muted-foreground); }
+/* Reader: keep scrolling to the next chapter; note when pages came from another site */
+.endch .pullhint { margin-top: 18px; }
+.readnote { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 12; max-width: min(640px, calc(100% - 32px)); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); color: var(--muted-foreground); font-size: 12px; text-align: center; pointer-events: none; animation: readnote 6s ease forwards; }
+@keyframes readnote { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+/* New chapters screen */
+.newgroup { margin-bottom: 28px; }
+.newgroup h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 20px; font-weight: 500; }
+.newgroup h2 span { font-family: var(--font-sans, inherit); font-size: 12px; color: var(--muted-foreground); margin-left: 6px; }
+.newrow { display: flex; align-items: center; gap: 14px; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+.newrow:hover { background: color-mix(in oklab, var(--secondary) 65%, transparent); }
+.newrow.seen { opacity: 0.6; }
+.newcover { flex: none; width: 44px; aspect-ratio: 5 / 7; padding: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--muted); display: grid; place-items: center; color: var(--muted-foreground); }
+.newcover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.newtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.newtext b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.newtext span { font-size: 12px; color: var(--muted-foreground); }
+.newrow .primary, .newrow .mini { flex: none; padding: 6px 14px; }
+/* Following: sort and Continue */
+.shelftools .sortpick { margin-left: auto; }
+.newcard .continue { width: 100%; margin-top: 6px; }

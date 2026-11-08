@@ -2,7 +2,7 @@ import { Tags } from './Tags'
 import { Icon } from './Icon'
 import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
-import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, proxied } from '../lib'
+import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, coverSrc } from '../lib'
 
 interface Props {
   series: OpenSeries
@@ -294,7 +294,7 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
         <div className="cover big">
           {(series.cover || detail?.cover) && (
             <img
-              src={proxied(series.cover || detail!.cover, series.coverReferer)}
+              src={coverSrc(series.cover || detail!.cover, series.coverReferer)}
               onError={(e) => fallbackCover(e, series.coverFallback || detail?.cover, series.coverReferer)}
             />
           )}

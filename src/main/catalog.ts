@@ -15,10 +15,11 @@ import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
 import { canonGenres, dataChapters, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
 import { readSitemapFile } from './sitemap'
-import { dataLog, isUnreadable, readJson, writeAtomic } from './safefile'
+import { dataLog, isUnreadable, readJson, writeAtomic, writeAtomicAsync } from './safefile'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
+import { getSettings, settingsVersion } from './settings'
 import { crawledMeta, genreIndexVersion, urlKey } from './genres'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -48,7 +49,8 @@ let store: Store | null = null
 let saveTimer: NodeJS.Timeout | undefined
 const crawling = new Map<string, { cancel: boolean }>()
 
-const storePath = (): string => join(app.getPath('userData'), 'catalog.json')
+let storeFile = ''
+const storePath = (): string => (storeFile ||= join(app.getPath('userData'), 'catalog.json'))
 
 /** True while the catalog in memory is only an empty stand-in (the file could not be seen when Yomi started). */
 let standIn = false
@@ -68,7 +70,7 @@ function load(): Store {
   }
   standIn = !fresh
   store = fresh ?? { sources: [], series: {}, scan: {} }
-  if (fresh) lastSearch = null
+  if (fresh) freshSearch()
   dataLog(storePath(), fresh ? 'catalog loaded: ' + fresh.sources?.length + ' sites' : 'catalog not found at start (' + storePath() + ')')
   store.scan ??= {} // catalogs saved by older versions have no scan state
   pruneForeignEntries(store)
@@ -154,7 +156,7 @@ function pruneForeignEntries(s: Store): void {
       changed = true
     }
     for (const e of keep) {
-      const t = fixTitle(e.title)
+      const t = fixTitle(e.title, e.url)
       if (t !== e.title) {
         e.title = t
         changed = true
@@ -164,35 +166,59 @@ function pruneForeignEntries(s: Store): void {
   if (changed) saveSoon()
 }
 
-/** A card that prints the name twice ("Kingdom Kingdom") is the same name once. */
-export function fixTitle(t: string): string {
+/**
+ * A card that prints the name twice ("Kingdom Kingdom") is the same name once. Some sites (Manhuatop, Weebcentral)
+ * name the title after its cover picture ("Magic Emperor cover"): the word "cover" goes, unless the series' own
+ * address ends with it too (then it is really part of the name).
+ */
+export function fixTitle(t: string, url = ''): string {
   const m = t.trim().match(/^(.{2,}?)\s+\1$/)
-  return m ? m[1] : t
+  let out = m ? m[1] : t
+  if (/\s+cover$/i.test(out) && !/[-_]cover\/?$/i.test(url.split(/[?#]/)[0])) out = out.replace(/\s+cover$/i, '')
+  return out
 }
 
 // Bumped whenever the catalog changes (every change is followed by a save), so cached search results know when
 // they are out of date.
 let catalogVersion = 0
 
+/*
+ * Saving the whole catalog (~80 MB) costs the app about a quarter of a second, so changes from background work (site
+ * scans, covers filled in while you scroll) are gathered and saved together at most every 45 seconds, and the file is
+ * written in the background. Your own changes (adding or deleting a site) are saved at once. Everything left is saved
+ * when Yomi closes (flushCatalog).
+ */
+const SAVE_EVERY_MS = 45 * 1000
+let unsaved = false
+function writeCatalog(sync: boolean): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = undefined
+  if (!unsaved) return
+  try {
+    const cur = load()
+    // never write an empty stand-in over a catalog file that is there (that would lose every site)
+    if (standIn && (cur.sources.length === 0 || existsSync(storePath()))) {
+      dataLog(storePath(), 'not saving: catalog in memory is only a stand-in')
+      return
+    }
+    unsaved = false
+    const text = JSON.stringify(cur)
+    if (sync) writeAtomic(storePath(), text)
+    else void writeAtomicAsync(storePath(), text).catch((e) => console.error('catalog save failed', e))
+    standIn = false
+  } catch (e) {
+    console.error('catalog save failed', e)
+  }
+}
 function saveSoon(immediate = false): void {
   catalogVersion++
-  if (saveTimer) clearTimeout(saveTimer)
-  const write = (): void => {
-    try {
-      const cur = load()
-      // never write an empty stand-in over a catalog file that is there (that would lose every site)
-      if (standIn && (cur.sources.length === 0 || existsSync(storePath()))) {
-        dataLog(storePath(), 'not saving: catalog in memory is only a stand-in')
-        return
-      }
-      writeAtomic(storePath(), JSON.stringify(cur))
-      standIn = false
-    } catch (e) {
-      console.error('catalog save failed', e)
-    }
-  }
-  if (immediate) write()
-  else saveTimer = setTimeout(write, 2500)
+  unsaved = true
+  if (immediate) writeCatalog(false)
+  else if (!saveTimer) saveTimer = setTimeout(() => writeCatalog(false), SAVE_EVERY_MS)
+}
+/** Saves what is not saved yet (when Yomi closes). */
+export function flushCatalog(): void {
+  writeCatalog(true)
 }
 
 const triedEnrich = new Set<string>()
@@ -399,7 +425,7 @@ export function addCatalogEntries(id: string, items: { url: string; title: strin
   let n = 0
   for (const it of items) {
     if (!it.url || have.has(it.url) || !re.test(it.url) || !it.title) continue
-    list.push({ sourceId: id, url: it.url, title: fixTitle(it.title), cover: it.cover })
+    list.push({ sourceId: id, url: it.url, title: fixTitle(it.title, it.url), cover: it.cover })
     have.add(it.url)
     n++
   }
@@ -450,6 +476,11 @@ export async function fillSiteLanguages(): Promise<void> {
   }
 }
 
+/** A Yomi Library site while the Settings switch "Show the Yomi Library" is off. */
+function isHiddenSite(src: SourceDef): boolean {
+  return !!src.library && !getSettings().showLibrary
+}
+
 export function listSources(): SourceInfo[] {
   const s = load()
   return s.sources
@@ -457,11 +488,13 @@ export function listSources(): SourceInfo[] {
     .map((src) => ({
     ...src,
     count: s.series[src.id]?.length ?? 0,
-    crawling: crawling.has(src.id)
+    crawling: crawling.has(src.id),
+    hidden: isHiddenSite(src)
   }))
 }
 
 export function addSource(def: SourceDef): SourceInfo {
+  freshSearch()
   const s = load()
   const old = s.sources.find((x) => x.id === def.id)
   if (!old) {
@@ -484,7 +517,7 @@ export function addSource(def: SourceDef): SourceInfo {
     }
   }
   mergeTitleOnly(s)
-  return listSources().find((x) => x.id === def.id) ?? ({ ...def, count: 0, crawling: false } as SourceInfo)
+  return listSources().find((x) => x.id === def.id) ?? ({ ...def, count: 0, crawling: false, hidden: false } as SourceInfo)
 }
 
 /**
@@ -529,6 +562,7 @@ export function scanDue(id: string): boolean {
 }
 
 export function removeSource(id: string): void {
+  freshSearch()
   const s = load()
   crawling.get(id) && (crawling.get(id)!.cancel = true)
   s.sources = s.sources.filter((x) => x.id !== id)
@@ -830,7 +864,7 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
           if (old) {
             // a sitemap only knows the URL: the real title / cover from the page replaces the guess (counts as progress)
             if (old.slugTitle && it.title) {
-              old.title = fixTitle(it.title)
+              old.title = fixTitle(it.title, it.url)
               delete old.slugTitle
               added++
             }
@@ -841,7 +875,7 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
             continue
           }
           if (isNavUrl(it.url)) continue
-          known.set(it.url, { sourceId: id, url: it.url, title: fixTitle(it.title) || titleFromUrl(it.url), cover: it.cover })
+          known.set(it.url, { sourceId: id, url: it.url, title: fixTitle(it.title, it.url) || titleFromUrl(it.url), cover: it.cover })
           added++
         }
         pages = nums[i]
@@ -912,7 +946,37 @@ interface Grp {
 }
 
 // The last full list of groups, so turning pages (or re-asking the same thing) costs nothing until the catalog changes.
-let lastSearch: { sig: string; groups: Grp[] } | null = null
+// `base` is the same without the catalog's change counter: while background scans keep adding titles, a search less
+// than a minute old is reused instead of re-sorting every title on each page turn (new titles show within a minute).
+// Your own changes (adding or deleting a site, Settings) clear it straight away.
+// The last few searches are kept (switching sort order and back is instant); each holds only pointers to entries.
+type SavedSearch = { sig: string; base: string; at: number; groups: Grp[] }
+let savedSearches: SavedSearch[] = []
+const KEEP_SEARCHES = 2
+const FORGET_SEARCHES_MS = 3 * 60 * 1000 // nothing searched for this long: give the memory back
+let forgetTimer: NodeJS.Timeout | undefined
+function rememberSearch(x: SavedSearch): void {
+  savedSearches = [x, ...savedSearches.filter((y) => y.base !== x.base)].slice(0, KEEP_SEARCHES)
+}
+function searchedNow(): void {
+  if (forgetTimer) clearTimeout(forgetTimer)
+  forgetTimer = setTimeout(() => (savedSearches = []), FORGET_SEARCHES_MS)
+}
+const STALE_OK_MS = 60 * 1000
+/** Forget the saved search, so the next one shows a change you just made. */
+function freshSearch(): void {
+  savedSearches = []
+}
+
+/**
+ * A cover address that is known to show no picture. Projectsuki lists every title with a cover, but when it has no
+ * picture for one the address ends in an empty "thumb?" and gives a tiny blank image. Such a title takes its cover
+ * from another site instead (or shows its first letter).
+ */
+export function isEmptyCover(url: string | undefined): boolean {
+  if (!url) return true
+  return /projectsuki\.com(\/|%2F)images(\/|%2F)gallery(\/|%2F)\d+(\/|%2F)thumb(\?|%3F)(&|$)/i.test(url)
+}
 
 function toHit(g: Grp): SearchHit {
   // Covers are stored as scanned (often tiny thumbnails). Show the bigger original, keep the thumbnail as a fallback.
@@ -921,7 +985,7 @@ function toHit(g: Grp): SearchHit {
     key: g.key,
     title: g.e.title,
     cover: withCover ? upgradeCover(withCover.cover) : '',
-    coverFallback: withCover ? withCover.cover : g.e.cover,
+    coverFallback: withCover ? withCover.cover : '',
     needsInfo: withCover ? !!withCover.slugTitle : true,
     coverReferer: (g.coverSrc ?? g.src).baseUrl,
     entries: [
@@ -950,23 +1014,28 @@ export function search(
   kind?: SeriesType,
   genre?: string
 ): SearchResult {
-  const sig = `${catalogVersion}|${metaVersion}|${genreIndexVersion()}|${q}|${sourceIds.join(',')}|${sort}`
-  if (lastSearch && lastSearch.sig === sig) return pick(lastSearch.groups, kind, genre, offset, limit)
+  const sig = `${catalogVersion}|${metaVersion}|${genreIndexVersion()}|${settingsVersion()}|${q}|${sourceIds.join(',')}|${sort}`
+  const base = sig.slice(sig.indexOf('|') + 1)
+  searchedNow()
+  const saved = savedSearches.find((x) => x.sig === sig || (x.base === base && Date.now() - x.at < STALE_OK_MS))
+  if (saved) return pick(saved.groups, kind, genre, offset, limit)
   const s = load()
   const tokens = norm(q).split(' ').filter(Boolean)
   const only = sourceIds.length > 0 ? new Set(sourceIds) : null
   const map = new Map<string, Grp>()
   for (const src of s.sources) {
     if (only && !only.has(src.id)) continue
+    if (isHiddenSite(src)) continue
     for (const e of s.series[src.id] ?? []) {
       const key = titleKey(e)
       if (!key) continue
       if (tokens.length && !tokens.every((t) => key.includes(t))) continue
       const g = map.get(key)
       if (!g) {
-        map.set(key, { key, e, src, coverE: e.cover ? e : null, coverSrc: e.cover ? src : null })
+        const has = !isEmptyCover(e.cover)
+        map.set(key, { key, e, src, coverE: has ? e : null, coverSrc: has ? src : null })
       } else {
-        if (!g.coverE && e.cover) {
+        if (!g.coverE && !isEmptyCover(e.cover)) {
           g.coverE = e
           g.coverSrc = src
         }
@@ -981,7 +1050,7 @@ export function search(
   if (sort === 'site' && !tokens.length) {
     // Several sites: their titles are mixed together (a fixed shuffle for this session, so pages stay stable),
     // instead of one whole site after another. One site: that site's own order.
-    const mixed = s.sources.filter((x) => !only || only.has(x.id)).length > 1
+    const mixed = s.sources.filter((x) => (!only || only.has(x.id)) && !isHiddenSite(x)).length > 1
     const rank = new Map<Grp, number>()
     if (mixed) for (const g of groups) rank.set(g, mixHash(g.key))
     groups.sort((a, b) => Number(!!b.coverE) - Number(!!a.coverE) || (mixed ? rank.get(a)! - rank.get(b)! : 0))
@@ -996,7 +1065,7 @@ export function search(
       if (ga !== gb) return ga < gb ? -1 : 1
       return Number(!!b.coverE) - Number(!!a.coverE) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
     })
-    lastSearch = { sig, groups }
+    rememberSearch({ sig, base, at: Date.now(), groups })
     return pick(groups, kind, genre, offset, limit)
   }
   if (sort !== 'site' || tokens.length) {
@@ -1019,7 +1088,7 @@ export function search(
       return sort !== 'site' || first ? (a.key < b.key ? -dir : a.key > b.key ? dir : 0) : 0
     })
   }
-  lastSearch = { sig, groups }
+  rememberSearch({ sig, base, at: Date.now(), groups })
   return pick(groups, kind, genre, offset, limit)
 }
 
@@ -1027,11 +1096,13 @@ export function search(
 let metaStore: Record<string, SeriesMeta> | null = null
 let metaVersion = 0
 let metaTimer: NodeJS.Timeout | undefined
-const metaPath = (): string => join(app.getPath('userData'), 'series-meta.json')
+let metaFile = ''
+const metaPath = (): string => (metaFile ||= join(app.getPath('userData'), 'series-meta.json'))
 function loadMeta(): Record<string, SeriesMeta> {
   if (metaStore && !isUnreadable(metaPath())) return metaStore
   metaStore = readJson<Record<string, SeriesMeta>>(metaPath(), metaStore ? 1 : 8) ?? metaStore ?? {}
   metaVersion++
+  metaGen++
   for (const m of Object.values(metaStore!)) if (m.genres) m.genres = canonGenres(m.genres)
   return metaStore!
 }
@@ -1043,6 +1114,8 @@ function rememberMeta(url: string, d: SeriesMeta): void {
   if (JSON.stringify(prev) === JSON.stringify(next)) return
   m[url] = next
   metaVersion++
+  metaChanges++
+  changedMetaUrls.add(url)
   if (metaTimer) clearTimeout(metaTimer)
   metaTimer = setTimeout(() => {
     try {
@@ -1088,35 +1161,68 @@ function siteKind(src: SourceDef): SeriesType | null {
   }
   return k
 }
-function kindOf(g: Grp): SeriesType | null {
-  const m = loadMeta()
-  const all = [{ e: g.e, src: g.src }, ...(g.more ?? [])]
-  for (const x of all) if (m[x.e.url]?.type) return m[x.e.url].type!
-  for (const x of all) {
-    const t = crawledMeta(entryKey(x.e))?.t
-    if (t) return t
+/*
+ * What each catalog entry's page (mt / mg) and the genre scan (ct / cg) said about its type and genres, worked out once
+ * and kept until it can have changed: the genre index was updated (at most once a minute while genres load), the
+ * saved series facts were read again, or this entry's own page was just opened. Searching and turning pages used to
+ * work this out again for all ~250,000 titles every time, which froze the app for 1-2 seconds.
+ */
+interface EntryInfo {
+  gv: number
+  fg: number
+  cc: number
+  mt?: SeriesType
+  ct?: SeriesType
+  mg: string[]
+  cg: string[]
+}
+const NO_GENRES: string[] = []
+const entryInfoMemo = new WeakMap<SeriesEntry, EntryInfo>()
+let metaGen = 0 // bumped whenever series-meta.json is read again in full
+let metaChanges = 0 // bumped whenever one series' facts change (its address goes into changedMetaUrls)
+const changedMetaUrls = new Set<string>()
+function entryInfo(e: SeriesEntry, m: Record<string, SeriesMeta>): EntryInfo {
+  const gv = genreIndexVersion()
+  let x = entryInfoMemo.get(e)
+  if (x && x.gv === gv && x.fg === metaGen && (x.cc === metaChanges || !changedMetaUrls.has(e.url))) {
+    x.cc = metaChanges
+    return x
   }
-  for (const x of all) {
-    const t = siteKind(x.src)
+  const meta = m[e.url]
+  const c = crawledMeta(entryKey(e))
+  x = { gv, fg: metaGen, cc: metaChanges, mt: meta?.type, ct: c?.t, mg: meta?.genres ?? NO_GENRES, cg: c?.g ?? NO_GENRES }
+  entryInfoMemo.set(e, x)
+  return x
+}
+function kindOf(g: Grp, m: Record<string, SeriesMeta> = loadMeta()): SeriesType | null {
+  const a = entryInfo(g.e, m)
+  if (!g.more) return a.mt ?? a.ct ?? siteKind(g.src)
+  const all = [a, ...g.more.map((y) => entryInfo(y.e, m))]
+  for (const x of all) if (x.mt) return x.mt
+  for (const x of all) if (x.ct) return x.ct
+  for (const src of [g.src, ...g.more.map((y) => y.src)]) {
+    const t = siteKind(src)
     if (t) return t
   }
   return null
 }
-/** Genres a title's pages listed (lower-case keys, any of its sites). */
-function genresOf(g: Grp): string[] {
-  const m = loadMeta()
+/** Genres a title's pages listed (lower-case keys, any of its sites). Don't change the list you get back. */
+function genresOf(g: Grp, m: Record<string, SeriesMeta> = loadMeta()): string[] {
+  const a = entryInfo(g.e, m)
+  if (!g.more) return a.mg.length ? a.mg : a.cg
+  const all = [a, ...g.more.map((y) => entryInfo(y.e, m))]
   const out = new Set<string>()
-  const entries = [g.e, ...(g.more ?? []).map((y) => y.e)]
-  for (const x of entries) for (const n of m[x.url]?.genres ?? []) out.add(n)
-  if (out.size === 0) for (const x of entries) for (const n of crawledMeta(entryKey(x))?.g ?? []) out.add(n)
-  return [...out]
+  for (const x of all) for (const n of x.mg) out.add(n)
+  if (out.size === 0) for (const x of all) for (const n of x.cg) out.add(n)
+  return out.size ? [...out] : NO_GENRES
 }
 const kindMemo = new WeakMap<Grp[], { v: string; kinds: (SeriesType | null)[]; genres: string[][] }>()
 function pick(groups: Grp[], kind: SeriesType | undefined, genre: string | undefined, offset: number, limit: number): SearchResult {
   let memo = kindMemo.get(groups)
   const v = metaVersion + ':' + genreIndexVersion()
   if (!memo || memo.v !== v) {
-    memo = { v, kinds: groups.map(kindOf), genres: groups.map(genresOf) }
+    const m = loadMeta()
+    memo = { v, kinds: groups.map((x) => kindOf(x, m)), genres: groups.map((x) => genresOf(x, m)) }
     kindMemo.set(groups, memo)
   }
   // '__none__' = the titles whose genres aren't known yet (open one and its genres load)

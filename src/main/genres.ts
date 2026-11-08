@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { appendFileSync } from 'fs'
+import { totalmem } from 'os'
 import * as cheerio from 'cheerio'
 import { fetchHtml } from './http'
 import { robotsAllows } from './robots'
@@ -10,7 +11,7 @@ import { canonGenre, knownGenre, parseMeta, parseSeriesList, type SeriesType } f
 import type { SourceDef } from '../preload/index.d'
 import { addCatalogEntries, catalogUrls, getSource, listSources } from './catalog'
 import { isOffline } from './downloads'
-import { isUnreadable, readJson, writeAtomic } from './safefile'
+import { isUnreadable, readJson, writeAtomicAsync } from './safefile'
 
 /*
  * Genres for every title, without opening every title: most sites have a page per genre ("/genre/action/") that
@@ -54,7 +55,7 @@ function loadIndex(): Record<string, SiteIndex> {
 }
 function saveIndex(): void {
   try {
-    writeAtomic(indexPath(), JSON.stringify(loadIndex()))
+    void writeAtomicAsync(indexPath(), JSON.stringify(loadIndex())).catch(() => undefined)
   } catch {
     /* not critical */
   }
@@ -218,12 +219,36 @@ function genreIndexLinks(html: string, pageUrl: string, host: string): string[] 
   return [...out]
 }
 
+/*
+ * How much background genre reading runs at once, by how much memory the PC has. Each hidden browser page is a small
+ * Chromium of its own (100-300 MB and a share of the CPU), so only one or two are open at a time; sites read with
+ * plain web requests are cheap and run side by side (fewer of them on PCs with less memory).
+ */
+const GB = 1024 ** 3
+const MEM = totalmem()
+const BROWSER_SLOTS = MEM >= 12 * GB ? 2 : 1
+const SITE_SLOTS = MEM >= 12 * GB ? 16 : MEM >= 6 * GB ? 4 : 2
+let browserBusy = 0
+const browserQueue: (() => void)[] = []
+async function browserSlot(): Promise<() => void> {
+  if (browserBusy >= BROWSER_SLOTS) await new Promise<void>((r) => browserQueue.push(r))
+  browserBusy++
+  let done = false
+  return () => {
+    if (done) return
+    done = true
+    browserBusy--
+    browserQueue.shift()?.()
+  }
+}
+
 async function getHtml(url: string, browser: boolean): Promise<string> {
   if (!browser) {
     const r = await fetchHtml(url, 20000)
     if (r.status === 403 || r.status === 429) throw new Error('refused ' + r.status)
     return r.status === 200 ? r.html : ''
   }
+  const release = await browserSlot()
   const w = hiddenWindow({ light: true })
   try {
     await loadPage(w, url, 30000)
@@ -231,6 +256,7 @@ async function getHtml(url: string, browser: boolean): Promise<string> {
     return await w.webContents.executeJavaScript('document.documentElement.outerHTML')
   } finally {
     if (!w.isDestroyed()) w.destroy()
+    release()
   }
 }
 
@@ -436,7 +462,7 @@ function saveSoonIndex(): void {
       lookup = null
       version++
     }
-  }, 15000)
+  }, 45000)
 }
 function saveIndexNow(): void {
   if (saveTimer) clearTimeout(saveTimer)
@@ -829,6 +855,10 @@ export function startGenreScheduler(): void {
           glog(s.id + ' ' + (why || 'start'))
           if (why === 'crawling') soon = true // its title list is being refreshed: start right after
           if (why) continue
+          if (running.size >= SITE_SLOTS) {
+            soon = true // the rest start as soon as one finishes
+            break
+          }
           const src = getSource(s.id)
           if (src) {
             if (!live.has(s.id)) setLive(s.id, { state: 'waiting', phase: 'Waiting to start' })

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FollowInfo, ProgressRecord, SeriesDetail, SourceInfo } from '../../../preload/index.d'
-import { OpenChapter, OpenSeries, proxied } from '../lib'
+import { OpenChapter, OpenSeries, coverSrc } from '../lib'
 import { Icon } from './Icon'
 import { Tags } from './Tags'
 
@@ -108,7 +108,7 @@ export default function Featured({ recent, follows, sources, onOpen, onRead }: P
   return (
     <section className="featured">
       <button className="fcover" onClick={() => onOpen(series)} aria-label={`Open ${p.title}`}>
-        {series.cover && <img src={proxied(series.cover, p.coverReferer)} alt="" width={140} height={196} decoding="async" />}
+        {series.cover && <img src={coverSrc(series.cover, p.coverReferer)} alt="" width={140} height={196} decoding="async" />}
       </button>
       <div className="fbody">
         <div className="eyebrow peach">{p.eyebrow}</div>

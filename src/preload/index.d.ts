@@ -35,6 +35,8 @@ export interface SourceDef {
   needsRefine?: boolean
   /** Made only to hold titles you added by address: never scanned, and not shown as a site. */
   titlesOnly?: boolean
+  /** Came ready-made from the Yomi Library (your Yomi account), not added on this computer. */
+  library?: boolean
 }
 
 export interface SeriesEntry {
@@ -114,6 +116,13 @@ export interface GenreJob {
 export interface SourceInfo extends SourceDef {
   count: number
   crawling: boolean
+  /** A Yomi Library site while "Show the Yomi Library" is off: kept, but left out of Discover and search. */
+  hidden: boolean
+}
+
+export interface AppSettings {
+  /** Show the sites that came ready-made from the Yomi Library. */
+  showLibrary: boolean
 }
 
 export interface HealthStep {
@@ -302,6 +311,8 @@ export interface MangaApi {
   siteCheck: (id: string) => Promise<SiteHealth>
   addSite: (url: string) => Promise<Result<SourceInfo>>
   removeSite: (id: string) => Promise<void>
+  getSettings: () => Promise<AppSettings>
+  setSettings: (patch: Partial<AppSettings>) => Promise<AppSettings>
   crawl: (id: string) => Promise<void>
   cancelCrawl: (id: string) => Promise<void>
   /** `sourceIds`: the sites to search; an empty list searches all of them. */

@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FollowCategory, FollowInfo, SourceInfo } from '../../../preload/index.d'
-import { OpenSeries, proxied, timeAgo } from '../lib'
+import type { FollowCategory, FollowInfo, ProgressRecord, SourceInfo } from '../../../preload/index.d'
+import { OpenChapter, OpenSeries, continueChapter, coverSrc, readerFor, timeAgo } from '../lib'
 
 interface Props {
   onBack: () => void
   onOpen: (s: OpenSeries) => void
+  onRead: (s: OpenSeries, c: OpenChapter) => void
+}
+
+type Sort = 'new' | 'recent' | 'az'
+const SORTS: { id: Sort; label: string }[] = [
+  { id: 'new', label: 'New chapters first' },
+  { id: 'recent', label: 'Recently read' },
+  { id: 'az', label: 'A–Z' }
+]
+const savedSort = (): Sort => {
+  try {
+    const v = localStorage.getItem('following.sort')
+    return v === 'recent' || v === 'az' ? v : 'new'
+  } catch {
+    return 'new'
+  }
 }
 
 type Tab = 'all' | FollowCategory
@@ -19,19 +35,35 @@ const SHELVES: { id: FollowCategory; label: string }[] = [
 const shelfOf = (f: FollowInfo): FollowCategory => f.category ?? 'reading'
 
 /** Every series you follow (you follow a series by pressing Follow, or just by reading it), sorted onto shelves. */
-export default function Following({ onOpen }: Props): React.JSX.Element {
+export default function Following({ onOpen, onRead }: Props): React.JSX.Element {
   const [list, setList] = useState<FollowInfo[]>([])
   const [sources, setSources] = useState<SourceInfo[]>([])
   const [loaded, setLoaded] = useState(false)
   const [tab, setTab] = useState<Tab>('all')
   const [q, setQ] = useState('')
   const [newOnly, setNewOnly] = useState(false)
+  const [sort, setSort] = useState<Sort>(savedSort)
+  // where you stopped in each series (for "Recently read", the "Read up to" line and Continue)
+  const [prog, setProg] = useState<Record<string, ProgressRecord>>({})
+  const [opening, setOpening] = useState('')
+  const [openError, setOpenError] = useState('')
 
   const load = (): void => {
     window.api.followList().then((l) => {
       setList(l)
       setLoaded(true)
+      void Promise.all(l.map((f) => window.api.progressGet(f.seriesUrl))).then((recs) =>
+        setProg(Object.fromEntries(recs.filter((r): r is ProgressRecord => !!r).map((r) => [r.seriesUrl, r])))
+      )
     })
+  }
+  const pickSort = (s: Sort): void => {
+    setSort(s)
+    try {
+      localStorage.setItem('following.sort', s)
+    } catch {
+      /* not critical */
+    }
   }
   useEffect(() => {
     load()
@@ -39,14 +71,22 @@ export default function Following({ onOpen }: Props): React.JSX.Element {
     return window.api.onUpdates(load) // refreshes while the background checker finds new chapters
   }, [])
 
-  const open = (f: FollowInfo): void => {
-    const name = sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId
-    onOpen({
-      title: f.title,
-      cover: f.cover,
-      coverReferer: f.coverReferer,
-      entries: [{ sourceId: f.sourceId, sourceName: name, url: f.seriesUrl }]
-    })
+  const seriesOf = (f: FollowInfo): OpenSeries => ({
+    title: f.title,
+    cover: f.cover,
+    coverReferer: f.coverReferer,
+    entries: [{ sourceId: f.sourceId, sourceName: sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId, url: f.seriesUrl }]
+  })
+  const open = (f: FollowInfo): void => onOpen(seriesOf(f))
+
+  // Continue: straight into the reader, at the chapter you were in (or the next one if you finished it)
+  const carryOn = async (f: FollowInfo): Promise<void> => {
+    setOpening(f.seriesUrl)
+    setOpenError('')
+    const c = await readerFor(f.sourceId, f.seriesUrl, (chs) => continueChapter(chs, prog[f.seriesUrl] ?? null))
+    setOpening('')
+    if (c) onRead(seriesOf(f), c)
+    else setOpenError(`Couldn't open ${f.title} right now. Open it from its page instead.`)
   }
 
   const unfollow = async (f: FollowInfo): Promise<void> => {
@@ -72,13 +112,17 @@ export default function Following({ onOpen }: Props): React.JSX.Element {
 
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return list.filter(
+    const out = list.filter(
       (f) =>
         (tab === 'all' || shelfOf(f) === tab) &&
         (!newOnly || f.unread > 0) &&
         (!needle || f.title.toLowerCase().includes(needle))
     )
-  }, [list, tab, q, newOnly])
+    const readAt = (f: FollowInfo): number => prog[f.seriesUrl]?.updatedAt ?? 0
+    if (sort === 'recent') out.sort((a, b) => readAt(b) - readAt(a))
+    else if (sort === 'az') out.sort((a, b) => a.title.localeCompare(b.title))
+    return out // 'new': as the list comes (most new chapters first)
+  }, [list, tab, q, newOnly, sort, prog])
 
   const withNew = list.filter((f) => f.unread > 0).length
 
@@ -116,7 +160,15 @@ export default function Following({ onOpen }: Props): React.JSX.Element {
             <label className="auto">
               <input type="checkbox" checked={newOnly} onChange={(e) => setNewOnly(e.target.checked)} /> New chapters only
             </label>
+            <select className="sortpick" value={sort} onChange={(e) => pickSort(e.target.value as Sort)} aria-label="Sort">
+              {SORTS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
           </div>
+          {openError && <div className="error small">{openError}</div>}
         </>
       )}
 
@@ -133,7 +185,7 @@ export default function Following({ onOpen }: Props): React.JSX.Element {
             <button className="card" onClick={() => open(f)}>
               <div className="cover">
                 {f.cover ? (
-                  <img loading="lazy" src={proxied(f.cover, f.coverReferer)} />
+                  <img loading="lazy" src={coverSrc(f.cover, f.coverReferer)} />
                 ) : (
                   <div className="ph">{f.title.trim().slice(0, 1).toUpperCase()}</div>
                 )}
@@ -143,8 +195,13 @@ export default function Following({ onOpen }: Props): React.JSX.Element {
                 {f.title}
               </div>
               <div className="from">
-                {sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId} · checked {timeAgo(f.lastChecked)}
+                {prog[f.seriesUrl]
+                  ? `Read up to ${prog[f.seriesUrl].chapterTitle.replace(/^chapters*/i, 'Ch. ')} · ${timeAgo(prog[f.seriesUrl].updatedAt)}`
+                  : `${sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId} · not started`}
               </div>
+            </button>
+            <button className="mini continue" disabled={opening === f.seriesUrl} onClick={() => void carryOn(f)}>
+              {opening === f.seriesUrl ? 'Opening…' : prog[f.seriesUrl] ? 'Continue' : 'Start reading'}
             </button>
             <select
               className="shelfpick"

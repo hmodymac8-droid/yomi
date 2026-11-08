@@ -1,4 +1,5 @@
 import { appendFileSync, copyFileSync, existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs'
+import { rename, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 
 /** Problems reading or writing data files go to data-log.txt next to them. */
@@ -70,12 +71,46 @@ export function isUnreadable(path: string): boolean {
   return unreadable.has(path)
 }
 
+/**
+ * Like writeAtomic, but the disk work happens in the background, so a big file (the catalog is ~80 MB) doesn't freeze
+ * the app while it is written. Two writes of the same file never overlap: the newer one waits for the older one.
+ */
+const pending = new Map<string, Promise<void>>()
+// Every write of a file gets the next number; a background write that finds a newer one already done leaves it alone.
+const writeSeq = new Map<string, number>()
+const nextSeq = (path: string): number => {
+  const n = (writeSeq.get(path) ?? 0) + 1
+  writeSeq.set(path, n)
+  return n
+}
+export function writeAtomicAsync(path: string, text: string): Promise<void> {
+  if (unreadable.has(path)) {
+    console.error('[data] not saving over a file that could not be read:', path)
+    return Promise.resolve()
+  }
+  const seq = nextSeq(path)
+  const prev = pending.get(path) ?? Promise.resolve()
+  const next = prev
+    .catch(() => undefined)
+    .then(async () => {
+      if (writeSeq.get(path) !== seq) return // a newer write already happened
+      const tmp = path + '.tmp-bg'
+      await writeFile(tmp, text)
+      if (writeSeq.get(path) !== seq) return
+      await rename(tmp, path)
+    })
+  pending.set(path, next)
+  void next.finally(() => pending.get(path) === next && pending.delete(path)).catch(() => undefined)
+  return next
+}
+
 /** Writes the whole file or nothing. Never writes over a file that couldn't be read (that would lose your data). */
 export function writeAtomic(path: string, text: string): void {
   if (unreadable.has(path)) {
     console.error('[data] not saving over a file that could not be read:', path)
     return
   }
+  nextSeq(path)
   const tmp = path + '.tmp'
   writeFileSync(tmp, text)
   renameSync(tmp, path)
