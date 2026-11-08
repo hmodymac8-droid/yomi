@@ -1,4 +1,14 @@
-import { copyFileSync, existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { appendFileSync, copyFileSync, existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs'
+import { dirname, join } from 'path'
+
+/** Problems reading or writing data files go to data-log.txt next to them. */
+export function dataLog(path: string, m: string): void {
+  try {
+    appendFileSync(join(dirname(path), 'data-log.txt'), new Date().toISOString() + ' ' + m + '\n')
+  } catch {
+    /* no log */
+  }
+}
 
 /*
  * Your data files are read and written only through here.
@@ -37,6 +47,13 @@ export function readJson<T>(path: string, tries = 8): T | null {
   }
   if (!unreadable.has(path)) {
     console.error('[data] could not read', path, last)
+    let size = -1
+    try {
+      size = statSync(path).size
+    } catch {
+      /* gone */
+    }
+    dataLog(path, 'could not read ' + path + ' (' + size + ' bytes): ' + String((last as Error)?.message ?? last))
     // a copy of what is there now, in case the file itself is damaged (not just busy)
     try {
       copyFileSync(path, path.replace(/\.json$/, '') + '.unreadable-' + Date.now() + '.json')

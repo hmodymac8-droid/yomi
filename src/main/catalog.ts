@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { existsSync } from 'fs'
 import type {
   CrawlProgress,
   EnrichedEntry,
@@ -14,7 +15,7 @@ import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
 import { canonGenres, dataChapters, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
 import { readSitemapFile } from './sitemap'
-import { isUnreadable, readJson, writeAtomic } from './safefile'
+import { dataLog, isUnreadable, readJson, writeAtomic } from './safefile'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
@@ -49,12 +50,26 @@ const crawling = new Map<string, { cancel: boolean }>()
 
 const storePath = (): string => join(app.getPath('userData'), 'catalog.json')
 
+/** True while the catalog in memory is only an empty stand-in (the file could not be seen when Yomi started). */
+let standIn = false
+
 function load(): Store {
-  if (store && !isUnreadable(storePath())) return store
+  if (store && !standIn && !isUnreadable(storePath())) return store
+  // a stand-in: look for the real file again (cheap), so your sites come back by themselves
+  if (store && standIn && !isUnreadable(storePath()) && !existsSync(storePath())) return store
   const fresh = readJson<Store>(storePath(), store ? 1 : 8)
   if (!fresh && store) return store // still busy: keep the empty stand-in (never saved) and try again on the next use
+  if (fresh && store && standIn) {
+    // anything added while only the stand-in was there is kept
+    for (const src of store.sources) if (!fresh.sources.some((x) => x.id === src.id)) {
+      fresh.sources.push(src)
+      fresh.series[src.id] = store.series[src.id] ?? []
+    }
+  }
+  standIn = !fresh
   store = fresh ?? { sources: [], series: {}, scan: {} }
   if (fresh) lastSearch = null
+  dataLog(storePath(), fresh ? 'catalog loaded: ' + fresh.sources?.length + ' sites' : 'catalog not found at start (' + storePath() + ')')
   store.scan ??= {} // catalogs saved by older versions have no scan state
   pruneForeignEntries(store)
   // Sites made earlier only to hold an added title (no scan, no sitemap) are marked as such
@@ -164,7 +179,14 @@ function saveSoon(immediate = false): void {
   if (saveTimer) clearTimeout(saveTimer)
   const write = (): void => {
     try {
-      writeAtomic(storePath(), JSON.stringify(load()))
+      const cur = load()
+      // never write an empty stand-in over a catalog file that is there (that would lose every site)
+      if (standIn && (cur.sources.length === 0 || existsSync(storePath()))) {
+        dataLog(storePath(), 'not saving: catalog in memory is only a stand-in')
+        return
+      }
+      writeAtomic(storePath(), JSON.stringify(cur))
+      standIn = false
     } catch (e) {
       console.error('catalog save failed', e)
     }

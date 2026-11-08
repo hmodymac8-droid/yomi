@@ -1,5 +1,6 @@
 import { app } from 'electron'
 import { join } from 'path'
+import { appendFileSync } from 'fs'
 import * as cheerio from 'cheerio'
 import { fetchHtml } from './http'
 import { robotsAllows } from './robots'
@@ -696,17 +697,18 @@ export function genreJobs(): GenreJob[] {
       etaMs = did >= need && spent > 0 ? (left * spent) / did : l.stepMs >= 20000 ? null : left * l.stepMs
     }
     const done = !l && site?.complete
+    const resting = !l && !!site?.failedAt && Date.now() - site.failedAt < 24 * 3600 * 1000
     return {
       id: s.id,
       name: s.name,
-      state: l?.state ?? (done ? 'done' : s.id === 'comix-to' ? 'skipped' : 'waiting'),
+      state: l?.state ?? (done ? 'done' : s.id === 'comix-to' ? 'skipped' : resting ? 'paused' : 'waiting'),
       phase: l?.phase ?? '',
       done: l?.done ?? 0,
       total: l?.total ?? 0,
       etaMs,
       tagged,
       titles: s.count,
-      note: l?.note ?? site?.stats.note,
+      note: l?.note ?? (resting ? 'Resting: the site asked us to slow down, trying again tomorrow' : site?.stats.note),
       detail: l?.detail
     }
   })
@@ -739,6 +741,7 @@ export function forgetGenres(id: string): void {
 async function runSite(src: SourceDef): Promise<void> {
   if (running.has(src.id)) return
   running.add(src.id)
+  glog(src.id + ' job begins')
   cancelled.delete(src.id)
   try {
     const host = new URL(src.baseUrl).hostname.replace(/^www\./, '')
@@ -769,7 +772,7 @@ async function runSite(src: SourceDef): Promise<void> {
       saveIndexNow()
       setLive(src.id, { state: 'paused', note: s.stats.note })
     } else {
-      console.error('[genres]', src.id, e)
+      glog(src.id + ' error ' + String((e as Error)?.stack ?? e))
       setLive(src.id, { state: 'paused', note: 'stopped by an error; trying again later' })
     }
   } finally {
@@ -798,13 +801,34 @@ export function scanGenresNow(id: string): boolean {
  * so no single site gets more than an ordinary reader's traffic while all of them finish in a few hours. Jobs resume
  * where they stopped after a restart; each site is looked at again weekly for new titles. Nothing in offline mode.
  */
+/** A short log of the background genre work (genre-log.txt in the data folder), to see what happened. */
+function glog(m: string): void {
+  if (process.env['MR_SCHED']) console.log('[genres] ' + m)
+  try {
+    appendFileSync(join(app.getPath('userData'), 'genre-log.txt'), new Date().toISOString() + ' ' + m + '\n')
+  } catch {
+    /* no log */
+  }
+}
+
 export function startGenreScheduler(): void {
-  if (Object.keys(process.env).some((k) => k.startsWith('MR_'))) return // dev test runs: never in the background
+  glog('scheduler start, MR vars: ' + Object.keys(process.env).filter((k) => k.startsWith('MR_')).join(','))
+  // dev test runs: never in the background (MR_SCHED=1 turns it on for a test)
+  if (!process.env['MR_SCHED'] && Object.keys(process.env).some((k) => k.startsWith('MR_'))) return
   const tick = (): void => {
+    let soon = false
     try {
-      if (!isOffline()) {
-        for (const s of listSources()) {
-          if (running.has(s.id) || s.crawling || !genreScanDue(s.id)) continue
+      const offline = isOffline()
+      const sources = offline ? [] : listSources()
+      glog('tick offline=' + offline + ' sites=' + sources.length)
+      // the catalog can still be loading (or busy) right after start: look again shortly instead of in 10 minutes
+      if (!offline && sources.length === 0) soon = true
+      if (!offline) {
+        for (const s of sources) {
+          const why = running.has(s.id) ? 'running' : s.crawling ? 'crawling' : !genreScanDue(s.id) ? 'not due' : ''
+          glog(s.id + ' ' + (why || 'start'))
+          if (why === 'crawling') soon = true // its title list is being refreshed: start right after
+          if (why) continue
           const src = getSource(s.id)
           if (src) {
             if (!live.has(s.id)) setLive(s.id, { state: 'waiting', phase: 'Waiting to start' })
@@ -812,11 +836,14 @@ export function startGenreScheduler(): void {
           }
         }
       }
+    } catch (e) {
+      glog('tick error ' + String((e as Error)?.stack ?? e))
+      soon = true
     } finally {
-      setTimeout(tick, 10 * 60 * 1000)
+      setTimeout(tick, soon ? 15 * 1000 : 10 * 60 * 1000)
     }
   }
-  setTimeout(tick, 60 * 1000)
+  setTimeout(tick, process.env['MR_SCHED'] ? 5000 : 20 * 1000)
 }
 
 // kept for the Sites screen's older status line
