@@ -1,6 +1,6 @@
 {
   "name": "manga-reader",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Yomi: read manga, manhwa and manhua from all your sites in one place",
   "main": "./out/main/index.js",
   "author": "Yomi",
