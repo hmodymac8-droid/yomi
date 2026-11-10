@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import DeleteSite from './DeleteSite'
-import type { CrawlProgress, FollowInfo, ProgressRecord, SearchHit, SourceInfo, UpdateStatus } from '../../../preload/index.d'
+import type {
+  CrawlProgress,
+  FollowInfo,
+  ProgressRecord,
+  SearchHit,
+  SourceInfo,
+  UpdateStatus
+} from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, fallbackCover, coverSrc, timeAgo } from '../lib'
 import Featured from './Featured'
 import GenreProgress from './GenreProgress'
@@ -28,7 +35,22 @@ interface AddedTitle {
   chapters: number
 }
 
-export default function Browse({ onOpen, active, shelf, q, onRead }: Props): React.JSX.Element {
+export default function Browse({
+  onOpen,
+  active,
+  shelf,
+  q: topQ,
+  onRead
+}: Props): React.JSX.Element {
+  // The search box above All titles searches inside what you picked there (language, type, sites, genre). The search
+  // bar at the top of the window, when it has text, wins.
+  const [findText, setFindText] = useState('')
+  const [findQ, setFindQ] = useState('')
+  useEffect(() => {
+    const t = window.setTimeout(() => setFindQ(findText.trim()), 250)
+    return () => window.clearTimeout(t)
+  }, [findText])
+  const q = topQ.trim() ? topQ : findQ
   // The row of site chips takes a lot of room: it can be folded away (and stays that way next time).
   const [sitesOpen, setSitesOpen] = useState<boolean>(() => {
     try {
@@ -88,7 +110,9 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   const [noGenre, setNoGenre] = useState(0)
   // All / Manga / Manhwa / Manhua: only titles whose type a series page has stated are in the three type tabs
   const [kind, setKind] = useState<'' | 'manga' | 'manhwa' | 'manhua'>('')
-  const [counts, setCounts] = useState<{ manga: number; manhwa: number; manhua: number } | null>(null)
+  const [counts, setCounts] = useState<{ manga: number; manhwa: number; manhua: number } | null>(
+    null
+  )
   const [sources, setSources] = useState<SourceInfo[]>([])
   // The sites actually searched (a site that was removed can't stay ticked). Empty = all of them.
   // Language switch: All sites, only English sites, or only Arabic sites (remembered)
@@ -112,7 +136,9 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   const pickedIds = picked ? picked.filter((id) => sources.some((s) => s.id === id)) : []
   // the sites searched: the ones you ticked (or all), narrowed to the chosen language
   const sourceIds = lang
-    ? (pickedIds.length ? pickedIds : sources.map((s) => s.id)).filter((id) => sources.some((s) => s.id === id && langOk(s)))
+    ? (pickedIds.length ? pickedIds : sources.map((s) => s.id)).filter((id) =>
+        sources.some((s) => s.id === id && langOk(s))
+      )
     : pickedIds
   const sourceKey = sourceIds.join(',')
   const [hits, setHits] = useState<SearchHit[]>([])
@@ -156,14 +182,25 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   const bottomSince = useRef(0)
 
   // Yomi Library sites hidden in Settings are left out here (search leaves them out too)
-  const refreshSources = useCallback(async () => setSources((await window.api.listSources()).filter((s) => !s.hidden)), [])
+  const refreshSources = useCallback(
+    async () => setSources((await window.api.listSources()).filter((s) => !s.hidden)),
+    []
+  )
   const [deleting, setDeleting] = useState<SourceInfo | null>(null)
 
   const runSearch = useCallback(async () => {
     const myGen = ++gen.current
     let res: Awaited<ReturnType<typeof window.api.search>>
     try {
-      res = await window.api.search(q, sourceKey ? sourceKey.split(',') : [], sort, page * PAGE, PAGE, kind || undefined, genre || undefined)
+      res = await window.api.search(
+        q,
+        sourceKey ? sourceKey.split(',') : [],
+        sort,
+        page * PAGE,
+        PAGE,
+        kind || undefined,
+        genre || undefined
+      )
     } catch {
       return // a failed search leaves the grid as it is; the next one tries again
     }
@@ -263,7 +300,12 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
         <button className="pg" disabled={page >= pages - 1} onClick={() => goPage(page + 1)}>
           Next ›
         </button>
-        <button className="pg" disabled={page >= pages - 1} onClick={() => goPage(pages - 1)} title="Last page">
+        <button
+          className="pg"
+          disabled={page >= pages - 1}
+          onClick={() => goPage(pages - 1)}
+          title="Last page"
+        >
           »
         </button>
         <span className="goto">
@@ -283,8 +325,12 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
           />{' '}
           of {pages.toLocaleString()}
         </span>
-        <label className="auto" title="Keep scrolling past the bottom of a page to open the next one">
-          <input type="checkbox" checked={autoNext} onChange={(e) => setAuto(e.target.checked)} /> scroll down for next page
+        <label
+          className="auto"
+          title="Keep scrolling past the bottom of a page to open the next one"
+        >
+          <input type="checkbox" checked={autoNext} onChange={(e) => setAuto(e.target.checked)} />{' '}
+          scroll down for next page
         </label>
       </div>
     )
@@ -371,7 +417,9 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
             referer: ref
           }))
         )
-        setAddMsg(`Queued ${d.data.chapters.length} chapters of "${a.title}". Watch them in Downloads.`)
+        setAddMsg(
+          `Queued ${d.data.chapters.length} chapters of "${a.title}". Watch them in Downloads.`
+        )
       } else {
         setAddMsg(`${a.already ? 'Updated' : 'Added'} "${a.title}" (${a.chapters} chapters).`)
       }
@@ -381,7 +429,12 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
   }
 
   const removeAddedTitle = async (a: AddedTitle): Promise<void> => {
-    if (!window.confirm(`Remove "${a.title}" from "Added by me"?\n\nDownloaded chapters are kept (delete them in Downloads).`)) return
+    if (
+      !window.confirm(
+        `Remove "${a.title}" from "Added by me"?\n\nDownloaded chapters are kept (delete them in Downloads).`
+      )
+    )
+      return
     await window.api.titleRemove(a.url)
     setAdded(await window.api.titleList())
   }
@@ -455,7 +508,15 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
       setHits((prev) =>
         prev.map((h) => {
           const r = byUrl.get(h.entries[0].url)
-          return r ? { ...h, title: r.title || h.title, cover: r.cover || h.cover, coverFallback: '', needsInfo: false } : h
+          return r
+            ? {
+                ...h,
+                title: r.title || h.title,
+                cover: r.cover || h.cover,
+                coverFallback: '',
+                needsInfo: false
+              }
+            : h
         })
       )
     })
@@ -512,376 +573,529 @@ export default function Browse({ onOpen, active, shelf, q, onRead }: Props): Rea
           </div>
           <div className="pageact">
             <span>
-              <b>{sources.reduce((n, x) => n + x.count, 0).toLocaleString()}</b> titles · {sources.length} sites
+              <b>{sources.reduce((n, x) => n + x.count, 0).toLocaleString()}</b> titles ·{' '}
+              {sources.length} sites
             </span>
           </div>
-        </div>
-      )}
-      {shelf === 'all' && sources.some((x) => x.lang === 'ar') && sources.some((x) => x.lang !== 'ar') && (
-        <div className="langtabs" role="tablist" aria-label="Language of the sites">
-          {(
-            [
-              ['', 'All sites', sources.length],
-              ['en', 'English', sources.filter((x) => x.lang === 'en').length],
-              ['ar', 'العربية', sources.filter((x) => x.lang === 'ar').length]
-            ] as const
-          ).map(([v, label, n]) => (
-            <button key={v || 'all'} role="tab" aria-selected={lang === v} className={lang === v ? 'on' : ''} onClick={() => setLang(v)}>
-              <span lang={v === 'ar' ? 'ar' : undefined}>{label}</span>
-              <span className="n">{n}</span>
-            </button>
-          ))}
         </div>
       )}
       {shelf === 'all' && <GenreProgress />}
       {shelf === 'all' && (
-      <>
-      <div className="addsite">
-        <p>
-          <b>Add a site</b> — paste any manga site&apos;s address and it joins your catalog.
-        </p>
-        <span className="add">
-          <input
-            placeholder="https://"
-            value={siteUrl}
-            onChange={(e) => setSiteUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addSite()}
-          />
-          <button onClick={addSite} disabled={adding}>
-            {adding ? 'Detecting…' : '+ Add'}
-          </button>
-        </span>
-      </div>
-      <div className="sitesbar">
-        <button className="mini big" onClick={toggleSites} title={sitesOpen ? 'Hide the site list' : 'Show the site list'}>
-          {sitesOpen || sources.length === 0 ? '▾' : '▸'} {sources.length} {sources.length === 1 ? 'site' : 'sites'}
-        </button>
-        <span className="sub">
-          {sources.reduce((n, x) => n + x.count, 0).toLocaleString()} titles
-          {sources.some((x) => x.crawling) && ' · scanning…'}
-        </span>
-      </div>
-      <div className="sites" style={{ display: sitesOpen || sources.length === 0 ? undefined : 'none' }}>
-        {sources.map((s) => {
-          const p = progress[s.id]
-          const busy = s.crawling && !(p && p.done)
-          return (
-            <span key={s.id} className="chip">
-              <b>{s.name}</b> {s.count.toLocaleString()}
-              {busy && <em> · scanning page {p?.pages ?? 1}…</em>}
-              {p?.done && p.error && <em className="bad"> · {p.error}</em>}
-              {busy ? (
-                <button className="mini" onClick={() => window.api.cancelCrawl(s.id)}>
-                  stop
-                </button>
-              ) : (
-                <>
-                  <button className="mini" title="Fetch new titles" onClick={() => window.api.crawl(s.id)}>
-                    refresh
-                  </button>
-                  <button className="mini" title="Delete site" onClick={() => setDeleting(s)}>
-                    ✕
-                  </button>
-                </>
-              )}
+        <>
+          <div className="addsite">
+            <p>
+              <b>Add a site</b> — paste any manga site&apos;s address and it joins your catalog.
+            </p>
+            <span className="add">
+              <input
+                placeholder="https://"
+                value={siteUrl}
+                onChange={(e) => setSiteUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addSite()}
+              />
+              <button onClick={addSite} disabled={adding}>
+                {adding ? 'Detecting…' : '+ Add'}
+              </button>
             </span>
-          )
-        })}
-      </div>
-      {deleting && <DeleteSite site={deleting} onKeep={() => setDeleting(null)} onDelete={() => void removeSite(deleting)} />}
-      {addError && <div className="error small">{addError}</div>}
-      {adding && stage && <div className="stage">⏳ {stage}</div>}
+          </div>
+          <div className="sitesbar">
+            <button
+              className="mini big"
+              onClick={toggleSites}
+              title={sitesOpen ? 'Hide the site list' : 'Show the site list'}
+            >
+              {sitesOpen || sources.length === 0 ? '▾' : '▸'} {sources.length}{' '}
+              {sources.length === 1 ? 'site' : 'sites'}
+            </button>
+            <span className="sub">
+              {sources.reduce((n, x) => n + x.count, 0).toLocaleString()} titles
+              {sources.some((x) => x.crawling) && ' · scanning…'}
+            </span>
+          </div>
+          <div
+            className="sites"
+            style={{ display: sitesOpen || sources.length === 0 ? undefined : 'none' }}
+          >
+            {sources.map((s) => {
+              const p = progress[s.id]
+              const busy = s.crawling && !(p && p.done)
+              return (
+                <span key={s.id} className="chip">
+                  <b>{s.name}</b> {s.count.toLocaleString()}
+                  {busy && <em> · scanning page {p?.pages ?? 1}…</em>}
+                  {p?.done && p.error && <em className="bad"> · {p.error}</em>}
+                  {busy ? (
+                    <button className="mini" onClick={() => window.api.cancelCrawl(s.id)}>
+                      stop
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        className="mini"
+                        title="Fetch new titles"
+                        onClick={() => window.api.crawl(s.id)}
+                      >
+                        refresh
+                      </button>
+                      <button className="mini" title="Delete site" onClick={() => setDeleting(s)}>
+                        ✕
+                      </button>
+                    </>
+                  )}
+                </span>
+              )
+            })}
+          </div>
+          {deleting && (
+            <DeleteSite
+              site={deleting}
+              onKeep={() => setDeleting(null)}
+              onDelete={() => void removeSite(deleting)}
+            />
+          )}
+          {addError && <div className="error small">{addError}</div>}
+          {adding && stage && <div className="stage">⏳ {stage}</div>}
 
-      {sources.length > 0 && upd && (
-        <div className="updbar">
-          <span>
-            Following {upd.following} series ·{' '}
-            {upd.checking ? 'checking for new chapters…' : `checked ${timeAgo(upd.lastChecked)}`}
-          </span>
-          <button className="mini" disabled={upd.checking} onClick={() => window.api.updatesCheck()}>
-            check now
-          </button>
-          <label className="auto" title="Download new chapters of the series you follow as soon as they appear">
-            <input
-              type="checkbox"
-              checked={upd.autoDownload}
-              onChange={(e) => window.api.updatesSetAutoDownload(e.target.checked)}
-            />{' '}
-            auto-download new chapters
-          </label>
-        </div>
-      )}
-      </>
+          {sources.length > 0 && upd && (
+            <div className="updbar">
+              <span>
+                Following {upd.following} series ·{' '}
+                {upd.checking
+                  ? 'checking for new chapters…'
+                  : `checked ${timeAgo(upd.lastChecked)}`}
+              </span>
+              <button
+                className="mini"
+                disabled={upd.checking}
+                onClick={() => window.api.updatesCheck()}
+              >
+                check now
+              </button>
+              <label
+                className="auto"
+                title="Download new chapters of the series you follow as soon as they appear"
+              >
+                <input
+                  type="checkbox"
+                  checked={upd.autoDownload}
+                  onChange={(e) => window.api.updatesSetAutoDownload(e.target.checked)}
+                />{' '}
+                auto-download new chapters
+              </label>
+            </div>
+          )}
+        </>
       )}
 
       {sources.length === 0 ? (
         <div className="hint">
-          Paste a manga site URL above (for example the site&apos;s home page) and I&apos;ll list every series on it.
+          Paste a manga site URL above (for example the site&apos;s home page) and I&apos;ll list
+          every series on it.
         </div>
       ) : (
         <>
-        {shelf === 'added' ? (
-          <>
-            <div className="invite">
-              <div className="kicker" style={{ color: 'var(--primary-text)' }}>
-                <Icon name="link" />
-              </div>
-              <h3>Save a single title</h3>
-              <p>Paste the address of a title&apos;s page from any site. It is saved here and opens like any other series.</p>
-              <span className="add">
-                <input
-                  placeholder="https://… the address of one title"
-                  value={addUrl}
-                  onChange={(e) => setAddUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && void addTitle(false)}
-                />
-                <button onClick={() => void addTitle(false)} disabled={addBusy || !addUrl.trim()}>
-                  {addBusy ? 'Reading…' : 'Add title'}
-                </button>
-                <button onClick={() => void addTitle(true)} disabled={addBusy || !addUrl.trim()} title="Add it and queue every chapter for download">
-                  Add + download all
-                </button>
-              </span>
-            </div>
-            {addErr && <div className="error small">{addErr}</div>}
-            {addMsg && <div className="stage">{addMsg}</div>}
-            {added.length === 0 && <div className="hint">Nothing here yet. Paste the address of one title above and it is saved here.</div>}
-            <div className="grid">
-              {added
-                .filter((a) => !q.trim() || a.title.toLowerCase().includes(q.trim().toLowerCase()))
-                .map((a) => (
-                  <div key={a.url} className="cwrap">
+          {shelf === 'added' ? (
+            <>
+              <div className="invite">
+                <div className="kicker" style={{ color: 'var(--primary-text)' }}>
+                  <Icon name="link" />
+                </div>
+                <h3>Save a single title</h3>
+                <p>
+                  Paste the address of a title&apos;s page from any site. It is saved here and opens
+                  like any other series.
+                </p>
+                <span className="add">
+                  <input
+                    placeholder="https://… the address of one title"
+                    value={addUrl}
+                    onChange={(e) => setAddUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && void addTitle(false)}
+                  />
+                  <button onClick={() => void addTitle(false)} disabled={addBusy || !addUrl.trim()}>
+                    {addBusy ? 'Reading…' : 'Add title'}
+                  </button>
                   <button
-                    className="card"
-                    onClick={() =>
-                      onOpen({
-                        title: a.title,
-                        cover: a.cover,
-                        coverReferer: new URL(a.url).origin + '/',
-                        entries: [{ sourceId: a.sourceId, sourceName: a.sourceName, url: a.url }]
-                      })
-                    }
+                    onClick={() => void addTitle(true)}
+                    disabled={addBusy || !addUrl.trim()}
+                    title="Add it and queue every chapter for download"
                   >
-                    <div className="cover">
-                      {a.cover ? <img loading="lazy" src={coverSrc(a.cover, new URL(a.url).origin + '/')} /> : <div className="ph">{a.title.trim().slice(0, 1).toUpperCase()}</div>}
-                    </div>
-                    <div className="name" title={a.title}>
-                      {a.title}
-                    </div>
-                    <div className="from">{a.sourceName}</div>
+                    Add + download all
                   </button>
-                  <button className="cremove" title="Remove from Added by me" onClick={() => void removeAddedTitle(a)}>
-                    ×
-                  </button>
-                  </div>
-                ))}
-            </div>
-          </>
-        ) : (
-        <>
-          {!q && <Featured recent={recentL} follows={followsL} sources={sources} onOpen={onOpen} onRead={onRead} />}
-          {withNew.length > 0 && !q && (
-            <section className="continue">
-              <div className="meta">New chapters</div>
-              <div className="strip">
-                {withNew.map((f) => (
-                  <div key={f.seriesUrl} className="newcard">
-                    <button className="card small" onClick={() => openFollow(f)}>
-                      <div className="cover">
-                        {f.cover && <img loading="lazy" src={coverSrc(f.cover, f.coverReferer)} />}
-                        <span className="badge">+{f.unread}</span>
-                      </div>
-                      <div className="name" title={f.title}>
-                        {f.title}
-                      </div>
-                      <div className="from">{f.unreadChapters[0]?.title}</div>
-                    </button>
-                    <button className="x" title="Dismiss" onClick={() => window.api.followDismiss(f.seriesUrl).then(() => window.api.followList().then(setFollows))}>
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                </span>
               </div>
-            </section>
-          )}
-          {recentL.length > 0 && !q && (
-            <section className="continue">
-              <div className="meta">Continue reading</div>
-              <div className="strip">
-                {recentL.map((r) => (
-                  <div key={r.seriesUrl} className="cwrap">
-                    <button className="card small" onClick={() => openRecent(r)}>
-                      <div className="cover">
-                        {r.cover && <img loading="lazy" decoding="async" src={coverSrc(r.cover, r.coverReferer)} />}
-                        {r.pos > 0.02 && !r.read.includes(r.chapterUrl) && (
-                          <div className="cprog">
-                            <span style={{ width: `${Math.round(r.pos * 100)}%` }} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="name" title={r.title}>
-                        {r.title}
-                      </div>
-                      <div className="from">
-                        {r.chapterTitle}
-                        {r.pos > 0.02 && !r.read.includes(r.chapterUrl) ? ` · ${Math.round(r.pos * 100)}%` : ''}
-                      </div>
-                    </button>
-                    <button
-                      className="cremove"
-                      title="Remove from Continue reading"
-                      onClick={() => {
-                        setRecent((list) => list.filter((x) => x.seriesUrl !== r.seriesUrl))
-                        window.api.progressHide(r.seriesUrl)
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-          <div className="sechead gridtop" ref={gridTop}>
-            <div>
-              <div className="eyebrow">
-                {total.toLocaleString()} titles
-                {pages > 1 && ` · page ${(page + 1).toLocaleString()} of ${pages.toLocaleString()}`}
-              </div>
-              <h2>{q.trim() ? `Results for “${q.trim()}”` : 'All titles'}</h2>
-            </div>
-            <div className="secact">
-              <div className="kindtabs">
-                {(['', 'manga', 'manhwa', 'manhua'] as const).map((k) => (
-                  <button key={k || 'all'} className={kind === k ? 'on' : ''} onClick={() => setKind(k)} title={k ? `Titles whose page says they are ${k} (more appear as series are opened)` : 'Every title'}>
-                    {k ? k.charAt(0).toUpperCase() + k.slice(1) : 'All'}
-                    {k && counts ? <span>{counts[k].toLocaleString()}</span> : null}
-                  </button>
-                ))}
-              </div>
-              <div className="picker">
-                <button className="pickbtn" onClick={() => setPickerOpen((o) => !o)} title="Choose which sites to search">
-                  {pickedIds.length === 0 || pickedIds.length === sources.length
-                    ? `All sites (${sources.length})`
-                    : `${pickedIds.length} of ${sources.length} sites`}{' '}
-                  ▾
-                </button>
-                {pickerOpen && (
-                  <>
-                    <div className="pickshade" onClick={() => setPickerOpen(false)} />
-                    <div className="pickmenu">
-                      <div className="pickhead">
-                        <button className="mini" onClick={() => choose(null)}>
-                          all
-                        </button>
-                        <span>tick the sites to search</span>
-                      </div>
-                      {sources.map((s) => {
-                        const on = pickedIds.length === 0 || pickedIds.includes(s.id)
-                        return (
-                          <div key={s.id} className="pickrow">
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={on}
-                                onChange={() => {
-                                  // from "all" the first click unticks that one site; always keep at least one ticked
-                                  const current = pickedIds.length === 0 ? sources.map((x) => x.id) : pickedIds
-                                  const next = on ? current.filter((id) => id !== s.id) : [...current, s.id]
-                                  if (next.length === 0) return
-                                  choose(next.length === sources.length ? null : next)
-                                }}
-                              />{' '}
-                              {s.name} <em>{s.count.toLocaleString()}</em>
-                              {s.lang === 'ar' && <em className="langtag">عربي</em>}
-                            </label>
-                            <button className="mini" title="Search only this site" onClick={() => { choose([s.id]); setPickerOpen(false) }}>
-                              only
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-              <select
-                className="genresel"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                title="Genres come from the series pages the app has read so far"
-              >
-                <option value="">All genres</option>
-                <option value="__none__">No genres yet ({noGenre.toLocaleString()}): open them to load</option>
-                {genre && genre !== '__none__' && !genreList.some((x) => x.name.toLowerCase() === genre.toLowerCase()) && <option value={genre}>{genre}</option>}
-                {genreList.map((x) => (
-                  <option key={x.name} value={x.name}>
-                    {x.name} ({x.count.toLocaleString()})
-                  </option>
-                ))}
-              </select>
-              <select value={sort} onChange={(e) => setSort(e.target.value as 'site' | 'az' | 'za' | 'sites' | 'genre')}>
-                <option value="site">{sourceIds.length === 1 || sources.length === 1 ? 'Site order' : 'Mixed'}</option>
-                <option value="sites">On most sites</option>
-                <option value="genre">By genre</option>
-                <option value="az">A – Z</option>
-                <option value="za">Z – A</option>
-              </select>
-            </div>
-          </div>
-          {genre === '__none__' && (
-            <div className="nogenre-note">
-              These titles&apos; genres aren&apos;t known yet. Open one and its genres load straight away; the background scan fills in the
-              rest site by site.
-            </div>
-          )}
-          {pager()}
-          <div className="grid">
-            {hits.map((h) => (
-              <button
-                key={h.key}
-                className="card"
-                onClick={() => onOpen(h)}
-                onMouseEnter={() => hoverPrefetch(h)}
-                onMouseLeave={() => window.clearTimeout(hoverTimer.current)}
-              >
-                <div className="cover" data-letter={h.title.trim().slice(0, 1).toUpperCase()}>
-                  {h.cover ? (
-                    <img
-                      loading="lazy"
-                      decoding="async"
-                      src={coverSrc(h.cover, h.coverReferer)}
-                      onError={(e) => fallbackCover(e, h.coverFallback, h.coverReferer)}
-                    />
-                  ) : (
-                    <div className="ph">{h.title.trim().slice(0, 1).toUpperCase()}</div>
-                  )}
-                </div>
-                <div className="name" title={h.title}>
-                  {h.title}
-                </div>
-                <div className="from">{h.entries.map((e) => e.sourceName).join(' · ')}</div>
-              </button>
-            ))}
-          </div>
-          {pager()}
-          {page < pages - 1 && (
-            <div className="nextbar">
-              <button className="nextpage" onClick={() => goPage(page + 1)}>
-                Next page ›
-              </button>
-              {autoNext && (
-                <div className="hint2">
-                  or keep scrolling down
-                  <span className="pullbar">
-                    <span style={{ width: `${pull * 100}%` }} />
-                  </span>
+              {addErr && <div className="error small">{addErr}</div>}
+              {addMsg && <div className="stage">{addMsg}</div>}
+              {added.length === 0 && (
+                <div className="hint">
+                  Nothing here yet. Paste the address of one title above and it is saved here.
                 </div>
               )}
-            </div>
+              <div className="grid">
+                {added
+                  .filter(
+                    (a) => !q.trim() || a.title.toLowerCase().includes(q.trim().toLowerCase())
+                  )
+                  .map((a) => (
+                    <div key={a.url} className="cwrap">
+                      <button
+                        className="card"
+                        onClick={() =>
+                          onOpen({
+                            title: a.title,
+                            cover: a.cover,
+                            coverReferer: new URL(a.url).origin + '/',
+                            entries: [
+                              { sourceId: a.sourceId, sourceName: a.sourceName, url: a.url }
+                            ]
+                          })
+                        }
+                      >
+                        <div className="cover">
+                          {a.cover ? (
+                            <img
+                              loading="lazy"
+                              src={coverSrc(a.cover, new URL(a.url).origin + '/')}
+                            />
+                          ) : (
+                            <div className="ph">{a.title.trim().slice(0, 1).toUpperCase()}</div>
+                          )}
+                        </div>
+                        <div className="name" title={a.title}>
+                          {a.title}
+                        </div>
+                        <div className="from">{a.sourceName}</div>
+                      </button>
+                      <button
+                        className="cremove"
+                        title="Remove from Added by me"
+                        onClick={() => void removeAddedTitle(a)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </>
+          ) : (
+            <>
+              {!topQ.trim() && (
+                <Featured
+                  recent={recentL}
+                  follows={followsL}
+                  sources={sources}
+                  onOpen={onOpen}
+                  onRead={onRead}
+                />
+              )}
+              {withNew.length > 0 && !topQ.trim() && (
+                <section className="continue">
+                  <div className="meta">New chapters</div>
+                  <div className="strip">
+                    {withNew.map((f) => (
+                      <div key={f.seriesUrl} className="newcard">
+                        <button className="card small" onClick={() => openFollow(f)}>
+                          <div className="cover">
+                            {f.cover && (
+                              <img loading="lazy" src={coverSrc(f.cover, f.coverReferer)} />
+                            )}
+                            <span className="badge">+{f.unread}</span>
+                          </div>
+                          <div className="name" title={f.title}>
+                            {f.title}
+                          </div>
+                          <div className="from">{f.unreadChapters[0]?.title}</div>
+                        </button>
+                        <button
+                          className="x"
+                          title="Dismiss"
+                          onClick={() =>
+                            window.api
+                              .followDismiss(f.seriesUrl)
+                              .then(() => window.api.followList().then(setFollows))
+                          }
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+              {recentL.length > 0 && !topQ.trim() && (
+                <section className="continue">
+                  <div className="meta">Continue reading</div>
+                  <div className="strip">
+                    {recentL.map((r) => (
+                      <div key={r.seriesUrl} className="cwrap">
+                        <button className="card small" onClick={() => openRecent(r)}>
+                          <div className="cover">
+                            {r.cover && (
+                              <img
+                                loading="lazy"
+                                decoding="async"
+                                src={coverSrc(r.cover, r.coverReferer)}
+                              />
+                            )}
+                            {r.pos > 0.02 && !r.read.includes(r.chapterUrl) && (
+                              <div className="cprog">
+                                <span style={{ width: `${Math.round(r.pos * 100)}%` }} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="name" title={r.title}>
+                            {r.title}
+                          </div>
+                          <div className="from">
+                            {r.chapterTitle}
+                            {r.pos > 0.02 && !r.read.includes(r.chapterUrl)
+                              ? ` · ${Math.round(r.pos * 100)}%`
+                              : ''}
+                          </div>
+                        </button>
+                        <button
+                          className="cremove"
+                          title="Remove from Continue reading"
+                          onClick={() => {
+                            setRecent((list) => list.filter((x) => x.seriesUrl !== r.seriesUrl))
+                            window.api.progressHide(r.seriesUrl)
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+              <div className="sechead gridtop" ref={gridTop}>
+                <div>
+                  <div className="eyebrow">
+                    {total.toLocaleString()} titles
+                    {pages > 1 &&
+                      ` · page ${(page + 1).toLocaleString()} of ${pages.toLocaleString()}`}
+                  </div>
+                  <h2>{q.trim() ? `Results for “${q.trim()}”` : 'All titles'}</h2>
+                  <div className="gridfind">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m20 20-3.5-3.5" />
+                    </svg>
+                    <input
+                      value={topQ.trim() ? topQ : findText}
+                      disabled={!!topQ.trim()}
+                      onChange={(e) => setFindText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setFindText('')
+                      }}
+                      placeholder={`Search ${lang === 'ar' ? 'Arabic sites' : lang === 'en' ? 'English sites' : 'these titles'}${kind ? ' · ' + kind : ''}${genre ? ' · ' + genre : ''}…`}
+                      aria-label="Search in these titles"
+                      spellCheck={false}
+                    />
+                    {findText && !topQ.trim() && (
+                      <button
+                        className="mini"
+                        onClick={() => setFindText('')}
+                        aria-label="Clear the search"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="secact">
+                  {/* which sites' language to browse (only when you have both English and Arabic sites) */}
+                  {sources.some((x) => x.lang === 'ar') && sources.some((x) => x.lang !== 'ar') && (
+                    <div className="langtabs" role="tablist" aria-label="Language of the sites">
+                      {(
+                        [
+                          ['', 'All sites', sources.length],
+                          ['en', 'English', sources.filter((x) => x.lang === 'en').length],
+                          ['ar', 'العربية', sources.filter((x) => x.lang === 'ar').length]
+                        ] as const
+                      ).map(([v, label, n]) => (
+                        <button
+                          key={v || 'all'}
+                          role="tab"
+                          aria-selected={lang === v}
+                          className={lang === v ? 'on' : ''}
+                          onClick={() => setLang(v)}
+                        >
+                          <span lang={v === 'ar' ? 'ar' : undefined}>{label}</span>
+                          <span className="n">{n}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="kindtabs">
+                    {(['', 'manga', 'manhwa', 'manhua'] as const).map((k) => (
+                      <button
+                        key={k || 'all'}
+                        className={kind === k ? 'on' : ''}
+                        onClick={() => setKind(k)}
+                        title={
+                          k
+                            ? `Titles whose page says they are ${k} (more appear as series are opened)`
+                            : 'Every title'
+                        }
+                      >
+                        {k ? k.charAt(0).toUpperCase() + k.slice(1) : 'All'}
+                        {k && counts ? <span>{counts[k].toLocaleString()}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="picker">
+                    <button
+                      className="pickbtn"
+                      onClick={() => setPickerOpen((o) => !o)}
+                      title="Choose which sites to search"
+                    >
+                      {pickedIds.length === 0 || pickedIds.length === sources.length
+                        ? `All sites (${sources.length})`
+                        : `${pickedIds.length} of ${sources.length} sites`}{' '}
+                      ▾
+                    </button>
+                    {pickerOpen && (
+                      <>
+                        <div className="pickshade" onClick={() => setPickerOpen(false)} />
+                        <div className="pickmenu">
+                          <div className="pickhead">
+                            <button className="mini" onClick={() => choose(null)}>
+                              all
+                            </button>
+                            <span>tick the sites to search</span>
+                          </div>
+                          {sources.map((s) => {
+                            const on = pickedIds.length === 0 || pickedIds.includes(s.id)
+                            return (
+                              <div key={s.id} className="pickrow">
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    checked={on}
+                                    onChange={() => {
+                                      // from "all" the first click unticks that one site; always keep at least one ticked
+                                      const current =
+                                        pickedIds.length === 0
+                                          ? sources.map((x) => x.id)
+                                          : pickedIds
+                                      const next = on
+                                        ? current.filter((id) => id !== s.id)
+                                        : [...current, s.id]
+                                      if (next.length === 0) return
+                                      choose(next.length === sources.length ? null : next)
+                                    }}
+                                  />{' '}
+                                  {s.name} <em>{s.count.toLocaleString()}</em>
+                                  {s.lang === 'ar' && <em className="langtag">عربي</em>}
+                                </label>
+                                <button
+                                  className="mini"
+                                  title="Search only this site"
+                                  onClick={() => {
+                                    choose([s.id])
+                                    setPickerOpen(false)
+                                  }}
+                                >
+                                  only
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <select
+                    className="genresel"
+                    value={genre}
+                    onChange={(e) => setGenre(e.target.value)}
+                    title="Genres come from the series pages the app has read so far"
+                  >
+                    <option value="">All genres</option>
+                    <option value="__none__">
+                      No genres yet ({noGenre.toLocaleString()}): open them to load
+                    </option>
+                    {genre &&
+                      genre !== '__none__' &&
+                      !genreList.some((x) => x.name.toLowerCase() === genre.toLowerCase()) && (
+                        <option value={genre}>{genre}</option>
+                      )}
+                    {genreList.map((x) => (
+                      <option key={x.name} value={x.name}>
+                        {x.name} ({x.count.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={sort}
+                    onChange={(e) =>
+                      setSort(e.target.value as 'site' | 'az' | 'za' | 'sites' | 'genre')
+                    }
+                  >
+                    <option value="site">
+                      {sourceIds.length === 1 || sources.length === 1 ? 'Site order' : 'Mixed'}
+                    </option>
+                    <option value="sites">On most sites</option>
+                    <option value="genre">By genre</option>
+                    <option value="az">A – Z</option>
+                    <option value="za">Z – A</option>
+                  </select>
+                </div>
+              </div>
+              {genre === '__none__' && (
+                <div className="nogenre-note">
+                  These titles&apos; genres aren&apos;t known yet. Open one and its genres load
+                  straight away; the background scan fills in the rest site by site.
+                </div>
+              )}
+              {pager()}
+              <div className="grid">
+                {hits.map((h) => (
+                  <button
+                    key={h.key}
+                    className="card"
+                    onClick={() => onOpen(h)}
+                    onMouseEnter={() => hoverPrefetch(h)}
+                    onMouseLeave={() => window.clearTimeout(hoverTimer.current)}
+                  >
+                    <div className="cover" data-letter={h.title.trim().slice(0, 1).toUpperCase()}>
+                      {h.cover ? (
+                        <img
+                          loading="lazy"
+                          decoding="async"
+                          src={coverSrc(h.cover, h.coverReferer)}
+                          onError={(e) => fallbackCover(e, h.coverFallback, h.coverReferer)}
+                        />
+                      ) : (
+                        <div className="ph">{h.title.trim().slice(0, 1).toUpperCase()}</div>
+                      )}
+                    </div>
+                    <div className="name" title={h.title}>
+                      {h.title}
+                    </div>
+                    <div className="from">{h.entries.map((e) => e.sourceName).join(' · ')}</div>
+                  </button>
+                ))}
+              </div>
+              {pager()}
+              {page < pages - 1 && (
+                <div className="nextbar">
+                  <button className="nextpage" onClick={() => goPage(page + 1)}>
+                    Next page ›
+                  </button>
+                  {autoNext && (
+                    <div className="hint2">
+                      or keep scrolling down
+                      <span className="pullbar">
+                        <span style={{ width: `${pull * 100}%` }} />
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
-        </>
-        )}
         </>
       )}
     </div>

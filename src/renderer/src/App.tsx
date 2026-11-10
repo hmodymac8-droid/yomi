@@ -106,6 +106,62 @@ function AppInner(): React.JSX.Element {
   }, [])
   const [health, setHealth] = useState<Record<string, SiteHealth>>({})
 
+  // If the library could not be read from disk (a busy file, a slow start), say so instead of showing an empty app, and
+  // keep asking until it can be; then the screen reloads with everything in place. Nothing is ever saved over it meanwhile.
+  const [trouble, setTrouble] = useState(false)
+  const [why, setWhy] = useState('')
+  const [report, setReport] = useState('')
+  useEffect(() => {
+    let stopped = false
+    let wasTrouble = false
+    let failures = 0
+    let troubleTicks = 0
+    const ask = async (): Promise<void> => {
+      let t: boolean
+      try {
+        t = await window.api.catalogTrouble()
+        failures = 0
+        sessionStorage.removeItem('reloads')
+        setWhy('')
+      } catch (e) {
+        // the answer itself failed (Yomi's other half isn't answering): say exactly what, and after a few tries start the screen over
+        t = true
+        failures++
+        const msg = e instanceof Error ? e.message : String(e)
+        setWhy(msg.replace(/^Error invoking remote method '[^']*': /, ''))
+        window.api.clientLog('catalogTrouble failed (' + failures + '): ' + msg)
+        const reloads = Number(sessionStorage.getItem('reloads') ?? '0')
+        if (failures >= 3 && reloads < 3) {
+          sessionStorage.setItem('reloads', String(reloads + 1))
+          window.location.reload()
+          return
+        }
+      }
+      if (stopped) return
+      setTrouble(t)
+      if (t && !wasTrouble) {
+        window.api.clientLog('library not readable at start')
+        void window.api.catalogDiagnose().then((d) => {
+          setReport(d)
+          window.api.clientLog('report: ' + d)
+        }, () => undefined)
+      }
+      if (wasTrouble && !t) {
+        window.api.clientLog('library readable again: reloading the screen')
+        window.location.reload()
+        return
+      }
+      wasTrouble = t
+      troubleTicks = t ? troubleTicks + 1 : 0
+      if (troubleTicks === 5) void window.api.restartApp() // 15 s and still nothing: start over once
+      window.setTimeout(() => void ask(), t ? 3000 : 20000)
+    }
+    void ask()
+    return () => {
+      stopped = true
+    }
+  }, [])
+
   // unread new chapters of the series you follow (the badge on New)
   const [newCount, setNewCount] = useState(0)
   useEffect(() => {
@@ -159,6 +215,16 @@ function AppInner(): React.JSX.Element {
   return (
     <div className="app">
       <TitleBar />
+      {trouble && (
+        <div className="datatrouble" role="alert">
+          <strong>Your library is still loading from disk.</strong> Your sites and progress are safe — Yomi can&apos;t read the file this very second and is trying again. Nothing is being overwritten.
+          {why && <em> ({why})</em>}
+          {report && <small className="datareport">{report}</small>}
+          <button className="mini" onClick={() => void window.api.catalogTrouble().then(setTrouble, (e) => setWhy(String(e)))}>
+            Try again now
+          </button>
+        </div>
+      )}
       {!reading && (
         <header className="topbar">
           <button className="iconbtn" style={{ width: 'auto', padding: 0 }} onClick={() => setView({ name: 'browse' })} aria-label="Yomi home">
@@ -236,7 +302,11 @@ function AppInner(): React.JSX.Element {
         )}
         {view.name === 'downloads' && (
           <div className="pane">
-            <Downloads onBack={() => setView({ name: 'browse' })} />
+            <Downloads
+              onBack={() => setView({ name: 'browse' })}
+              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'downloads' })}
+              onOpen={(series) => setView({ name: 'series', series, from: 'downloads' })}
+            />
           </div>
         )}
         {view.name === 'series' && (

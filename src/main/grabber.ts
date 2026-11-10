@@ -330,6 +330,9 @@ const PAGE_SCRIPT = `
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // Some sites show a short "checking your browser" screen first: wait for the real page.
   for (let i = 0; i < 40 && (!document.body || /just a moment|checking your browser/i.test(document.title)); i++) await sleep(150);
+  // pages whose addresses are written into the page, base64-encoded (Mangadar): read them directly
+  const mds = [...document.querySelectorAll('img[data-mds]')].map((i) => { try { return atob(i.getAttribute('data-mds') || ''); } catch { return ''; } }).filter((u) => u.startsWith('http'));
+  if (mds.length) return { title: document.title, imgs: [], mds };
   let lastHeight = 0, stable = 0;
   for (let i = 0; i < 150 && stable < 3; i++) {
     window.scrollBy(0, Math.max(600, window.innerHeight * 0.9));
@@ -423,6 +426,9 @@ const LIGHT_SCRIPT = `
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let i = 0; i < 40 && (!document.body || /just a moment|checking your browser/i.test(document.title)); i++) await sleep(150);
+  // pages whose addresses are written into the page, base64-encoded (Mangadar): read them directly
+  const mds = [...document.querySelectorAll('img[data-mds]')].map((i) => { try { return atob(i.getAttribute('data-mds') || ''); } catch { return ''; } }).filter((u) => u.startsWith('http'));
+  if (mds.length) return { title: document.title, imgs: [], mds };
   const attrs = ['data-src', 'data-lazy-src', 'data-original', 'data-cfsrc', 'src'];
   const collect = () => {
     const out = [];
@@ -439,6 +445,14 @@ const LIGHT_SCRIPT = `
     }
     return out;
   };
+  // Some readers fill in each page's picture only when that page comes into view (Mangasid): walk down the chapter a
+  // screen at a time first, so every page gets its turn, instead of jumping straight to the end.
+  for (let y = 0, i = 0; i < 300; i++) {
+    window.scrollTo(0, y);
+    await sleep(70);
+    y += Math.max(400, window.innerHeight * 0.8);
+    if (y >= document.documentElement.scrollHeight) break;
+  }
   // Scrolling makes lazy loaders add their images; wait until the list stops growing.
   let last = -1, stable = 0, imgs = [];
   for (let i = 0; i < 60 && stable < 3; i++) {
@@ -460,7 +474,9 @@ export async function grabChapterLight(url: string): Promise<GrabResult> {
     const r = (await win.webContents.executeJavaScript(LIGHT_SCRIPT)) as {
       title: string
       imgs: { src: string; w: number; h: number }[]
+      mds?: string[]
     }
+    if (r.mds?.length) return { url, title: r.title, pages: r.mds, landed: win.webContents.getURL() }
     const urls = r.imgs.filter((i) => !((i.w && i.w < 200) || (i.h && i.h < 200))).map((i) => i.src)
     return { url, title: r.title, pages: pickPageGroup(urls), landed: win.webContents.getURL() }
   } finally {
@@ -492,7 +508,9 @@ export async function grabChapter(url: string): Promise<GrabResult> {
     const result = (await win.webContents.executeJavaScript(PAGE_SCRIPT)) as {
       title: string
       imgs: RawImg[]
+      mds?: string[]
     }
+    if (result.mds?.length) return { url, title: result.title, pages: result.mds, landed: win.webContents.getURL() }
     return { url, title: result.title, pages: pickPages(result.imgs), landed: win.webContents.getURL() }
   } finally {
     if (!win.isDestroyed()) win.destroy()

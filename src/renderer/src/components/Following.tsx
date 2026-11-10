@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FollowCategory, FollowInfo, ProgressRecord, SourceInfo } from '../../../preload/index.d'
+import type {
+  FollowCategory,
+  FollowInfo,
+  ProgressRecord,
+  SourceInfo
+} from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, continueChapter, coverSrc, readerFor, timeAgo } from '../lib'
 
 interface Props {
@@ -47,13 +52,27 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
   const [prog, setProg] = useState<Record<string, ProgressRecord>>({})
   const [opening, setOpening] = useState('')
   const [openError, setOpenError] = useState('')
+  // the Settings switch for auto-download (each series can be turned on or off on its own card)
+  const [autoAll, setAutoAll] = useState(false)
+  useEffect(() => {
+    void window.api.updatesStatus().then((s) => setAutoAll(s.autoDownload))
+    return window.api.onUpdates((s) => setAutoAll(s.autoDownload))
+  }, [])
+  const setAuto = (f: FollowInfo, on: boolean): void => {
+    setList((l) => l.map((x) => (x.seriesUrl === f.seriesUrl ? { ...x, autoDownload: on } : x)))
+    void window.api.followAutoDownload(f.seriesUrl, on)
+  }
 
   const load = (): void => {
     window.api.followList().then((l) => {
       setList(l)
       setLoaded(true)
       void Promise.all(l.map((f) => window.api.progressGet(f.seriesUrl))).then((recs) =>
-        setProg(Object.fromEntries(recs.filter((r): r is ProgressRecord => !!r).map((r) => [r.seriesUrl, r])))
+        setProg(
+          Object.fromEntries(
+            recs.filter((r): r is ProgressRecord => !!r).map((r) => [r.seriesUrl, r])
+          )
+        )
       )
     })
   }
@@ -75,7 +94,13 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
     title: f.title,
     cover: f.cover,
     coverReferer: f.coverReferer,
-    entries: [{ sourceId: f.sourceId, sourceName: sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId, url: f.seriesUrl }]
+    entries: [
+      {
+        sourceId: f.sourceId,
+        sourceName: sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId,
+        url: f.seriesUrl
+      }
+    ]
   })
   const open = (f: FollowInfo): void => onOpen(seriesOf(f))
 
@@ -83,7 +108,9 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
   const carryOn = async (f: FollowInfo): Promise<void> => {
     setOpening(f.seriesUrl)
     setOpenError('')
-    const c = await readerFor(f.sourceId, f.seriesUrl, (chs) => continueChapter(chs, prog[f.seriesUrl] ?? null))
+    const c = await readerFor(f.sourceId, f.seriesUrl, (chs) =>
+      continueChapter(chs, prog[f.seriesUrl] ?? null)
+    )
     setOpening('')
     if (c) onRead(seriesOf(f), c)
     else setOpenError(`Couldn't open ${f.title} right now. Open it from its page instead.`)
@@ -91,7 +118,13 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
 
   const unfollow = async (f: FollowInfo): Promise<void> => {
     await window.api.followSet(
-      { seriesUrl: f.seriesUrl, sourceId: f.sourceId, title: f.title, cover: f.cover, coverReferer: f.coverReferer },
+      {
+        seriesUrl: f.seriesUrl,
+        sourceId: f.sourceId,
+        title: f.title,
+        cover: f.cover,
+        coverReferer: f.coverReferer
+      },
       false
     )
     load()
@@ -105,7 +138,13 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
   }
 
   const counts = useMemo(() => {
-    const c: Record<Tab, number> = { all: list.length, reading: 0, plan: 0, finished: 0, dropped: 0 }
+    const c: Record<Tab, number> = {
+      all: list.length,
+      reading: 0,
+      plan: 0,
+      finished: 0,
+      dropped: 0
+    }
     for (const f of list) c[shelfOf(f)]++
     return c
   }, [list])
@@ -158,9 +197,19 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
               onChange={(e) => setQ(e.target.value)}
             />
             <label className="auto">
-              <input type="checkbox" checked={newOnly} onChange={(e) => setNewOnly(e.target.checked)} /> New chapters only
+              <input
+                type="checkbox"
+                checked={newOnly}
+                onChange={(e) => setNewOnly(e.target.checked)}
+              />{' '}
+              New chapters only
             </label>
-            <select className="sortpick" value={sort} onChange={(e) => pickSort(e.target.value as Sort)} aria-label="Sort">
+            <select
+              className="sortpick"
+              value={sort}
+              onChange={(e) => pickSort(e.target.value as Sort)}
+              aria-label="Sort"
+            >
               {SORTS.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
@@ -174,11 +223,13 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
 
       {loaded && list.length === 0 && (
         <div className="hint">
-          You aren&apos;t following anything yet. Press ☆ Follow on a series, or just read a chapter: reading a series follows
-          it, and the app tells you when it gets new chapters.
+          You aren&apos;t following anything yet. Press ☆ Follow on a series, or just read a
+          chapter: reading a series follows it, and the app tells you when it gets new chapters.
         </div>
       )}
-      {loaded && list.length > 0 && shown.length === 0 && <div className="hint">Nothing here with these filters.</div>}
+      {loaded && list.length > 0 && shown.length === 0 && (
+        <div className="hint">Nothing here with these filters.</div>
+      )}
       <div className="grid">
         {shown.map((f) => (
           <div key={f.seriesUrl} className="newcard wide">
@@ -200,8 +251,16 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
                   : `${sources.find((s) => s.id === f.sourceId)?.name ?? f.sourceId} · not started`}
               </div>
             </button>
-            <button className="mini continue" disabled={opening === f.seriesUrl} onClick={() => void carryOn(f)}>
-              {opening === f.seriesUrl ? 'Opening…' : prog[f.seriesUrl] ? 'Continue' : 'Start reading'}
+            <button
+              className="mini continue"
+              disabled={opening === f.seriesUrl}
+              onClick={() => void carryOn(f)}
+            >
+              {opening === f.seriesUrl
+                ? 'Opening…'
+                : prog[f.seriesUrl]
+                  ? 'Continue'
+                  : 'Start reading'}
             </button>
             <select
               className="shelfpick"
@@ -215,6 +274,17 @@ export default function Following({ onOpen, onRead }: Props): React.JSX.Element 
                 </option>
               ))}
             </select>
+            <label
+              className="autodl"
+              title="Download new chapters of this series as soon as they come out"
+            >
+              <input
+                type="checkbox"
+                checked={f.autoDownload ?? autoAll}
+                onChange={(e) => setAuto(f, e.target.checked)}
+              />
+              Auto-download
+            </label>
             <button className="x" title="Unfollow" onClick={() => unfollow(f)}>
               ✕
             </button>

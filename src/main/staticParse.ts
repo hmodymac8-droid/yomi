@@ -252,6 +252,14 @@ export function pickPageGroup(urls: string[]): string[] {
 
 export function parseChapterImages(html: string, pageUrl: string): { title: string; pages: string[] } {
   const $ = cheerio.load(html)
+  // Some readers (Mangadar) put each page's address in data-mds, base64-encoded, and only show it as you scroll:
+  // read them straight from there, in order.
+  const encoded: string[] = []
+  $('img[data-mds]').each((_, el) => {
+    const u = Buffer.from(String($(el).attr('data-mds') ?? ''), 'base64').toString('utf8')
+    if (/^https?:\/\//.test(u)) encoded.push(u)
+  })
+  if (encoded.length > 0) return { title: $('title').first().text().trim(), pages: encoded }
   const dom: string[] = []
   $('img').each((_, el) => {
     const u = imgUrl($(el), pageUrl)
@@ -270,6 +278,11 @@ export function parseChapterImages(html: string, pageUrl: string): { title: stri
     const fromScripts = pickPageGroup(found)
     if (fromScripts.length > pages.length) pages = fromScripts
   }
+  // Readers that fill in each page's picture only as you scroll to it (Mangatek, Mangasid) still number every page
+  // in the HTML ("Page 20" / "صفحة 20"). More numbered pages than pictures means this list is only the start of the
+  // chapter: give nothing, so a way that scrolls through the page (the hidden browser) is used instead.
+  const numbered = $('img').filter((_, el) => /(?:page|صفحة)\s*\d+/i.test($(el).attr('alt') ?? '')).length
+  if (numbered >= pages.length + 2) pages = []
   return { title: $('title').first().text().trim(), pages }
 }
 

@@ -1,6 +1,14 @@
 import { app, BrowserWindow, Notification } from 'electron'
 import { join } from 'path'
-import type { DownloadRequest, FollowCategory, FollowInfo, FollowMeta, FollowRecord, NewChapter, UpdateStatus } from '../preload/index.d'
+import type {
+  DownloadRequest,
+  FollowCategory,
+  FollowInfo,
+  FollowMeta,
+  FollowRecord,
+  NewChapter,
+  UpdateStatus
+} from '../preload/index.d'
 import { getSeries, getSeriesCached, getSource, mergeNewest, openSeries } from './catalog'
 import { enqueueDownloads } from './downloads'
 import { getProgress, recentProgress } from './progress'
@@ -94,7 +102,13 @@ function baselineFromCache(rec: FollowRecord): void {
 
 export function setFollow(meta: FollowMeta, following: boolean): void {
   const s = load()
-  const rec: FollowRecord = s.follows[meta.seriesUrl] ?? { ...meta, following, known: [], newChapters: [], lastChecked: 0 }
+  const rec: FollowRecord = s.follows[meta.seriesUrl] ?? {
+    ...meta,
+    following,
+    known: [],
+    newChapters: [],
+    lastChecked: 0
+  }
   Object.assign(rec, meta, { following })
   if (following) baselineFromCache(rec)
   else rec.newChapters = []
@@ -132,12 +146,24 @@ export function setAutoDownload(on: boolean): void {
   emit()
 }
 
+/** Auto-download for one series: on, off, or undefined to follow the Settings switch. */
+export function setSeriesAutoDownload(seriesUrl: string, on: boolean | undefined): void {
+  const rec = load().follows[seriesUrl]
+  if (!rec) return
+  if (on === undefined) delete rec.autoDownload
+  else rec.autoDownload = on
+  saveSoon()
+  emit()
+}
+
 function notify(found: { rec: FollowRecord; fresh: NewChapter[] }[]): void {
   if (found.length === 0 || !Notification.isSupported()) return
   const show = (title: string, body: string): void => {
     const n = new Notification({ title, body })
     n.on('click', () => {
-      const w = BrowserWindow.getAllWindows().find((x) => !x.isDestroyed() && x.isVisible()) ?? BrowserWindow.getAllWindows()[0]
+      const w =
+        BrowserWindow.getAllWindows().find((x) => !x.isDestroyed() && x.isVisible()) ??
+        BrowserWindow.getAllWindows()[0]
       if (w && !w.isDestroyed()) {
         if (w.isMinimized()) w.restore()
         w.show()
@@ -148,7 +174,10 @@ function notify(found: { rec: FollowRecord; fresh: NewChapter[] }[]): void {
   }
   if (found.length <= 4) {
     for (const { rec, fresh } of found)
-      show(rec.title, fresh.length === 1 ? `${fresh[0].title} is out` : `${fresh.length} new chapters are out`)
+      show(
+        rec.title,
+        fresh.length === 1 ? `${fresh[0].title} is out` : `${fresh.length} new chapters are out`
+      )
   } else {
     show('New chapters', `${found.length} series you follow have new chapters`)
   }
@@ -163,7 +192,9 @@ export async function checkAll(manual: boolean): Promise<void> {
   try {
     const s = load()
     // (series on your Finished or Dropped shelf are not checked: fewer requests to the sites)
-    for (const rec of Object.values(s.follows).filter((f) => f.following && f.category !== 'finished' && f.category !== 'dropped')) {
+    for (const rec of Object.values(s.follows).filter(
+      (f) => f.following && f.category !== 'finished' && f.category !== 'dropped'
+    )) {
       if (!getSource(rec.sourceId)) continue
       try {
         const d = await getSeries(rec.sourceId, rec.seriesUrl, true) // newest chapters only
@@ -186,7 +217,8 @@ export async function checkAll(manual: boolean): Promise<void> {
             const have = new Set(rec.newChapters.map((c) => keyOf(c)))
             rec.newChapters.push(...fresh.filter((c) => !have.has(keyOf(c))))
             found.push({ rec, fresh })
-            if (s.autoDownload) {
+            // each series can have its own choice (in Following); otherwise the Settings switch decides
+            if (rec.autoDownload ?? s.autoDownload) {
               const referer = new URL(rec.seriesUrl).origin + '/'
               const reqs: DownloadRequest[] = [...fresh].reverse().map((c) => ({
                 chapterUrl: c.url,
@@ -233,9 +265,11 @@ export async function preloadLists(limit = 12): Promise<number> {
   try {
     const wanted = new Map<string, string>() // series url -> source id
     for (const f of Object.values(load().follows)) {
-      if (f.following && f.category !== 'finished' && f.category !== 'dropped') wanted.set(f.seriesUrl, f.sourceId)
+      if (f.following && f.category !== 'finished' && f.category !== 'dropped')
+        wanted.set(f.seriesUrl, f.sourceId)
     }
-    for (const r of recentProgress(30)) if (!wanted.has(r.seriesUrl)) wanted.set(r.seriesUrl, r.sourceId)
+    for (const r of recentProgress(30))
+      if (!wanted.has(r.seriesUrl)) wanted.set(r.seriesUrl, r.sourceId)
     for (const [url, sourceId] of wanted) {
       if (done >= limit) break
       if (!getSource(sourceId) || getSeriesCached(url)) continue

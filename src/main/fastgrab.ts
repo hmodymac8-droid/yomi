@@ -1,6 +1,13 @@
 import { session } from 'electron'
-import { ensureSession, grabChapter, grabChapterLight, refererHints, type GrabResult } from './grabber'
+import {
+  ensureSession,
+  grabChapter,
+  grabChapterLight,
+  refererHints,
+  type GrabResult
+} from './grabber'
 import { fetchHtml } from './http'
+import { feedChapter, feedFor } from './feedapi'
 import { parseChapterImages } from './staticParse'
 import { getMode, setMode } from './hostmode'
 
@@ -173,7 +180,13 @@ async function extendSequence(res: GrabResult): Promise<GrabResult> {
   const zeros = digits.length - String(start).length // leading zeros of the first number (001 -> 2)
   // Sites do not always pad the same way: 001..009 then 010 (padded), 10 (plain) or 0010 (always two zeros first).
   const variants = (n: number): string[] =>
-    [...new Set([String(n).padStart(digits.length, '0'), String(n), '0'.repeat(Math.max(0, zeros)) + n])].map((d) => head + d + tail)
+    [
+      ...new Set([
+        String(n).padStart(digits.length, '0'),
+        String(n),
+        '0'.repeat(Math.max(0, zeros)) + n
+      ])
+    ].map((d) => head + d + tail)
   const find = async (n: number): Promise<string | null> => {
     for (const u of variants(n)) if (await exists(u, referer)) return u
     return null
@@ -218,9 +231,13 @@ export function grabChapterFast(url: string): Promise<GrabResult> {
   if (hit && Date.now() - hit.at < TTL) return Promise.resolve(hit.res)
   const running = inflight.get(url)
   if (running) return running
-  const p = grab(url)
-    .then((res) => (sentHome(url, res.landed) ? { url, title: res.title, pages: [] } : res))
-    .then((res) => extendSequence(res).catch(() => res))
+  const feed = feedFor(url)
+  const read: Promise<GrabResult> = feed
+    ? feedChapter(feed.def, feed.origin, url) // a site with a data feed: its page list is one request
+    : grab(url)
+        .then((res) => (sentHome(url, res.landed) ? { url, title: res.title, pages: [] } : res))
+        .then((res) => extendSequence(res).catch(() => res))
+  const p = read
     .then((res) => {
       if (res.pages.length > 0) cache.set(url, { at: Date.now(), res })
       return res

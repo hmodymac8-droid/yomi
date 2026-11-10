@@ -3,6 +3,7 @@ import type { SourceDef } from '../preload/index.d'
 import { hiddenWindow, loadPageReady, pageIsChallenge, waitForHuman } from './grabber'
 import { discoverSitemap } from './sitemap'
 import { robotsAllows } from './robots'
+import { detectFeedApi } from './feedapi'
 
 export const BUILTIN_SOURCES: SourceDef[] = [
   {
@@ -44,7 +45,10 @@ export function matchBuiltin(url: string): SourceDef | undefined {
 }
 
 function slugId(url: string): string {
-  return new URL(url).hostname.replace(/^www\./, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+  return new URL(url).hostname
+    .replace(/^www\./, '')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .toLowerCase()
 }
 
 function prettyName(url: string): string {
@@ -96,20 +100,36 @@ async function snapshot(
   win: BrowserWindow,
   host: string,
   maxMs = 7000
-): Promise<{ cards: string[]; all: string[]; title: string; search: { name: string; action: string } | null }> {
+): Promise<{
+  cards: string[]
+  all: string[]
+  title: string
+  search: { name: string; action: string } | null
+}> {
   const start = Date.now()
-  let last = { cards: [] as string[], all: [] as string[], title: '', search: null as { name: string; action: string } | null }
+  let last = {
+    cards: [] as string[],
+    all: [] as string[],
+    title: '',
+    search: null as { name: string; action: string } | null
+  }
   let prev = -1
   while (Date.now() - start < maxMs) {
     last = await win.webContents.executeJavaScript(SNAPSHOT)
     // Navigation icons and banners also count as "cards", so wait for a real group of look-alike series links
     // (6 or more) and for it to stop growing.
     const group = bestGroupSize(last.cards, host)
-    if (process.env['MR_TRACE2']) console.log(`TRACE2   poll +${Date.now() - start}ms cards=${last.cards.length} group=${group} prev=${prev}`)
+    if (process.env['MR_TRACE2'])
+      console.log(
+        `TRACE2   poll +${Date.now() - start}ms cards=${last.cards.length} group=${group} prev=${prev}`
+      )
     if (group >= 6) {
       if (group === prev && Date.now() - start > 700) break
       prev = group
-    } else if (Date.now() - start > 2500 && /just a moment|attention required|security verification/i.test(last.title)) {
+    } else if (
+      Date.now() - start > 2500 &&
+      /just a moment|attention required|security verification/i.test(last.title)
+    ) {
       break
     } else if (Date.now() - start > 3500) {
       break // no real group of series links after 3.5 s: a page that doesn't exist or isn't a list
@@ -146,7 +166,9 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
   const host = u.hostname
   const snap = await snapshot(win, host)
   if (process.env['MR_TRACE'])
-    console.log(`TRACE   analyze ${pageUrl.slice(-34)}: load ${tLoaded - tA}ms + cards ${Date.now() - tLoaded}ms`)
+    console.log(
+      `TRACE   analyze ${pageUrl.slice(-34)}: load ${tLoaded - tA}ms + cards ${Date.now() - tLoaded}ms`
+    )
 
   const groups = new Map<string, Set<string>>()
   for (const href of snap.cards) {
@@ -169,15 +191,28 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
   // Also chapters: …/reader/<series-slug>/138 (the chapter is only a number after the series name, no "chapter" word).
   const numberTail = (path: string): boolean => {
     const s = path.split('/').filter(Boolean)
-    return s.length >= 3 && /^\d+(?:[._-]\d+)?$/.test(s[s.length - 1]) && !/^\d+$/.test(s[s.length - 2])
+    return (
+      s.length >= 3 && /^\d+(?:[._-]\d+)?$/.test(s[s.length - 1]) && !/^\d+$/.test(s[s.length - 2])
+    )
   }
   const isChapterGroup = (set: Set<string>): boolean =>
     [...set].filter((u) => {
       const p = new URL(u).pathname
       return chapterish.test(p) || numberTail(p)
-    }).length > set.size * 0.4
-  const best = [...groups.entries()].filter(([, set]) => !isChapterGroup(set)).sort((a, b) => b[1].size - a[1].size)[0]
-  const empty: Analysis = { cards: 0, cardUrls: [], seriesRe: '', listTemplate: pageUrl, paged: false, links: snap.all, searchForm: snap.search }
+    }).length >
+    set.size * 0.4
+  const best = [...groups.entries()]
+    .filter(([, set]) => !isChapterGroup(set))
+    .sort((a, b) => b[1].size - a[1].size)[0]
+  const empty: Analysis = {
+    cards: 0,
+    cardUrls: [],
+    seriesRe: '',
+    listTemplate: pageUrl,
+    paged: false,
+    links: snap.all,
+    searchForm: snap.search
+  }
   if (!best) return empty
 
   const [countStr, first] = best[0].split('|')
@@ -186,7 +221,9 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
   const seriesRe =
     count === 1
       ? `^${origin}/[^/?#]+/?$`
-      : `^${origin}/${escapeRe(first)}/${Array(count - 1).fill('[^/?#]+').join('/')}/?$`
+      : `^${origin}/${escapeRe(first)}/${Array(count - 1)
+          .fill('[^/?#]+')
+          .join('/')}/?$`
 
   // Pagination: look for a link to "page 2" and turn the 2 into {n}.
   const next = snap.all.find((h) => {
@@ -204,20 +241,35 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
       ? next.replace(/([?&](?:page|p|paged)=)2(?=&|$)/, '$1{n}')
       : next.replace(/2(\/?)$/, '{n}$1')
   }
-  return { cards: best[1].size, cardUrls: [...best[1]], seriesRe, listTemplate, paged: !!next, links: snap.all, searchForm: snap.search }
+  return {
+    cards: best[1].size,
+    cardUrls: [...best[1]],
+    seriesRe,
+    listTemplate,
+    paged: !!next,
+    links: snap.all,
+    searchForm: snap.search
+  }
 }
 
 /**
  * Many sites show their page numbers as buttons, not links, so no "page 2" link exists to read. Try the usual
  * URL forms for page 2 and accept one only if it shows different series than page 1.
  */
-async function probePagination(pool: WindowPool, pageUrl: string, first: Analysis): Promise<string | null> {
+async function probePagination(
+  pool: WindowPool,
+  pageUrl: string,
+  first: Analysis
+): Promise<string | null> {
   const u = new URL(pageUrl)
   const withParam = new URL(pageUrl)
   withParam.searchParams.set('page', '2')
   const guesses: { url: string; template: string }[] = [
     { url: withParam.toString(), template: withParam.toString().replace(/([?&]page=)2/, '$1{n}') },
-    { url: u.origin + u.pathname.replace(/\/$/, '') + '/page/2/', template: u.origin + u.pathname.replace(/\/$/, '') + '/page/{n}/' }
+    {
+      url: u.origin + u.pathname.replace(/\/$/, '') + '/page/2/',
+      template: u.origin + u.pathname.replace(/\/$/, '') + '/page/{n}/'
+    }
   ]
   const known = new Set(first.cardUrls)
   // The guesses run side by side, and the first one that works ends the check (a guess that doesn't exist would
@@ -272,7 +324,8 @@ function makePool(size: number): WindowPool {
 }
 
 // Pages that usually hold the complete list of series (the home page often shows only a "latest" slice).
-const LIST_PAGE = /^\/(browse|browser|all|list|manga-?list|mangas?|manhwas?|manhuas?|webtoons?|series|index|directory|library|catalog|comics?|titles|latest|search|explore|advanced-search|genres?|az|a-z)(\/|$)/i
+const LIST_PAGE =
+  /^\/(browse|browser|all|list|manga-?list|mangas?|manhwas?|manhuas?|webtoons?|series|index|directory|library|catalog|comics?|titles|latest|search|explore|advanced-search|genres?|az|a-z)(\/|$)/i
 
 /** If series pages look like /<section>/<name>, the section's own page (/<section>/) is a likely list. */
 function derivedListUrl(seriesUrls: string[], origin: string): string | null {
@@ -334,9 +387,32 @@ export async function detectSource(
     })
 
   const builtin = process.env['MR_NOBUILTIN'] ? undefined : matchBuiltin(input) // (dev: measure the generic path)
+
+  // A JavaScript-app site whose titles come from a data feed: read the feed (everything in a few requests, no
+  // browser window). Ordinary sites are ruled out from their first page, so this costs them one quick request.
+  if (!builtin && !process.env['MR_NOFEED']) {
+    const feed = await detectFeedApi(u.origin).catch(() => null)
+    T('feed lookup done: ' + (feed ? feed.base : 'none'))
+    if (feed)
+      return {
+        id: slugId(input),
+        name: prettyName(input),
+        baseUrl: u.origin + '/',
+        listTemplate: u.origin + '/',
+        seriesRe: '^' + escapeRe(u.origin) + '/series/[0-9]+/?$',
+        chapterRe: '/chapter/[0-9]+',
+        maxPages: 1, // (not page-scanned: the feed is read instead)
+        sitemaps: [],
+        sitemapChecked: true,
+        api: feed
+      }
+  }
+
   if (builtin) {
     const plan = await planP
-    return plan ? { ...builtin, sitemaps: plan.files, sitemapChecked: true } : { ...builtin, sitemapChecked: true }
+    return plan
+      ? { ...builtin, sitemaps: plan.files, sitemapChecked: true }
+      : { ...builtin, sitemapChecked: true }
   }
 
   // Quick start: if the site has a sitemap, that alone is enough to begin (the complete list arrives in seconds).
@@ -376,7 +452,15 @@ export async function detectSource(
       ;({ a: pick, challenged } = await readHome())
     } catch (e) {
       if (!(await planP)) throw e
-      pick = { cards: 0, cardUrls: [], seriesRe: '', listTemplate: input, paged: false, links: [], searchForm: null }
+      pick = {
+        cards: 0,
+        cardUrls: [],
+        seriesRe: '',
+        listTemplate: input,
+        paged: false,
+        links: [],
+        searchForm: null
+      }
     }
     let listTemplates: string[] | undefined // set when the site can only be listed through its search
     T(`home page read: ${pick.cards} cards, paged=${pick.paged}`)
@@ -392,7 +476,7 @@ export async function detectSource(
       if (pick.cards < 5 && challenged)
         throw new Error(
           'The site still shows its "verify you are human" check after you completed it, which means it does not ' +
-            'accept this app\'s browser. The app cannot read this site.'
+            "accept this app's browser. The app cannot read this site."
         )
     }
     if (!(pick.cards >= 5 && pick.paged)) {
@@ -400,9 +484,23 @@ export async function detectSource(
       // The likely list pages are read side by side (each in its own window), not one after another.
       // The section the series live in is a natural list page too: series at /manga/<name> -> try /manga/.
       const derived = derivedListUrl(pick.cardUrls, u.origin)
-      const cands = [...(derived ? [derived] : []), ...listCandidates(pick.links, u.hostname, input).filter((c) => c !== derived)].slice(0, 3)
-      const analyses = await Promise.all(cands.map((c) => pool.use((w) => analyze(w, c)).catch(() => null)))
-      T('candidates read: ' + JSON.stringify(cands.map((c, i) => ({ c: c.slice(-28), cards: analyses[i]?.cards ?? null, paged: analyses[i]?.paged ?? null }))))
+      const cands = [
+        ...(derived ? [derived] : []),
+        ...listCandidates(pick.links, u.hostname, input).filter((c) => c !== derived)
+      ].slice(0, 3)
+      const analyses = await Promise.all(
+        cands.map((c) => pool.use((w) => analyze(w, c)).catch(() => null))
+      )
+      T(
+        'candidates read: ' +
+          JSON.stringify(
+            cands.map((c, i) => ({
+              c: c.slice(-28),
+              cards: analyses[i]?.cards ?? null,
+              paged: analyses[i]?.paged ?? null
+            }))
+          )
+      )
       // Every candidate that shows series gets the "does page 2 exist?" check (side by side). The first guess is not always
       // the real list: /book/<id> pages give no list at all, while /browse does (Projectsuki).
       const found = analyses
@@ -434,7 +532,9 @@ export async function detectSource(
             T('search listing: ' + (t ?? 'no pagination'))
             if (t) {
               const re = new RegExp('([?&]' + escapeRe(form.name) + '=)a(?=&|$)')
-              listTemplates = 'abcdefghijklmnopqrstuvwxyz'.split('').map((l) => t.replace(re, `$1${l}`))
+              listTemplates = 'abcdefghijklmnopqrstuvwxyz'
+                .split('')
+                .map((l) => t.replace(re, `$1${l}`))
               pick = { ...a, listTemplate: listTemplates[0], paged: true }
             }
           }
@@ -447,7 +547,8 @@ export async function detectSource(
         "Couldn't find a list of series on that page. Paste the site's 'all series / browse' page URL instead."
       )
     // The page scan is only used if robots.txt allows it; otherwise the sitemap (if any) is all we have.
-    const scanAllowed = pick.cards >= 5 && (await robotsAllows(pick.listTemplate.replace('{n}', '1')))
+    const scanAllowed =
+      pick.cards >= 5 && (await robotsAllows(pick.listTemplate.replace('{n}', '1')))
     return {
       id: slugId(input),
       name: prettyName(input),

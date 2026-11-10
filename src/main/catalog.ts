@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
-import { existsSync } from 'fs'
+import { existsSync, statSync } from 'fs'
 import type {
   CrawlProgress,
   EnrichedEntry,
@@ -13,14 +13,34 @@ import type {
 } from '../preload/index.d'
 import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
-import { canonGenres, dataChapters, parseMeta, parseSeries, parseSeriesList, parseSeriesMeta, upgradeCover, type SeriesMeta, type SeriesType } from './staticParse'
+import {
+  canonGenres,
+  dataChapters,
+  parseMeta,
+  parseSeries,
+  parseSeriesList,
+  parseSeriesMeta,
+  upgradeCover,
+  type SeriesMeta,
+  type SeriesType
+} from './staticParse'
 import { readSitemapFile } from './sitemap'
-import { dataLog, isUnreadable, readJson, writeAtomic, writeAtomicAsync } from './safefile'
+import {
+  backupIfEmpty,
+  dataLog,
+  isUnreadable,
+  lastLogError,
+  lastReadError,
+  readJson,
+  writeAtomic,
+  writeAtomicAsync
+} from './safefile'
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
 import { getSettings, settingsVersion } from './settings'
-import { crawledMeta, genreIndexVersion, urlKey } from './genres'
+import { crawledMeta, genreIndexVersion, setFeedTags, urlKey } from './genres'
+import { feedList, feedSeries, registerFeedSources } from './feedapi'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const hostOf = (url: string): string => new URL(url).hostname
@@ -59,28 +79,83 @@ function load(): Store {
   if (store && !standIn && !isUnreadable(storePath())) return store
   // a stand-in: look for the real file again (cheap), so your sites come back by themselves
   if (store && standIn && !isUnreadable(storePath()) && !existsSync(storePath())) return store
-  const fresh = readJson<Store>(storePath(), store ? 1 : 8)
+  let fresh = readJson<Store>(storePath(), store ? 1 : 8)
+  // a file that opens fine but holds no sites at all (while a backup has some) is not trusted
+  if (fresh)
+    fresh = backupIfEmpty(
+      storePath(),
+      fresh,
+      (v) => !Array.isArray(v.sources) || v.sources.length === 0
+    )
   if (!fresh && store) return store // still busy: keep the empty stand-in (never saved) and try again on the next use
   if (fresh && store && standIn) {
     // anything added while only the stand-in was there is kept
-    for (const src of store.sources) if (!fresh.sources.some((x) => x.id === src.id)) {
-      fresh.sources.push(src)
-      fresh.series[src.id] = store.series[src.id] ?? []
-    }
+    for (const src of store.sources)
+      if (!fresh.sources.some((x) => x.id === src.id)) {
+        fresh.sources.push(src)
+        fresh.series[src.id] = store.series[src.id] ?? []
+      }
   }
   standIn = !fresh
   store = fresh ?? { sources: [], series: {}, scan: {} }
   if (fresh) freshSearch()
-  dataLog(storePath(), fresh ? 'catalog loaded: ' + fresh.sources?.length + ' sites' : 'catalog not found at start (' + storePath() + ')')
+  dataLog(
+    storePath(),
+    fresh
+      ? 'catalog loaded: ' + fresh.sources?.length + ' sites'
+      : 'catalog not found at start (' + storePath() + ')'
+  )
   store.scan ??= {} // catalogs saved by older versions have no scan state
+  registerFeedSources(store.sources) // sites with a data feed: their chapter pages are read from it
   pruneForeignEntries(store)
   // Sites made earlier only to hold an added title (no scan, no sitemap) are marked as such
   for (const a of store.added ?? []) {
     const t = store.sources.find((x) => x.id === a.sourceId)
-    if (t && !t.titlesOnly && t.maxPages === 0 && !(t.sitemaps && t.sitemaps.length)) t.titlesOnly = true
+    if (t && !t.titlesOnly && t.maxPages === 0 && !(t.sitemaps && t.sitemaps.length))
+      t.titlesOnly = true
   }
   if (mergeTitleOnly(store)) saveSoon(true)
   return store
+}
+
+/**
+ * True while your library could not be read from disk (the screen then says so and keeps trying). Asking also makes
+ * the catalog try to load again, so the sites come back by themselves as soon as the file can be read.
+ */
+export function catalogTrouble(): boolean {
+  try {
+    load()
+  } catch (e) {
+    dataLog(storePath(), 'catalog load failed: ' + String((e as Error)?.stack ?? e))
+    return true
+  }
+  return standIn || isUnreadable(storePath())
+}
+
+/** A short technical report for the "library is loading" banner: what this Yomi sees on disk and why reading may fail. */
+export function catalogDiagnose(): string {
+  let size = -1
+  try {
+    size = statSync(storePath()).size
+  } catch {
+    /* not there */
+  }
+  return [
+    'pid ' + process.pid,
+    'folder ' + app.getPath('userData'),
+    'file ' + (existsSync(storePath()) ? size + ' bytes' : 'MISSING'),
+    'inMemory ' + (store ? store.sources.length + ' sites' : 'none'),
+    'standIn ' + standIn,
+    'unreadable ' + isUnreadable(storePath()),
+    lastReadError ? 'readError ' + lastReadError : '',
+    lastLogError ? 'logError ' + lastLogError : '',
+    'MR vars ' +
+      (Object.keys(process.env)
+        .filter((k) => k.startsWith('MR_'))
+        .join(',') || 'none')
+  ]
+    .filter(Boolean)
+    .join(' | ')
 }
 
 const siteHost = (src: SourceDef): string => {
@@ -102,7 +177,8 @@ function mergeTitleOnly(s: Store): boolean {
     const full = s.sources.find((x) => x !== t && !x.titlesOnly && siteHost(x) === siteHost(t))
     if (!full) continue
     const have = new Set((s.series[full.id] ?? []).map((e) => e.url))
-    for (const e of s.series[t.id] ?? []) if (!have.has(e.url)) (s.series[full.id] ??= []).push({ ...e, sourceId: full.id })
+    for (const e of s.series[t.id] ?? [])
+      if (!have.has(e.url)) (s.series[full.id] ??= []).push({ ...e, sourceId: full.id })
     for (const a of s.added ?? []) {
       if (a.sourceId === t.id) {
         a.sourceId = full.id
@@ -111,7 +187,8 @@ function mergeTitleOnly(s: Store): boolean {
     }
     s.sources = s.sources.filter((x) => x !== t)
     delete s.series[t.id]
-    for (const k of Object.keys(s.scan)) if (k === t.id || k.startsWith(t.id + '#')) delete s.scan[k]
+    for (const k of Object.keys(s.scan))
+      if (k === t.id || k.startsWith(t.id + '#')) delete s.scan[k]
     changed = true
   }
   return changed
@@ -125,10 +202,47 @@ function mergeTitleOnly(s: Store): boolean {
  * Pages of a site's own menu (Browse, Top rated, Most popular...) look like series addresses on some sites but are lists.
  */
 const NAV_SLUGS = new Set([
-  'browse', 'top-rated', 'most-popular', 'most-favorited', 'most-viewed', 'trending', 'latest', 'latest-updates', 'popular',
-  'new', 'new-releases', 'recent', 'hot', 'random', 'genres', 'genre', 'search', 'az-list', 'a-z', 'all', 'list', 'completed',
-  'ongoing', 'bookmarks', 'history', 'login', 'register', 'contact', 'about', 'faq', 'terms', 'privacy', 'dmca', 'profile',
-  'rss', 'sitemap', 'advanced-search', 'manga-list', 'series', 'comics', 'directory'
+  'browse',
+  'top-rated',
+  'most-popular',
+  'most-favorited',
+  'most-viewed',
+  'trending',
+  'latest',
+  'latest-updates',
+  'popular',
+  'new',
+  'new-releases',
+  'recent',
+  'hot',
+  'random',
+  'genres',
+  'genre',
+  'search',
+  'az-list',
+  'a-z',
+  'all',
+  'list',
+  'completed',
+  'ongoing',
+  'bookmarks',
+  'history',
+  'login',
+  'register',
+  'contact',
+  'about',
+  'faq',
+  'terms',
+  'privacy',
+  'dmca',
+  'profile',
+  'rss',
+  'sitemap',
+  'advanced-search',
+  'manga-list',
+  'series',
+  'comics',
+  'directory'
 ])
 export function isNavUrl(url: string): boolean {
   try {
@@ -156,6 +270,14 @@ function pruneForeignEntries(s: Store): void {
       changed = true
     }
     for (const e of keep) {
+      // a title that is only the site's own name (read from a page that needs a browser to show the real one) goes
+      // back to the name from the address, and is filled in properly later
+      if (isSiteTitle(e.title, src, e.url)) {
+        e.title = titleFromUrl(e.url)
+        e.slugTitle = true
+        changed = true
+        continue
+      }
       const t = fixTitle(e.title, e.url)
       if (t !== e.title) {
         e.title = t
@@ -167,6 +289,37 @@ function pruneForeignEntries(s: Store): void {
 }
 
 /**
+ * Is this "title" really just the site's own name? Sites built in the browser (Manhwaarab) give every page the same
+ * generic title ("Manhwa Arab - موقع قراءة المانهوا…") when read without one. Such a title contains the site's name
+ * (or its address) while the series' own address does not.
+ */
+export function isSiteTitle(title: string, src: SourceDef, url: string): boolean {
+  const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
+  const t = flat(title)
+  if (!t) return false
+  const host = siteHost(src).split('.')[0] // "manhwaarab"
+  const names = [flat(src.name), flat(host)].filter((n) => n.length >= 5)
+  const path = flat(
+    decodeURIComponent(
+      (() => {
+        try {
+          return new URL(url).pathname
+        } catch {
+          return url
+        }
+      })()
+    )
+  )
+  if (!names.some((n) => t.includes(n) && !path.includes(n))) return false
+  // "Solo Leveling | MangaFreak" is a real title with the site's name on the end: it shares a word with its address
+  const words = title
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 4 && !names.some((n) => n.includes(w)))
+  return !words.some((w) => path.includes(w))
+}
+
+/**
  * A card that prints the name twice ("Kingdom Kingdom") is the same name once. Some sites (Manhuatop, Weebcentral)
  * name the title after its cover picture ("Magic Emperor cover"): the word "cover" goes, unless the series' own
  * address ends with it too (then it is really part of the name).
@@ -174,7 +327,8 @@ function pruneForeignEntries(s: Store): void {
 export function fixTitle(t: string, url = ''): string {
   const m = t.trim().match(/^(.{2,}?)\s+\1$/)
   let out = m ? m[1] : t
-  if (/\s+cover$/i.test(out) && !/[-_]cover\/?$/i.test(url.split(/[?#]/)[0])) out = out.replace(/\s+cover$/i, '')
+  if (/\s+cover$/i.test(out) && !/[-_]cover\/?$/i.test(url.split(/[?#]/)[0]))
+    out = out.replace(/\s+cover$/i, '')
   return out
 }
 
@@ -204,7 +358,8 @@ function writeCatalog(sync: boolean): void {
     unsaved = false
     const text = JSON.stringify(cur)
     if (sync) writeAtomic(storePath(), text)
-    else void writeAtomicAsync(storePath(), text).catch((e) => console.error('catalog save failed', e))
+    else
+      void writeAtomicAsync(storePath(), text).catch((e) => console.error('catalog save failed', e))
     standIn = false
   } catch (e) {
     console.error('catalog save failed', e)
@@ -247,6 +402,9 @@ export async function enrichEntries(urls: string[]): Promise<EnrichedEntry[]> {
         const r = await fetchHtml(e.url, 12000)
         if (r.status !== 200) continue
         const m = parseSeriesMeta(r.html, e.url)
+        // a page that only shows the site's own name (it needs a browser) has nothing true to say: not its picture either
+        const src = s.sources.find((x) => x.id === e.sourceId)
+        if (src && m.title && isSiteTitle(m.title, src, e.url)) continue
         if (m.title && e.slugTitle) {
           e.title = m.title
           delete e.slugTitle
@@ -269,6 +427,8 @@ function applyMeta(url: string, d: SeriesDetail): void {
     const e = list.find((x) => x.url === url)
     if (!e) continue
     let changed = false
+    const src = load().sources.find((x) => x.id === e.sourceId)
+    if (src && d.title && isSiteTitle(d.title, src, url)) return // the page only showed the site's own name
     if (e.slugTitle && d.title) {
       e.title = d.title
       delete e.slugTitle
@@ -340,7 +500,11 @@ export async function addTitleByUrl(input: string): Promise<{
     const segs = u.pathname.split('/').filter(Boolean)
     const esc = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const seriesRe =
-      segs.length <= 1 ? `^${esc(u.origin)}/[^/?#]+/?$` : `^${esc(u.origin)}/${esc(segs[0])}/${Array(segs.length - 1).fill('[^/?#]+').join('/')}/?$`
+      segs.length <= 1
+        ? `^${esc(u.origin)}/[^/?#]+/?$`
+        : `^${esc(u.origin)}/${esc(segs[0])}/${Array(segs.length - 1)
+            .fill('[^/?#]+')
+            .join('/')}/?$`
     const builtin = matchBuiltin(u.origin + '/')
     src = addSource({
       ...(builtin ?? {
@@ -362,12 +526,20 @@ export async function addTitleByUrl(input: string): Promise<{
   const d = await getSeries(src.id, url)
   // page titles often end with the site's name ("Title | Project Suki"): drop that part
   {
-    const base = bareHost(u.hostname).split('.').slice(0, -1).join('').replace(/[^a-z0-9]/g, '')
+    const base = bareHost(u.hostname)
+      .split('.')
+      .slice(0, -1)
+      .join('')
+      .replace(/[^a-z0-9]/g, '')
     const m = d.title.match(/^(.+?)\s+[|–—-]\s+([^|–—]{2,40})$/)
     const tail = m?.[2].toLowerCase().replace(/[^a-z0-9]/g, '') ?? ''
-    if (m && base && tail.length >= 3 && (tail.includes(base) || base.includes(tail))) d.title = m[1].trim()
+    if (m && base && tail.length >= 3 && (tail.includes(base) || base.includes(tail)))
+      d.title = m[1].trim()
   }
-  if (d.chapters.length === 0) throw new Error('No chapters were found at that address. Is it the page of one title (not a chapter or a list)?')
+  if (d.chapters.length === 0)
+    throw new Error(
+      'No chapters were found at that address. Is it the page of one title (not a chapter or a list)?'
+    )
   const list = (s.series[src.id] ??= [])
   const old = list.find((e) => e.url === url)
   const already = !!old
@@ -378,7 +550,14 @@ export async function addTitleByUrl(input: string): Promise<{
   } else {
     list.push({ sourceId: src.id, url, title: d.title, cover: d.cover })
   }
-  const rec: AddedRec = { sourceId: src.id, sourceName: src.name, url, title: d.title, cover: d.cover, chapters: d.chapters.length }
+  const rec: AddedRec = {
+    sourceId: src.id,
+    sourceName: src.name,
+    url,
+    title: d.title,
+    cover: d.cover,
+    chapters: d.chapters.length
+  }
   s.added = [rec, ...(s.added ?? []).filter((x) => x.url !== url)]
   saveSoon(true)
   return { ...rec, siteIsNew, already }
@@ -415,7 +594,10 @@ export function importAdded(list: AddedRec[]): void {
  * stops at about 300 titles, its genre pages show all of them). Only addresses that look like the site's series pages,
  * and only ones not already there. Returns how many were new.
  */
-export function addCatalogEntries(id: string, items: { url: string; title: string; cover: string }[]): number {
+export function addCatalogEntries(
+  id: string,
+  items: { url: string; title: string; cover: string }[]
+): number {
   const s = load()
   const src = s.sources.find((x) => x.id === id)
   if (!src) return 0
@@ -446,7 +628,9 @@ export function getSource(id: string): SourceDef | undefined {
 export function langOfHtml(html: string): 'ar' | 'en' | 'other' {
   const tag = html.match(/<html[^>]*>/i)?.[0] ?? ''
   const lang = (tag.match(/\blang=["']?([a-zA-Z-]+)/i)?.[1] ?? '').toLowerCase()
-  const text = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/g, ' ').slice(0, 300000)
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/g, ' ')
+    .slice(0, 300000)
   const arabic = (text.match(/[\u0600-\u06ff]/g) ?? []).length
   const latin = (text.match(/[a-zA-Z]/g) ?? []).length
   if (lang.startsWith('ar') || /\bdir=["']?rtl/i.test(tag) || arabic > latin * 0.5) return 'ar'
@@ -486,14 +670,15 @@ export function listSources(): SourceInfo[] {
   return s.sources
     .filter((src) => !src.titlesOnly)
     .map((src) => ({
-    ...src,
-    count: s.series[src.id]?.length ?? 0,
-    crawling: crawling.has(src.id),
-    hidden: isHiddenSite(src)
-  }))
+      ...src,
+      count: s.series[src.id]?.length ?? 0,
+      crawling: crawling.has(src.id),
+      hidden: isHiddenSite(src)
+    }))
 }
 
 export function addSource(def: SourceDef): SourceInfo {
+  registerFeedSources([def])
   freshSearch()
   const s = load()
   const old = s.sources.find((x) => x.id === def.id)
@@ -507,7 +692,8 @@ export function addSource(def: SourceDef): SourceInfo {
       old.seriesRe !== def.seriesRe ||
       old.maxPages !== def.maxPages ||
       JSON.stringify(old.sitemaps ?? null) !== JSON.stringify(def.sitemaps ?? null) ||
-      JSON.stringify(old.listTemplates ?? null) !== JSON.stringify(def.listTemplates ?? null)
+      JSON.stringify(old.listTemplates ?? null) !== JSON.stringify(def.listTemplates ?? null) ||
+      JSON.stringify(old.api ?? null) !== JSON.stringify(def.api ?? null)
     if (structural || !!old.sitemapChecked !== !!def.sitemapChecked) {
       // Same site added again with a better way of listing it: use the new definition and keep the titles we have.
       Object.assign(old, def)
@@ -517,7 +703,10 @@ export function addSource(def: SourceDef): SourceInfo {
     }
   }
   mergeTitleOnly(s)
-  return listSources().find((x) => x.id === def.id) ?? ({ ...def, count: 0, crawling: false, hidden: false } as SourceInfo)
+  return (
+    listSources().find((x) => x.id === def.id) ??
+    ({ ...def, count: 0, crawling: false, hidden: false } as SourceInfo)
+  )
 }
 
 /**
@@ -530,12 +719,22 @@ export function sourcesWithChapterTitles(): string[] {
   for (const src of s.sources) {
     const list = s.series[src.id] ?? []
     // a site that was set up but has no titles and no way to list them (older detection picked a page the site forbids): redo it
-    if (list.length === 0 && !src.titlesOnly && src.maxPages === 0 && !(src.sitemaps && src.sitemaps.length)) out.push(src.id)
+    if (
+      list.length === 0 &&
+      !src.titlesOnly &&
+      src.maxPages === 0 &&
+      !(src.sitemaps && src.sitemaps.length)
+    )
+      out.push(src.id)
     if (list.length === 0) continue
     const bad = list.filter((e) => {
       try {
         const segs = new URL(e.url).pathname.split('/').filter(Boolean)
-        return segs.length >= 3 && /^\d+(?:[._-]\d+)?$/.test(segs[segs.length - 1]) && !/^\d+$/.test(segs[segs.length - 2])
+        return (
+          segs.length >= 3 &&
+          /^\d+(?:[._-]\d+)?$/.test(segs[segs.length - 1]) &&
+          !/^\d+$/.test(segs[segs.length - 2])
+        )
       } catch {
         return false
       }
@@ -555,7 +754,9 @@ export function scanDue(id: string): boolean {
   if (!src || crawling.has(id)) return false
   if (src.maxPages <= 0 && !src.sitemaps?.length) return false // nothing to scan
   const at = s.scanAt?.[id] ?? 0
-  const incomplete = Object.keys(s.scan).some((k) => (k === id || k.startsWith(id + '#')) && !s.scan[k].complete)
+  const incomplete = Object.keys(s.scan).some(
+    (k) => (k === id || k.startsWith(id + '#')) && !s.scan[k].complete
+  )
   const never = !s.scan[id] && !src.sitemaps?.length
   const fast = !!process.env['MR_AUTOSCAN_FAST'] // dev tests: every wait is 1 s
   return Date.now() - at > (fast ? 1000 : incomplete || never ? 30 * 60 * 1000 : 12 * 3600 * 1000)
@@ -623,10 +824,17 @@ const extractScript = (seriesRe: string): string => `(() => {
 
 function titleFromUrl(url: string): string {
   const last = decodeURIComponent(new URL(url).pathname.split('/').filter(Boolean).pop() ?? url)
-  return last.replace(/-[0-9a-f]{24}$/, '').replace(/[-_]+/g, ' ').trim()
+  return last
+    .replace(/-[0-9a-f]{24}$/, '')
+    .replace(/[-_]+/g, ' ')
+    .trim()
 }
 
-async function extractWithPolling(win: BrowserWindow, seriesRe: string, maxMs = 9000): Promise<ListItem[]> {
+async function extractWithPolling(
+  win: BrowserWindow,
+  seriesRe: string,
+  maxMs = 9000
+): Promise<ListItem[]> {
   const start = Date.now()
   let items: ListItem[] = []
   // Some sites render the list with JavaScript after load: poll until something shows up.
@@ -694,7 +902,10 @@ async function decideListMode(
   const bItems = b.status === 'fulfilled' ? b.value : []
   const bUrls = new Set(bItems.map((i) => i.url))
   const overlap = sItems.filter((i) => bUrls.has(i.url)).length
-  const ok = sItems.length > 0 && (bItems.length === 0 || (sItems.length >= bItems.length * 0.9 && overlap >= bItems.length * 0.9))
+  const ok =
+    sItems.length > 0 &&
+    (bItems.length === 0 ||
+      (sItems.length >= bItems.length * 0.9 && overlap >= bItems.length * 0.9))
   const mode: Mode = ok ? 'static' : 'browser'
   if (sItems.length + bItems.length > 0) setMode(key, mode)
   return mode
@@ -720,7 +931,10 @@ function makeSlugTitler(urls: string[]): (url: string) => string {
   return (u) => {
     let s = lastSeg(u).replace(/-[0-9a-f]{24}$/, '')
     if (stripPrefix) s = s.replace(/^[a-z0-9]{3,6}-/, '')
-    return s.replace(/[-_]+/g, ' ').trim().replace(/\b([a-z])/g, (c) => c.toUpperCase())
+    return s
+      .replace(/[-_]+/g, ' ')
+      .trim()
+      .replace(/\b([a-z])/g, (c) => c.toUpperCase())
   }
 }
 
@@ -753,7 +967,13 @@ async function importSitemaps(
               continue
             }
             if (isNavUrl(url)) continue
-            known.set(url, { sourceId: src.id, url, title: titleOf(url), cover: r.image ?? '', slugTitle: true })
+            known.set(url, {
+              sourceId: src.id,
+              url,
+              title: titleOf(url),
+              cover: r.image ?? '',
+              slugTitle: true
+            })
           }
         }
       } catch {
@@ -769,6 +989,41 @@ async function importSitemaps(
   await Promise.all([worker(), worker(), worker()])
 }
 
+/** Reads a data feed's whole title list (200 a page): titles, covers, types and genres, all at once. */
+async function importFeed(
+  src: SourceDef,
+  known: Map<string, SeriesEntry>,
+  s: Store,
+  emit: (p: CrawlProgress) => void,
+  ctl: { cancel: boolean }
+): Promise<number> {
+  const origin = new URL(src.baseUrl).origin
+  const tags: { url: string; type?: SeriesType; genres: string[] }[] = []
+  let page = 1
+  for (;;) {
+    if (ctl.cancel) return page
+    const r = await feedList(src.api!, origin, page)
+    for (const it of r.items) {
+      if (it.novel) continue // novels have no pictures to read
+      const old = known.get(it.url)
+      if (old) {
+        old.title = it.title
+        delete old.slugTitle
+        if (it.cover) old.cover = it.cover
+      } else known.set(it.url, { sourceId: src.id, url: it.url, title: it.title, cover: it.cover })
+      tags.push({ url: it.url, type: it.type, genres: it.genres })
+    }
+    s.series[src.id] = [...known.values()]
+    saveSoon()
+    emit({ sourceId: src.id, pages: page, found: known.size, done: false })
+    if (!r.hasNext || r.items.length === 0) break
+    page++
+    await sleep(250)
+  }
+  setFeedTags(src.id, tags)
+  return page
+}
+
 export async function crawlSource(id: string, emit: (p: CrawlProgress) => void): Promise<void> {
   const src = getSource(id)
   if (!src || crawling.has(id)) return
@@ -781,6 +1036,13 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
   let error: string | undefined
   const lister = makeBrowserLister(src, 2)
   try {
+    if (src.api) {
+      // A site with a data feed: every title (with its type and genres) in a handful of requests.
+      pages = await importFeed(src, known, s, emit, ctl)
+      found = known.size
+      if (!ctl.cancel) s.scan[id] = { complete: true, lastPage: pages }
+      return
+    }
     // 1) The site's sitemap, if it has one: the complete list of series in seconds.
     await importSitemaps(src, known, s, emit, ctl)
     found = known.size
@@ -789,115 +1051,125 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
     //    has one search per letter, and they are scanned one after another and merged.
     const templates = src.listTemplates?.length ? src.listTemplates : [src.listTemplate]
     for (let ti = 0; ti < templates.length && !ctl.cancel; ti++) {
-    // A finished scan means "refresh": start at page 1 and stop at the first batch with nothing new.
-    // An unfinished scan (stopped, closed mid-way, or failed) resumes from the page it reached.
-    const stateKey = ti === 0 ? id : `${id}#${ti}`
-    const state = (s.scan[stateKey] ??= { complete: false, lastPage: 0 })
-    const refresh = state.complete
-    const startPage = refresh ? 1 : Math.max(1, state.lastPage)
-    const urlFor = (p: number): string => templates[ti].replace('{n}', String(p))
+      // A finished scan means "refresh": start at page 1 and stop at the first batch with nothing new.
+      // An unfinished scan (stopped, closed mid-way, or failed) resumes from the page it reached.
+      const stateKey = ti === 0 ? id : `${id}#${ti}`
+      const state = (s.scan[stateKey] ??= { complete: false, lastPage: 0 })
+      const refresh = state.complete
+      const startPage = refresh ? 1 : Math.max(1, state.lastPage)
+      const urlFor = (p: number): string => templates[ti].replace('{n}', String(p))
 
-    // With a sitemap the page scan only fills in real titles and covers, so a few dozen pages are enough;
-    // without one it IS the list. It only runs if the site's robots.txt allows it.
-    const scanCap = src.sitemaps?.length ? Math.min(src.maxPages, 40) : src.maxPages
-    const scanAllowed = scanCap > 0 && (await robotsAllows(urlFor(startPage)))
-    if (scanCap > 0 && !scanAllowed && !src.sitemaps?.length) {
-      error = "This site's robots.txt asks automated tools not to read its list pages, so it can't be scanned."
-    }
-    const lastScanPage = scanAllowed ? scanCap : 0
-    const mode: Mode = lastScanPage > 0 ? await decideListMode(src, urlFor(startPage), lister) : 'browser'
-
-    const fetchListPage = async (p: number): Promise<{ items: ListItem[]; error?: string }> => {
-      const url = urlFor(p)
-      if (mode === 'static') {
-        try {
-          const items = await staticList(src, url)
-          if (items.length > 0) return { items }
-        } catch {
-          /* fall through to the browser */
-        }
+      // With a sitemap the page scan only fills in real titles and covers, so a few dozen pages are enough;
+      // without one it IS the list. It only runs if the site's robots.txt allows it.
+      const scanCap = src.sitemaps?.length ? Math.min(src.maxPages, 40) : src.maxPages
+      const scanAllowed = scanCap > 0 && (await robotsAllows(urlFor(startPage)))
+      if (scanCap > 0 && !scanAllowed && !src.sitemaps?.length) {
+        error =
+          "This site's robots.txt asks automated tools not to read its list pages, so it can't be scanned."
       }
-      let err = ''
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          return { items: await lister.list(url) }
-        } catch (e) {
-          err = e instanceof Error ? e.message : String(e)
-        }
-      }
-      return { items: [], error: err }
-    }
+      const lastScanPage = scanAllowed ? scanCap : 0
+      const mode: Mode =
+        lastScanPage > 0 ? await decideListMode(src, urlFor(startPage), lister) : 'browser'
 
-    // Plain HTTP can fetch several pages at once; the browser fallback uses a few windows side by side.
-    // (browser-built lists are usually API-backed and rate-limited, so go gently there)
-    const concurrency = mode === 'static' ? 4 : 2
-    let zeroBatches = 0
-    for (let n = startPage; n <= lastScanPage && !ctl.cancel; n += concurrency) {
-      const nums = Array.from({ length: Math.min(concurrency, lastScanPage - n + 1) }, (_, i) => n + i)
-      const results = await Promise.all(nums.map(fetchListPage))
-      let added = 0
-      let ended = false
-      for (let i = 0; i < nums.length; i++) {
-        let r = results[i]
-        if (r.items.length === 0 && !r.error && nums[i] > startPage) {
-          // An empty page could be the real end of the list, or the site briefly refusing us (rate limit).
-          // Wait and look again before deciding it is the end.
-          for (const wait of [3000, 9000]) {
-            if (ctl.cancel) break
-            await sleep(wait)
-            const retry = await fetchListPage(nums[i])
-            if (retry.items.length > 0 || retry.error) {
-              r = retry
-              break
-            }
+      const fetchListPage = async (p: number): Promise<{ items: ListItem[]; error?: string }> => {
+        const url = urlFor(p)
+        if (mode === 'static') {
+          try {
+            const items = await staticList(src, url)
+            if (items.length > 0) return { items }
+          } catch {
+            /* fall through to the browser */
           }
         }
-        if (r.items.length === 0) {
-          // Past the last page (a real end) or a page error. Only a clean end counts as complete.
-          if (r.error) error = r.error
-          else if (nums[i] > 1) state.complete = true
-          ended = true
-          break
-        }
-        for (const it of r.items) {
-          const old = known.get(it.url)
-          if (old) {
-            // a sitemap only knows the URL: the real title / cover from the page replaces the guess (counts as progress)
-            if (old.slugTitle && it.title) {
-              old.title = fixTitle(it.title, it.url)
-              delete old.slugTitle
-              added++
-            }
-            if (!old.cover && it.cover) {
-              old.cover = it.cover
-              added++
-            }
-            continue
+        let err = ''
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            return { items: await lister.list(url) }
+          } catch (e) {
+            err = e instanceof Error ? e.message : String(e)
           }
-          if (isNavUrl(it.url)) continue
-          known.set(it.url, { sourceId: id, url: it.url, title: fixTitle(it.title, it.url) || titleFromUrl(it.url), cover: it.cover })
-          added++
         }
-        pages = nums[i]
-        if (!refresh) state.lastPage = nums[i]
+        return { items: [], error: err }
       }
-      found = known.size
-      s.series[id] = [...known.values()]
-      saveSoon()
-      emit({ sourceId: id, pages, found, done: false })
-      if (ended) break
-      if (added === 0) {
-        zeroBatches++
-        // refresh: we've reached titles we already have. resume: two empty batches in a row means the
-        // site is repeating itself (it ignored our page number).
-        if (refresh || zeroBatches >= 2) {
-          if (!refresh) state.complete = true
-          break
+
+      // Plain HTTP can fetch several pages at once; the browser fallback uses a few windows side by side.
+      // (browser-built lists are usually API-backed and rate-limited, so go gently there)
+      const concurrency = mode === 'static' ? 4 : 2
+      let zeroBatches = 0
+      for (let n = startPage; n <= lastScanPage && !ctl.cancel; n += concurrency) {
+        const nums = Array.from(
+          { length: Math.min(concurrency, lastScanPage - n + 1) },
+          (_, i) => n + i
+        )
+        const results = await Promise.all(nums.map(fetchListPage))
+        let added = 0
+        let ended = false
+        for (let i = 0; i < nums.length; i++) {
+          let r = results[i]
+          if (r.items.length === 0 && !r.error && nums[i] > startPage) {
+            // An empty page could be the real end of the list, or the site briefly refusing us (rate limit).
+            // Wait and look again before deciding it is the end.
+            for (const wait of [3000, 9000]) {
+              if (ctl.cancel) break
+              await sleep(wait)
+              const retry = await fetchListPage(nums[i])
+              if (retry.items.length > 0 || retry.error) {
+                r = retry
+                break
+              }
+            }
+          }
+          if (r.items.length === 0) {
+            // Past the last page (a real end) or a page error. Only a clean end counts as complete.
+            if (r.error) error = r.error
+            else if (nums[i] > 1) state.complete = true
+            ended = true
+            break
+          }
+          for (const it of r.items) {
+            const old = known.get(it.url)
+            if (old) {
+              // a sitemap only knows the URL: the real title / cover from the page replaces the guess (counts as progress)
+              if (old.slugTitle && it.title) {
+                old.title = fixTitle(it.title, it.url)
+                delete old.slugTitle
+                added++
+              }
+              if (!old.cover && it.cover) {
+                old.cover = it.cover
+                added++
+              }
+              continue
+            }
+            if (isNavUrl(it.url)) continue
+            known.set(it.url, {
+              sourceId: id,
+              url: it.url,
+              title: fixTitle(it.title, it.url) || titleFromUrl(it.url),
+              cover: it.cover
+            })
+            added++
+          }
+          pages = nums[i]
+          if (!refresh) state.lastPage = nums[i]
         }
-      } else zeroBatches = 0
-      await sleep(mode === 'static' ? 80 : 600)
-    }
-    if (!ctl.cancel && !error && lastScanPage > 0 && pages >= lastScanPage) state.complete = true
+        found = known.size
+        s.series[id] = [...known.values()]
+        saveSoon()
+        emit({ sourceId: id, pages, found, done: false })
+        if (ended) break
+        if (added === 0) {
+          zeroBatches++
+          // refresh: we've reached titles we already have. resume: two empty batches in a row means the
+          // site is repeating itself (it ignored our page number).
+          if (refresh || zeroBatches >= 2) {
+            if (!refresh) state.complete = true
+            break
+          }
+        } else zeroBatches = 0
+        await sleep(mode === 'static' ? 80 : 600)
+      }
+      if (!ctl.cancel && !error && lastScanPage > 0 && pages >= lastScanPage) state.complete = true
     } // (end of this list)
   } catch (e) {
     error = e instanceof Error ? e.message : String(e)
@@ -975,7 +1247,9 @@ function freshSearch(): void {
  */
 export function isEmptyCover(url: string | undefined): boolean {
   if (!url) return true
-  return /projectsuki\.com(\/|%2F)images(\/|%2F)gallery(\/|%2F)\d+(\/|%2F)thumb(\?|%3F)(&|$)/i.test(url)
+  return /projectsuki\.com(\/|%2F)images(\/|%2F)gallery(\/|%2F)\d+(\/|%2F)thumb(\?|%3F)(&|$)/i.test(
+    url
+  )
 }
 
 function toHit(g: Grp): SearchHit {
@@ -1017,7 +1291,9 @@ export function search(
   const sig = `${catalogVersion}|${metaVersion}|${genreIndexVersion()}|${settingsVersion()}|${q}|${sourceIds.join(',')}|${sort}`
   const base = sig.slice(sig.indexOf('|') + 1)
   searchedNow()
-  const saved = savedSearches.find((x) => x.sig === sig || (x.base === base && Date.now() - x.at < STALE_OK_MS))
+  const saved = savedSearches.find(
+    (x) => x.sig === sig || (x.base === base && Date.now() - x.at < STALE_OK_MS)
+  )
   if (saved) return pick(saved.groups, kind, genre, offset, limit)
   const s = load()
   const tokens = norm(q).split(' ').filter(Boolean)
@@ -1053,7 +1329,9 @@ export function search(
     const mixed = s.sources.filter((x) => (!only || only.has(x.id)) && !isHiddenSite(x)).length > 1
     const rank = new Map<Grp, number>()
     if (mixed) for (const g of groups) rank.set(g, mixHash(g.key))
-    groups.sort((a, b) => Number(!!b.coverE) - Number(!!a.coverE) || (mixed ? rank.get(a)! - rank.get(b)! : 0))
+    groups.sort(
+      (a, b) => Number(!!b.coverE) - Number(!!a.coverE) || (mixed ? rank.get(a)! - rank.get(b)! : 0)
+    )
   }
   if (sort === 'genre' && !tokens.length) {
     // grouped by each title's main genre (the first its page lists), genres A-Z, titles without one last
@@ -1110,7 +1388,11 @@ function rememberMeta(url: string, d: SeriesMeta): void {
   if (!d.type && !d.genres && !d.status) return
   const m = loadMeta()
   const prev = m[url]
-  const next: SeriesMeta = { type: d.type ?? prev?.type, genres: d.genres ?? prev?.genres, status: d.status ?? prev?.status }
+  const next: SeriesMeta = {
+    type: d.type ?? prev?.type,
+    genres: d.genres ?? prev?.genres,
+    status: d.status ?? prev?.status
+  }
   if (JSON.stringify(prev) === JSON.stringify(next)) return
   m[url] = next
   metaVersion++
@@ -1129,7 +1411,12 @@ function rememberMeta(url: string, d: SeriesMeta): void {
 function withMeta(d: SeriesDetail): SeriesDetail {
   const m = loadMeta()[d.url]
   const c = crawledMeta(urlKey(d.url))
-  return { ...d, type: d.type ?? m?.type ?? c?.t, genres: d.genres ?? m?.genres ?? c?.g, status: d.status ?? m?.status }
+  return {
+    ...d,
+    type: d.type ?? m?.type ?? c?.t,
+    genres: d.genres ?? m?.genres ?? c?.g,
+    status: d.status ?? m?.status
+  }
 }
 /** Each catalog entry's address in the form the genre scan uses (worked out once per entry). */
 const keyOfEntry = new WeakMap<SeriesEntry, string>()
@@ -1184,13 +1471,26 @@ const changedMetaUrls = new Set<string>()
 function entryInfo(e: SeriesEntry, m: Record<string, SeriesMeta>): EntryInfo {
   const gv = genreIndexVersion()
   let x = entryInfoMemo.get(e)
-  if (x && x.gv === gv && x.fg === metaGen && (x.cc === metaChanges || !changedMetaUrls.has(e.url))) {
+  if (
+    x &&
+    x.gv === gv &&
+    x.fg === metaGen &&
+    (x.cc === metaChanges || !changedMetaUrls.has(e.url))
+  ) {
     x.cc = metaChanges
     return x
   }
   const meta = m[e.url]
   const c = crawledMeta(entryKey(e))
-  x = { gv, fg: metaGen, cc: metaChanges, mt: meta?.type, ct: c?.t, mg: meta?.genres ?? NO_GENRES, cg: c?.g ?? NO_GENRES }
+  x = {
+    gv,
+    fg: metaGen,
+    cc: metaChanges,
+    mt: meta?.type,
+    ct: c?.t,
+    mg: meta?.genres ?? NO_GENRES,
+    cg: c?.g ?? NO_GENRES
+  }
   entryInfoMemo.set(e, x)
   return x
 }
@@ -1216,8 +1516,17 @@ function genresOf(g: Grp, m: Record<string, SeriesMeta> = loadMeta()): string[] 
   if (out.size === 0) for (const x of all) for (const n of x.cg) out.add(n)
   return out.size ? [...out] : NO_GENRES
 }
-const kindMemo = new WeakMap<Grp[], { v: string; kinds: (SeriesType | null)[]; genres: string[][] }>()
-function pick(groups: Grp[], kind: SeriesType | undefined, genre: string | undefined, offset: number, limit: number): SearchResult {
+const kindMemo = new WeakMap<
+  Grp[],
+  { v: string; kinds: (SeriesType | null)[]; genres: string[][] }
+>()
+function pick(
+  groups: Grp[],
+  kind: SeriesType | undefined,
+  genre: string | undefined,
+  offset: number,
+  limit: number
+): SearchResult {
   let memo = kindMemo.get(groups)
   const v = metaVersion + ':' + genreIndexVersion()
   if (!memo || memo.v !== v) {
@@ -1249,7 +1558,13 @@ function pick(groups: Grp[], kind: SeriesType | undefined, genre: string | undef
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, 80)
     .map(([name, count]) => ({ name, count }))
-  return { total: keep.length, hits: keep.slice(offset, offset + limit).map(toHit), counts, genres, noGenre }
+  return {
+    total: keep.length,
+    hits: keep.slice(offset, offset + limit).map(toHit),
+    counts,
+    genres,
+    noGenre
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1360,7 +1675,8 @@ const CLICK_MORE = `(() => {
   let any = false;
   for (const el of els) {
     const t = label(el);
-    if (t.length < 45 && /^(show|view|load|see|expand)\\s+(all|more|the rest)/.test(t) && clickable(el)) { mark(el); any = true; }
+    // (Arabic sites too: "تحميل المزيد (3804 متبقي)", "عرض المزيد", "إظهار الكل")
+    if (t.length < 45 && (/^(show|view|load|see|expand)\\s+(all|more|the rest)/.test(t) || /^(تحميل|عرض|إظهار|اظهار)\\s+(المزيد|الكل|كل الفصول|باقي)/.test(t)) && clickable(el)) { mark(el); any = true; }
   }
   return any;
 })()`
@@ -1370,7 +1686,7 @@ const DECLARED_TOTAL = `(() => {
   const t = (document.body.innerText || '').replace(/\\s+/g, ' ');
   // Several numbers can sit next to the word "chapters" (a tab label "Chapters 70", "+3 chapters" in a review): the
   // page's own total is the biggest of them.
-  const pats = [/showing\\s+\\d+\\s+of\\s+(\\d+)\\s+chapters?/gi, /\\bchapters(\\d{1,5})(?!\\d)/gi, /chapters?\\s*\\(\\s*(\\d{1,5})\\s*\\)/gi, /\\b(\\d{1,5})\\s+chapters\\b/gi, /\\bchapters\\s+(\\d{1,5})\\b/gi];
+  const pats = [/showing\\s+\\d+\\s+of\\s+(\\d+)\\s+chapters?/gi, /(\\d{1,5})\\s*(?:فصل|فصول|فصلا)(?![\\u0600-\\u06FF])/g, /\\bchapters(\\d{1,5})(?!\\d)/gi, /chapters?\\s*\\(\\s*(\\d{1,5})\\s*\\)/gi, /\\b(\\d{1,5})\\s+chapters\\b/gi, /\\bchapters\\s+(\\d{1,5})\\b/gi];
   // the patterns are in order of trust: the first one that matches anything decides (its biggest number)
   for (const re of pats) {
     let best = 0;
@@ -1435,7 +1751,9 @@ const NUM = '(\\d+(?:\\.\\d+)?)'
 
 /** Chapter number from the visible title (used to merge the same chapter listed by several providers). */
 function numFromTitle(t: string): string | null {
-  const m = t.match(new RegExp(`\\bC\\.\\s*${NUM}`, 'i')) || t.match(new RegExp(`\\b(?:chapter|chap|ch|ep|episode)\\.?\\s*${NUM}`, 'i'))
+  const m =
+    t.match(new RegExp(`\\bC\\.\\s*${NUM}`, 'i')) ||
+    t.match(new RegExp(`\\b(?:chapter|chap|ch|ep|episode)\\.?\\s*${NUM}`, 'i'))
   return m ? m[1] : null
 }
 
@@ -1444,7 +1762,8 @@ function chapterNum(c: Ch): number | null {
   const t = numFromTitle(c.title)
   if (t !== null) return Number(t)
   const m =
-    c.url.match(new RegExp(`(?:chapter|chap|ch|ep|episode)[-_/ ]?${NUM}`, 'i')) || c.url.match(new RegExp(`_${NUM}/?$`))
+    c.url.match(new RegExp(`(?:chapter|chap|ch|ep|episode)[-_/ ]?${NUM}`, 'i')) ||
+    c.url.match(new RegExp(`_${NUM}/?$`))
   return m ? Number(m[1]) : null
 }
 
@@ -1525,8 +1844,20 @@ async function clickMarked(win: BrowserWindow): Promise<void> {
     if (!r) return
     if (r.x < 0) continue // had no size on screen: the script click above was all we could do
     win.webContents.sendInputEvent({ type: 'mouseMove', x: r.x, y: r.y })
-    win.webContents.sendInputEvent({ type: 'mouseDown', x: r.x, y: r.y, button: 'left', clickCount: 1 })
-    win.webContents.sendInputEvent({ type: 'mouseUp', x: r.x, y: r.y, button: 'left', clickCount: 1 })
+    win.webContents.sendInputEvent({
+      type: 'mouseDown',
+      x: r.x,
+      y: r.y,
+      button: 'left',
+      clickCount: 1
+    })
+    win.webContents.sendInputEvent({
+      type: 'mouseUp',
+      x: r.x,
+      y: r.y,
+      button: 'left',
+      clickCount: 1
+    })
     await sleep(80)
   }
 }
@@ -1545,13 +1876,23 @@ async function queryPaging(
   let page1 = new Set<string>()
   try {
     const r1 = await fetchHtml(base)
-    if (r1.status === 200) page1 = new Set(parseSeries(r1.html, base, src.chapterRe).chapters.map((c) => c.url))
+    if (r1.status === 200)
+      page1 = new Set(parseSeries(r1.html, base, src.chapterRe).chapters.map((c) => c.url))
   } catch {
     /* no baseline: the acc check below still applies */
   }
   const ownNew = (list: { title: string; url: string }[]): { title: string; url: string }[] =>
-    list.filter((c) => !acc.has(c.url) && !page1.has(c.url) && (!slug || flat(c.url).includes(slug)))
-  const styles = ['?tab=chapters&chapter_page=', '?chapter_page=', '?chapters_page=', '?cpage=', '?tab=chapters&page=', '?page=']
+    list.filter(
+      (c) => !acc.has(c.url) && !page1.has(c.url) && (!slug || flat(c.url).includes(slug))
+    )
+  const styles = [
+    '?tab=chapters&chapter_page=',
+    '?chapter_page=',
+    '?chapters_page=',
+    '?cpage=',
+    '?tab=chapters&page=',
+    '?page='
+  ]
   const fetchPage = async (style: string, n: number): Promise<{ title: string; url: string }[]> => {
     const r = await fetchHtml(base + style + n)
     return r.status === 200 ? parseSeries(r.html, base, src.chapterRe).chapters : []
@@ -1561,7 +1902,8 @@ async function queryPaging(
     let first: { title: string; url: string }[] = []
     for (const st of styles) {
       const got = ownNew(await fetchPage(st, 2))
-      if (process.env['MR_PAGERDEBUG']) console.log('QPAGE style=' + st + ' page2 new=' + got.length + ' slug=' + slug)
+      if (process.env['MR_PAGERDEBUG'])
+        console.log('QPAGE style=' + st + ' page2 new=' + got.length + ' slug=' + slug)
       if (got.length > 0) {
         style = st
         first = got
@@ -1580,7 +1922,13 @@ async function queryPaging(
   }
 }
 
-async function browserSeries(src: SourceDef, url: string, slug: string, firstPageOnly = false, depth = 0): Promise<SeriesDetail> {
+async function browserSeries(
+  src: SourceDef,
+  url: string,
+  slug: string,
+  firstPageOnly = false,
+  depth = 0
+): Promise<SeriesDetail> {
   const win = hiddenWindow({ light: true })
   try {
     await loadPage(win, url)
@@ -1598,16 +1946,26 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     await (firstPageOnly ? waitXhrIdle(win, 300, 5000, 350) : waitXhrIdle(win, 450, 8000, 700))
     if (!firstPageOnly) {
       // (the newest-chapters check only needs what is on screen; a full read also wakes up lazy lists)
-      await win.webContents.executeJavaScript('window.scrollTo(0, document.documentElement.scrollHeight)').catch(() => undefined)
+      await win.webContents
+        .executeJavaScript('window.scrollTo(0, document.documentElement.scrollHeight)')
+        .catch(() => undefined)
       await waitXhrIdle(win, 350, 3000, 200)
     }
     let out = await run()
     let prevSig = ''
     let stableRounds = 0
-    const deadline = Date.now() + 40000 // a series page never takes longer than this, whatever the site does
+    // A series page gets 40 s. While its list keeps growing (a "load more" button adding 50 at a time), each new
+    // slice buys a few more seconds, up to 3 minutes in all, so very long series (3,000+ chapters) load completely.
+    let deadline = Date.now() + 40000
+    const hardEnd = Date.now() + 180000
     for (let i = 0; i < 50; i++) {
       // the site already refused the request that carries the chapter list: no point waiting for it
-      if (out.chapters.length === 0 && i >= 8 && refusedIn(win).some((r) => r.status === 403 || r.status === 429)) break
+      if (
+        out.chapters.length === 0 &&
+        i >= 8 &&
+        refusedIn(win).some((r) => r.status === 403 || r.status === 429)
+      )
+        break
       if (out.chapters.length > 0) {
         if (!slug || out.ownCount > 0) break
         const sig = out.chapters.map((c) => c.url).join('|')
@@ -1625,20 +1983,31 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     // and read the answer: it holds the WHOLE list even when the page draws only the newest chapters.
     if (!firstPageOnly && slug) {
       const flatSlug = (u: string): string => u.toLowerCase().replace(/[^a-z0-9]+/g, '')
-      const got: { title: string; url: string }[] = await win.webContents.executeJavaScript(HARVEST_DATA).catch(() => [])
+      const got: { title: string; url: string }[] = await win.webContents
+        .executeJavaScript(HARVEST_DATA)
+        .catch(() => [])
       for (const c of got)
-        if (!acc.has(c.url) && flatSlug(c.url).includes(slug)) acc.set(c.url, { url: c.url, title: c.title || decodeURIComponent(c.url.split('/').pop() ?? '') })
+        if (!acc.has(c.url) && flatSlug(c.url).includes(slug))
+          acc.set(c.url, {
+            url: c.url,
+            title: c.title || decodeURIComponent(c.url.split('/').pop() ?? '')
+          })
       if (process.env['MR_PAGERDEBUG']) console.log('HARVEST ' + got.length + ' kept=' + acc.size)
     }
     let idleRounds = 0
-    for (let round = 0; round < 80 && Date.now() < deadline; round++) {
+    for (let round = 0; round < 200 && Date.now() < deadline; round++) {
       const before = acc.size
       for (const c of out.chapters) if (!acc.has(c.url)) acc.set(c.url, c)
+      if (acc.size > before) deadline = Math.min(hardEnd, Math.max(deadline, Date.now() + 8000))
       // The page's own data can list chapters that are not drawn as links yet (only the newest are): read them too.
       if (!firstPageOnly && slug) {
-        const html: string = await win.webContents.executeJavaScript('document.documentElement.outerHTML').catch(() => '')
+        const html: string = await win.webContents
+          .executeJavaScript('document.documentElement.outerHTML')
+          .catch(() => '')
         const flatSlug = (u: string): string => u.toLowerCase().replace(/[^a-z0-9]+/g, '')
-        if (html) for (const c of parseSeries(html, url, src.chapterRe).chapters) if (!acc.has(c.url) && flatSlug(c.url).includes(slug)) acc.set(c.url, c)
+        if (html)
+          for (const c of parseSeries(html, url, src.chapterRe).chapters)
+            if (!acc.has(c.url) && flatSlug(c.url).includes(slug)) acc.set(c.url, c)
       }
       // Clicking on but nothing new arrives (e.g. a pager that keeps "working" past its last page): stop.
       if (round > 0 && acc.size === before) {
@@ -1649,22 +2018,57 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
         const labels = await win.webContents.executeJavaScript(
           `[...document.querySelectorAll('button,[role=button],a')].map(e=>(e.textContent||'').trim()).filter(t=>/^\\d{1,4}$|^[‹›«»…]|^\\.\\.\\.|next|prev/i.test(t)).join(' ')`
         )
-        console.log('PAGER round=' + round + ' chapters=' + out.chapters.length + ' acc=' + acc.size + ' labels=[' + labels + ']')
+        console.log(
+          'PAGER round=' +
+            round +
+            ' chapters=' +
+            out.chapters.length +
+            ' acc=' +
+            acc.size +
+            ' labels=[' +
+            labels +
+            ']'
+        )
       }
       if (firstPageOnly) break // update checks only need the newest chapters: don't walk the whole list
-      // Show what we have so far: the screen can list the first chapters while the rest are still coming.
-      if (acc.size > 0) partialEmitter({ ...out, url, chapters: finalizeChapters([...acc.values()], slug) })
       // More to load? Either a button/pager to press, or a box that loads the next slice when scrolled to its end.
       // Many pages say how many chapters there are ("Chapters (198)", "Showing 50 of 198 chapters"): while we have
       // fewer than that, a button that does nothing yet (the page is still starting up) is retried, not given up on.
-      const declared: number = await win.webContents.executeJavaScript(DECLARED_TOTAL).catch(() => 0)
+      const declared: number = await win.webContents
+        .executeJavaScript(DECLARED_TOTAL)
+        .catch(() => 0)
+      // Show what we have so far: the screen lists the first chapters while the rest are still coming, with a progress
+      // bar when the page says how many there are.
+      if (acc.size > 0)
+        partialEmitter({
+          ...out,
+          url,
+          chapters: finalizeChapters([...acc.values()], slug),
+          expected: declared > acc.size ? declared : undefined
+        })
       const wantMore = declared > 0 && acc.size < declared * 0.98
       let changed = false
       for (let attempt = 0; attempt < (wantMore ? 4 : 1) && !changed; attempt++) {
         let clicked: boolean = await win.webContents.executeJavaScript(CLICK_MORE)
         if (clicked) await clickMarked(win)
         if (!clicked) clicked = await win.webContents.executeJavaScript(INNER_SCROLL)
-        if (process.env['MR_PAGERDEBUG']) console.log('MORE attempt=' + attempt + ' declared=' + declared + ' have=' + acc.size + ' clicked=' + clicked + ' refused=' + JSON.stringify(refusedIn(win).slice(-3)) + ' now=' + (await win.webContents.executeJavaScript(`document.querySelectorAll('a[href*=chapter]').length`).catch(() => '?')))
+        if (process.env['MR_PAGERDEBUG'])
+          console.log(
+            'MORE attempt=' +
+              attempt +
+              ' declared=' +
+              declared +
+              ' have=' +
+              acc.size +
+              ' clicked=' +
+              clicked +
+              ' refused=' +
+              JSON.stringify(refusedIn(win).slice(-3)) +
+              ' now=' +
+              (await win.webContents
+                .executeJavaScript(`document.querySelectorAll('a[href*=chapter]').length`)
+                .catch(() => '?'))
+          )
         if (!clicked) {
           if (!wantMore) break
           await sleep(600) // the button may not exist yet
@@ -1681,7 +2085,23 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
           }
         }
       }
-      if (process.env['MR_PAGERDEBUG']) console.log('MORECHG ' + url + ' sample=' + JSON.stringify(out.chapters.slice(0, 2)) + ' changed=' + changed + ' now=' + out.chapters.length + ' dom=' + (await win.webContents.executeJavaScript(`[document.querySelectorAll('a[href*=chapter]').length, [...document.querySelectorAll('a[href]')].filter((a) => a.pathname.startsWith(location.pathname + '/')).length, [...document.querySelectorAll('button')].map((b) => b.textContent.trim()).filter((t) => /more|load/i.test(t)).join('|')].join(' ')`).catch(() => -1)))
+      if (process.env['MR_PAGERDEBUG'])
+        console.log(
+          'MORECHG ' +
+            url +
+            ' sample=' +
+            JSON.stringify(out.chapters.slice(0, 2)) +
+            ' changed=' +
+            changed +
+            ' now=' +
+            out.chapters.length +
+            ' dom=' +
+            (await win.webContents
+              .executeJavaScript(
+                `[document.querySelectorAll('a[href*=chapter]').length, [...document.querySelectorAll('a[href]')].filter((a) => a.pathname.startsWith(location.pathname + '/')).length, [...document.querySelectorAll('button')].map((b) => b.textContent.trim()).filter((t) => /more|load/i.test(t)).join('|')].join(' ')`
+              )
+              .catch(() => -1))
+        )
       if (!changed) break
     }
     if (acc.size === 0) {
@@ -1692,7 +2112,9 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
             'right now; try again in a few minutes.'
         )
     }
-    const declaredEnd: number = firstPageOnly ? 0 : await win.webContents.executeJavaScript(DECLARED_TOTAL).catch(() => 0)
+    const declaredEnd: number = firstPageOnly
+      ? 0
+      : await win.webContents.executeJavaScript(DECLARED_TOTAL).catch(() => 0)
     // The page says it has more chapters than we collected and its button did nothing: many sites also serve the
     // other slices at plain addresses (?chapter_page=2 ...). Try those.
     let pagingTried = false
@@ -1703,9 +2125,11 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
       // Plain pager LINKS on the page (…/series/ABC?page=2): the series page shows one slice at a time and no button
       // loads the rest. Walk those addresses until a page brings nothing new.
       const hasPagerLinks: boolean = await win.webContents
-        .executeJavaScript(`[...document.querySelectorAll('a[href]')].some((a) => a.origin === location.origin && a.pathname === location.pathname && /[?&](page|chapter_page|chapters_page|cpage)=2(&|$)/.test(a.search))`)
+        .executeJavaScript(
+          `[...document.querySelectorAll('a[href]')].some((a) => a.origin === location.origin && a.pathname === location.pathname && /[?&](page|chapter_page|chapters_page|cpage)=2(&|$)/.test(a.search))`
+        )
         .catch(() => false)
-  if (process.env['MR_PAGERDEBUG']) console.log('PAGERLINKS ' + hasPagerLinks)
+      if (process.env['MR_PAGERDEBUG']) console.log('PAGERLINKS ' + hasPagerLinks)
       if (hasPagerLinks) {
         pagingTried = true
         await queryPaging(src, url, slug, acc, 100000)
@@ -1713,30 +2137,47 @@ async function browserSeries(src: SourceDef, url: string, slug: string, firstPag
     }
     // Self-check: the list has holes or is far shorter than its newest chapter says. Try the other ways of reaching
     // the rest before giving up (plain addresses for the slices), then let the check below flag whatever is left.
-    if (!firstPageOnly && depth === 0 && !pagingTried && looksIncomplete(finalizeChapters([...acc.values()], slug))) {
+    if (
+      !firstPageOnly &&
+      depth === 0 &&
+      !pagingTried &&
+      looksIncomplete(finalizeChapters([...acc.values()], slug))
+    ) {
       await queryPaging(src, url, slug, acc, 100000)
     }
     // Aggregator sites list several "sources" per series, each with its own page holding the full chapter list while the
     // series page shows only the newest chapter of each: follow the first (biggest) source.
     if (depth === 0 && declaredEnd >= 10 && acc.size < declaredEnd * 0.9) {
-      const sourceUrl: string = await win.webContents.executeJavaScript(`(() => { const a = [...document.querySelectorAll('a[href]')].find((x) => /\\/sources?\\/[^/?#]+\\/?$/i.test(x.pathname) && x.origin === location.origin); return a ? a.href : '' })()`).catch(() => '')
+      const sourceUrl: string = await win.webContents
+        .executeJavaScript(
+          `(() => { const a = [...document.querySelectorAll('a[href]')].find((x) => /\\/sources?\\/[^/?#]+\\/?$/i.test(x.pathname) && x.origin === location.origin); return a ? a.href : '' })()`
+        )
+        .catch(() => '')
       if (sourceUrl && sourceUrl !== url) {
         try {
           const sub = await browserSeries(src, sourceUrl, '', false, 1)
-          for (const c of sub.chapters) if (!acc.has(c.url)) acc.set(c.url, { title: c.title, url: c.url })
+          for (const c of sub.chapters)
+            if (!acc.has(c.url)) acc.set(c.url, { title: c.title, url: c.url })
         } catch {
           /* keep what we have */
         }
       }
     }
     // type / genres / status, from the page as it is now (read once, while the page is open anyway)
-    const html: string = await win.webContents.executeJavaScript('document.documentElement.outerHTML.slice(0, 3000000)').catch(() => '')
+    const html: string = await win.webContents
+      .executeJavaScript('document.documentElement.outerHTML.slice(0, 3000000)')
+      .catch(() => '')
     const listed = [...acc.values()]
     // chapters the page keeps in its data without drawing them as links
     const extra = dataChapters(html, url, listed)
     const chapters = finalizeChapters([...listed, ...extra], slug)
     const short = declaredEnd >= 10 && chapters.length < declaredEnd * 0.9
-    return { ...out, ...parseMeta(html, url), chapters, incomplete: looksIncomplete(chapters) || short || undefined }
+    return {
+      ...out,
+      ...parseMeta(html, url),
+      chapters,
+      incomplete: looksIncomplete(chapters) || short || undefined
+    }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }
@@ -1763,22 +2204,104 @@ export function looksIncomplete(chapters: { title: string; url: string }[]): boo
   return false
 }
 
-async function staticSeries(src: SourceDef, url: string, slug: string): Promise<SeriesDetail | null> {
+/**
+ * Madara sites (a common manga site engine) often load a series' chapter list with a request after the page opens,
+ * 50 chapters at a time ("…/ajax/chapters/", then "?t=2", "?t=3"…). Asking for those pieces directly gives the whole
+ * list in a second or two, where a browser window would have to click through each page. Null when the page is not
+ * like that.
+ */
+async function madaraChapters(
+  html: string,
+  url: string,
+  chapterRe: string
+): Promise<{ title: string; url: string }[] | null> {
+  if (!/wp-manga|madara/i.test(html) || !/manga_id|manga-chapters-holder/i.test(html)) return null
+  const base = url.replace(/[?#].*$/, '').replace(/\/?$/, '/') + 'ajax/chapters/'
+  const first = await fetchHtml(base, 15000, 'POST').catch(() => null)
+  if (!first || first.status !== 200) return null
+  const all = [...parseSeries(first.html, url, chapterRe).chapters]
+  if (all.length === 0) return null
+  // the list's own pager says how many pieces there are
+  const last = Math.min(
+    200,
+    Math.max(
+      1,
+      ...[...first.html.matchAll(/data-page="(\d+)"|[?&]t=(\d+)/g)].map((m) => Number(m[1] ?? m[2]))
+    )
+  )
+  const rest = Array.from({ length: last - 1 }, (_, i) => i + 2)
+  for (let i = 0; i < rest.length; i += 4) {
+    const got = await Promise.all(
+      rest.slice(i, i + 4).map((n) => fetchHtml(base + '?t=' + n, 15000, 'POST').catch(() => null))
+    )
+    for (const g of got)
+      if (g && g.status === 200) all.push(...parseSeries(g.html, url, chapterRe).chapters)
+  }
+  if (process.env['MR_PIPEDEBUG'])
+    console.log('MADARA', url, 'pieces', last, 'chapters', all.length)
+  return all
+}
+
+async function staticSeries(
+  src: SourceDef,
+  url: string,
+  slug: string
+): Promise<SeriesDetail | null> {
   try {
     const r = await fetchHtml(url)
     if (r.status !== 200) return null
+    const madara = await madaraChapters(r.html, url, src.chapterRe)
+    if (madara) {
+      const chapters = finalizeChapters(madara, slug)
+      if (chapters.length > 0) {
+        const p0 = parseSeries(r.html, url, src.chapterRe)
+        return {
+          url,
+          title: p0.title,
+          cover: p0.cover,
+          description: p0.description,
+          ...parseMeta(r.html, url),
+          chapters
+        }
+      }
+    }
     const p = parseSeries(r.html, url, src.chapterRe)
-    if (process.env['MR_PIPEDEBUG']) console.log('STATIC', url, 'status', r.status, 'chapters', p.chapters.length, 'paged', p.paged)
+    if (process.env['MR_PIPEDEBUG'])
+      console.log(
+        'STATIC',
+        url,
+        'status',
+        r.status,
+        'chapters',
+        p.chapters.length,
+        'paged',
+        p.paged
+      )
     if (p.paged || p.chapters.length === 0) return null
     // Pager links to the same page (…?page=2): this is only the first slice of the list.
-    if (/href="[^"]*[?&](?:page|chapter_page|chapters_page|cpage)=2(?:&|")/i.test(r.html.replace(/&amp;/g, '&'))) return null
+    if (
+      /href="[^"]*[?&](?:page|chapter_page|chapters_page|cpage)=2(?:&|")/i.test(
+        r.html.replace(/&amp;/g, '&')
+      )
+    )
+      return null
     // The static HTML may only hold other series' chapter links (the real list is added by JavaScript).
     const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
     if (slug && !p.chapters.some((c) => flat(c.url).includes(slug))) return null
-    const chapters = finalizeChapters([...p.chapters, ...dataChapters(r.html, url, p.chapters)], slug)
+    const chapters = finalizeChapters(
+      [...p.chapters, ...dataChapters(r.html, url, p.chapters)],
+      slug
+    )
     // The page handed over only a slice (the rest is added by JavaScript after load): not a usable answer.
     if (looksIncomplete(chapters)) return null
-    return { url, title: p.title, cover: p.cover, description: p.description, ...parseMeta(r.html, url), chapters }
+    return {
+      url,
+      title: p.title,
+      cover: p.cover,
+      description: p.description,
+      ...parseMeta(r.html, url),
+      chapters
+    }
   } catch {
     return null
   }
@@ -1800,7 +2323,9 @@ const SERIES_CACHE_VERSION = 7
 
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   if (seriesCache && !isUnreadable(seriesCachePath())) return seriesCache
-  seriesCache = readJson<Record<string, SeriesCacheEntry>>(seriesCachePath(), seriesCache ? 1 : 8) ?? seriesCache
+  seriesCache =
+    readJson<Record<string, SeriesCacheEntry>>(seriesCachePath(), seriesCache ? 1 : 8) ??
+    seriesCache
   seriesCache ??= {}
   const rec = seriesCache as unknown as Record<string, unknown>
   if (rec['__v'] !== SERIES_CACHE_VERSION) {
@@ -1876,7 +2401,8 @@ export async function openSeries(
   const c = loadSeriesCache()[url]
   const saved = c && c.detail.chapters.length > 0 ? c : null
   if (mode === 'full' || !saved) return getSeries(sourceId, url)
-  if (mode === 'auto' && Date.now() - (saved.checkedAt ?? saved.at) < CHECK_EVERY) return withMeta(saved.detail)
+  if (mode === 'auto' && Date.now() - (saved.checkedAt ?? saved.at) < CHECK_EVERY)
+    return withMeta(saved.detail)
   const newest = await getSeries(sourceId, url, true)
   return withMeta(mergeNewest(url, newest) ?? saved.detail)
 }
@@ -1913,7 +2439,11 @@ export function setSeriesPartialEmitter(fn: (d: SeriesDetail) => void): void {
 // joins that read instead of starting a second one.
 const seriesInflight = new Map<string, Promise<SeriesDetail>>()
 
-export function getSeries(sourceId: string, url: string, newestOnly = false): Promise<SeriesDetail> {
+export function getSeries(
+  sourceId: string,
+  url: string,
+  newestOnly = false
+): Promise<SeriesDetail> {
   if (newestOnly) return getSeriesInner(sourceId, url, true)
   const running = seriesInflight.get(url)
   if (running) return running
@@ -1939,17 +2469,34 @@ export async function prefetchSeries(sourceId: string, url: string): Promise<voi
   }
 }
 
-async function getSeriesInner(sourceId: string, url: string, newestOnly = false): Promise<SeriesDetail> {
+async function getSeriesInner(
+  sourceId: string,
+  url: string,
+  newestOnly = false
+): Promise<SeriesDetail> {
   const src = getSource(sourceId)
   if (!src) throw new Error('Unknown source')
+  // A site with a data feed: details and the whole chapter list come from the feed in a second or two.
+  if (src.api) {
+    const d = await feedSeries(src.api, new URL(src.baseUrl).origin, url, newestOnly)
+    if (newestOnly) return d
+    if (d.chapters.length > 0) cacheSeries(d)
+    applyMeta(url, d)
+    return d
+  }
   // Series slug (without a trailing 24-hex id), used to drop chapters of unrelated series.
-  const slug = titleFromUrl(url).toLowerCase().replace(/[^a-z0-9]+/g, '')
+  const slug = titleFromUrl(url)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
   const key = hostOf(url) + '|series'
   const mode = getMode(key)
   let result: SeriesDetail
 
   if (newestOnly) {
-    return (mode === 'static' ? await staticSeries(src, url, slug) : null) ?? (await browserSeries(src, url, slug, true))
+    return (
+      (mode === 'static' ? await staticSeries(src, url, slug) : null) ??
+      (await browserSeries(src, url, slug, true))
+    )
   }
   if (mode === 'browser') {
     result = await browserSeries(src, url, slug)
@@ -1957,19 +2504,29 @@ async function getSeriesInner(sourceId: string, url: string, newestOnly = false)
     result = (await staticSeries(src, url, slug)) ?? (await browserSeries(src, url, slug))
   } else {
     // First series opened on this site: do it both ways and see if plain HTTP finds the same chapters.
-    const [s, b] = await Promise.allSettled([staticSeries(src, url, slug), browserSeries(src, url, slug)])
+    const [s, b] = await Promise.allSettled([
+      staticSeries(src, url, slug),
+      browserSeries(src, url, slug)
+    ])
     const sv = s.status === 'fulfilled' ? s.value : null
     if (b.status === 'rejected') {
       if (!sv) throw b.reason
       result = sv
     } else {
       const bv = b.value
-      const same = !!sv && sv.chapters.length === bv.chapters.length && sv.chapters[0]?.url === bv.chapters[0]?.url
+      const same =
+        !!sv &&
+        sv.chapters.length === bv.chapters.length &&
+        sv.chapters[0]?.url === bv.chapters[0]?.url
       // The plain page can hold MORE than the browser view (a list shown 13 at a time, the rest in the page's data):
       // then plain HTTP is the better way for this site, not the worse one.
       const staticWins = !!sv && !!bv.incomplete && sv.chapters.length > bv.chapters.length
-      const staticMore = !!sv && sv.chapters.length > bv.chapters.length * 1.2 && sv.chapters.length >= bv.chapters.length + 3
-      if (bv.chapters.length > 0 || sv) setMode(key, same || staticWins || staticMore ? 'static' : 'browser')
+      const staticMore =
+        !!sv &&
+        sv.chapters.length > bv.chapters.length * 1.2 &&
+        sv.chapters.length >= bv.chapters.length + 3
+      if (bv.chapters.length > 0 || sv)
+        setMode(key, same || staticWins || staticMore ? 'static' : 'browser')
       result = sv && (staticWins || staticMore) ? sv : bv
     }
   }

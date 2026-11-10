@@ -26,6 +26,12 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
   const [offline, setOffline] = useState(false)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  // progress while the chapter list is collected: when it started, and how many chapters the page says it has
+  const [loadStart, setLoadStart] = useState(0)
+  const [expected, setExpected] = useState<number | undefined>(undefined)
+  const [partial, setPartial] = useState(false)
+  // chapters this load has collected so far (the screen may still show a longer saved list meanwhile)
+  const [found, setFound] = useState(0)
   // why the latest refresh failed while an older saved list is being shown (empty when it worked)
   const [refreshError, setRefreshError] = useState('')
   // bumped by the buttons to run the loading again; `mode` says how much to re-read
@@ -111,6 +117,10 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
     setDetail(null)
     setRefreshing(false)
     setRefreshError('')
+    setLoadStart(Date.now())
+    setExpected(undefined)
+    setPartial(false)
+    setFound(0)
     // Show the last known chapter list instantly, then replace it with the fresh one when it arrives.
     window.api.getSeriesCached(entry.url).then((cached) => {
       if (cancelled || gotFresh || !cached) return
@@ -123,6 +133,9 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
     const offPartial = window.api.onSeriesPartial((d) => {
       if (cancelled || gotFresh || d.url !== entry.url) return
       setDetail((prev) => (prev && prev.chapters.length >= d.chapters.length ? prev : d))
+      setExpected(d.expected)
+      setFound(d.chapters.length)
+      setPartial(true)
       setLoading(false)
       setRefreshing(true)
     })
@@ -130,6 +143,8 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
       if (cancelled) return
       gotFresh = true
       setRefreshing(false)
+      setPartial(false)
+      setExpected(undefined)
       if (res.ok) {
         setDetail(res.data)
         return setLoading(false)
@@ -359,7 +374,9 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
         </div>
       </div>
 
-      {loading && <div className="hint">Loading chapters from {entry.sourceName}…</div>}
+      {(loading || (refreshing && partial)) && (
+        <ChapterProgress site={entry.sourceName} found={found} expected={expected} since={loadStart} />
+      )}
       {error && (
         <div className="error">
           {error}{' '}
@@ -431,6 +448,48 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
             ))}
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Shows that the chapter list is still being collected, so a long wait never looks like the app is stuck: a bar that
+ * fills up when the site says how many chapters there are (otherwise one that keeps moving), how many were found so
+ * far, and the time it has taken.
+ */
+function ChapterProgress({ site, found, expected, since }: { site: string; found: number; expected?: number; since: number }): React.JSX.Element {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const secs = Math.max(0, Math.round((now - since) / 1000))
+  const time = secs < 60 ? `${secs} s` : `${Math.floor(secs / 60)} min ${secs % 60} s`
+  const pct = expected && expected > 0 ? Math.min(99, Math.round((found / expected) * 100)) : null
+  return (
+    <div className="chprog" role="status" aria-live="polite">
+      <div className="chprog-top">
+        <span>
+          {found === 0
+            ? `Reading the chapter list from ${site}…`
+            : expected
+              ? `Loading chapters from ${site}… ${found.toLocaleString()} of ${expected.toLocaleString()}`
+              : `Loading chapters from ${site}… ${found.toLocaleString()} found so far`}
+        </span>
+        <span className="chprog-time">
+          {pct !== null ? `${pct}% · ` : ''}
+          {time}
+        </span>
+      </div>
+      <div className={`chprog-bar${pct === null ? ' moving' : ''}`}>
+        <span style={pct !== null ? { width: `${pct}%` } : undefined} />
+      </div>
+      {(found > 0 || secs >= 15) && (
+        <div className="chprog-note">
+          {found > 0 ? 'You can already open the chapters shown below. ' : ''}
+          {secs >= 15 ? 'Long series can take a few minutes the first time; after that they open straight away.' : ''}
+        </div>
       )}
     </div>
   )

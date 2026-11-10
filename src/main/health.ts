@@ -47,7 +47,11 @@ function entry(id: string): Entry {
 }
 
 /** One series was opened on this site. */
-export function recordOpen(sourceId: string, outcome: 'ok' | 'incomplete' | 'failed', error?: string): void {
+export function recordOpen(
+  sourceId: string,
+  outcome: 'ok' | 'incomplete' | 'failed',
+  error?: string
+): void {
   const e = entry(sourceId)
   e.recent = [...e.recent, outcome].slice(-20)
   e.lastAt = Date.now()
@@ -56,7 +60,10 @@ export function recordOpen(sourceId: string, outcome: 'ok' | 'incomplete' | 'fai
 }
 
 export function recordCheck(sourceId: string, check: HealthCheck): void {
-  entry(sourceId).check = check
+  const e = entry(sourceId)
+  e.check = check
+  // a fresh Re-check starts the count over: opens from before it no longer colour the site
+  e.recent = []
   saveSoon()
 }
 
@@ -78,5 +85,13 @@ export function allHealth(): SiteHealth[] {
 }
 
 export function healthOf(sourceId: string): SiteHealth {
-  return allHealth().find((h) => h.sourceId === sourceId) ?? { sourceId, ok: 0, incomplete: 0, failed: 0, lastAt: 0 }
+  return (
+    allHealth().find((h) => h.sourceId === sourceId) ?? {
+      sourceId,
+      ok: 0,
+      incomplete: 0,
+      failed: 0,
+      lastAt: 0
+    }
+  )
 }

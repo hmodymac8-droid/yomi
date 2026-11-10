@@ -34,8 +34,9 @@ export default function Settings(): React.JSX.Element {
         <div className="settext">
           <h2>Yomi Library</h2>
           <p>
-            Ready-made sites that come with your Yomi account: their titles and genres are already loaded, so you can search
-            and read straight away. Sites you add yourself are always shown.
+            Ready-made sites that come with your Yomi account: their titles and genres are already
+            loaded, so you can search and read straight away. Sites you add yourself are always
+            shown.
           </p>
           <p className="sub">
             {library.length > 0
@@ -45,11 +46,52 @@ export default function Settings(): React.JSX.Element {
           </p>
         </div>
         <label className="switch">
-          <input type="checkbox" checked={settings?.showLibrary ?? true} disabled={!settings} onChange={() => void toggle()} />
+          <input
+            type="checkbox"
+            checked={settings?.showLibrary ?? true}
+            disabled={!settings}
+            onChange={() => void toggle()}
+          />
           <span className="track" aria-hidden="true" />
           <span>Show the Yomi Library</span>
         </label>
       </section>
+
+      <AutoDownloadSetting />
     </div>
+  )
+}
+
+/** Download new chapters of followed series by themselves (each series can still be switched on its own card). */
+function AutoDownloadSetting(): React.JSX.Element {
+  const [on, setOn] = useState<boolean | null>(null)
+  useEffect(() => {
+    void window.api.updatesStatus().then((s) => setOn(s.autoDownload))
+    return window.api.onUpdates((s) => setOn(s.autoDownload))
+  }, [])
+  return (
+    <section className="setting">
+      <div className="settext">
+        <h2>Auto-download new chapters</h2>
+        <p>
+          When a series you follow gets a new chapter, Yomi downloads it for you so it is ready to
+          read, even offline. You can also turn this on or off for each series on its card in
+          Following.
+        </p>
+      </div>
+      <label className="switch">
+        <input
+          type="checkbox"
+          checked={on ?? false}
+          disabled={on === null}
+          onChange={(e) => {
+            setOn(e.target.checked)
+            void window.api.updatesSetAutoDownload(e.target.checked)
+          }}
+        />
+        <span className="track" aria-hidden="true" />
+        <span>For all followed series</span>
+      </label>
+    </section>
   )
 }

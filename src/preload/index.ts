@@ -3,7 +3,8 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  prefetchSeries: (sourceId: string, url: string) => ipcRenderer.invoke('prefetch-series', sourceId, url),
+  prefetchSeries: (sourceId: string, url: string) =>
+    ipcRenderer.invoke('prefetch-series', sourceId, url),
   onSeriesPartial: (cb: (d: unknown) => void) => {
     const h = (_e: unknown, d: unknown): void => cb(d)
     ipcRenderer.on('series-partial', h)
@@ -17,9 +18,13 @@ const api = {
   enrich: (urls: string[]) => ipcRenderer.invoke('enrich', urls),
   followList: () => ipcRenderer.invoke('follow-list'),
   followGet: (seriesUrl: string) => ipcRenderer.invoke('follow-get', seriesUrl),
-  followSet: (meta: unknown, following: boolean) => ipcRenderer.invoke('follow-set', meta, following),
-  followCategory: (seriesUrl: string, category: string) => ipcRenderer.invoke('follow-category', seriesUrl, category),
+  followSet: (meta: unknown, following: boolean) =>
+    ipcRenderer.invoke('follow-set', meta, following),
+  followCategory: (seriesUrl: string, category: string) =>
+    ipcRenderer.invoke('follow-category', seriesUrl, category),
   followDismiss: (seriesUrl: string) => ipcRenderer.invoke('follow-dismiss', seriesUrl),
+  followAutoDownload: (seriesUrl: string, on: boolean | undefined) =>
+    ipcRenderer.invoke('follow-autodl', seriesUrl, on),
   updatesCheck: () => ipcRenderer.invoke('updates-check'),
   updatesStatus: () => ipcRenderer.invoke('updates-status'),
   updatesSetAutoDownload: (on: boolean) => ipcRenderer.invoke('updates-auto-download', on),
@@ -38,7 +43,8 @@ const api = {
   downloadSetConcurrency: (n: number) => ipcRenderer.invoke('download-set-concurrency', n),
   downloadRemoveMany: (ids: string[]) => ipcRenderer.invoke('download-remove-many', ids),
   titleAdd: (url: string) => ipcRenderer.invoke('title-add', url),
-  windowControl: (action: 'minimize' | 'maximize' | 'close') => ipcRenderer.send('window-control', action),
+  windowControl: (action: 'minimize' | 'maximize' | 'close') =>
+    ipcRenderer.send('window-control', action),
   genreStatus: () => ipcRenderer.invoke('genre-status'),
   updateStatus: () => ipcRenderer.invoke('update-status'),
   updateInstall: () => ipcRenderer.invoke('update-install'),
@@ -71,15 +77,28 @@ const api = {
   progressHide: (seriesUrl: string) => ipcRenderer.invoke('progress-hide', seriesUrl),
   grabChapter: (url: string) => ipcRenderer.invoke('grab-chapter', url),
   listSources: () => ipcRenderer.invoke('list-sources'),
+  clientLog: (m: string) => ipcRenderer.send('client-log', m),
+  catalogDiagnose: () => ipcRenderer.invoke('catalog-diagnose') as Promise<string>,
+  restartApp: () => ipcRenderer.invoke('restart-app') as Promise<boolean>,
+  catalogTrouble: () => ipcRenderer.invoke('catalog-trouble') as Promise<boolean>,
   addSite: (url: string) => ipcRenderer.invoke('add-site', url),
   removeSite: (id: string) => ipcRenderer.invoke('remove-site', id),
   getSettings: () => ipcRenderer.invoke('settings-get'),
   setSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke('settings-set', patch),
+  pageBytes: (src: string) => ipcRenderer.invoke('page-bytes', src),
   crawl: (id: string) => ipcRenderer.invoke('crawl', id),
   cancelCrawl: (id: string) => ipcRenderer.invoke('cancel-crawl', id),
-  search: (q: string, sourceIds: string[], sort: string, offset: number, limit: number, kind?: string, genre?: string) =>
-    ipcRenderer.invoke('search', q, sourceIds, sort, offset, limit, kind, genre),
-  getSeries: (sourceId: string, url: string, mode?: string) => ipcRenderer.invoke('get-series', sourceId, url, mode),
+  search: (
+    q: string,
+    sourceIds: string[],
+    sort: string,
+    offset: number,
+    limit: number,
+    kind?: string,
+    genre?: string
+  ) => ipcRenderer.invoke('search', q, sourceIds, sort, offset, limit, kind, genre),
+  getSeries: (sourceId: string, url: string, mode?: string) =>
+    ipcRenderer.invoke('get-series', sourceId, url, mode),
   onProgress: (cb: (p: unknown) => void) => {
     const h = (_e: unknown, p: unknown): void => cb(p)
     ipcRenderer.on('crawl-progress', h)

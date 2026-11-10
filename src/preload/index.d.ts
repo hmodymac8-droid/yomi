@@ -8,6 +8,17 @@ export interface GrabResult {
 
 export type GrabResponse = { ok: true; data: GrabResult } | { ok: false; error: string }
 
+/**
+ * A site that is a JavaScript app reading its titles from a data feed (a JSON API). Yomi reads that feed directly:
+ * the whole title list with genres in a few requests, chapter lists and chapter pages in one request each, with no
+ * browser window. 'series-feed' = paged `series/` and `chapters/` lists (count / next / results).
+ */
+export interface FeedApiDef {
+  kind: 'series-feed'
+  /** The feed's address, ending in a slash (for example https://appswat.com/v2/api/v2/). */
+  base: string
+}
+
 export interface SourceDef {
   id: string
   name: string
@@ -37,6 +48,8 @@ export interface SourceDef {
   titlesOnly?: boolean
   /** Came ready-made from the Yomi Library (your Yomi account), not added on this computer. */
   library?: boolean
+  /** The site's data feed, when it has one (titles, chapters and pages are then read from it, not from web pages). */
+  api?: FeedApiDef
 }
 
 export interface SeriesEntry {
@@ -84,6 +97,8 @@ export interface SeriesDetail {
   chapters: { title: string; url: string; alts?: string[] }[]
   /** The list looks too short for the newest chapter number (e.g. 2 chapters but the latest is Chapter 66). */
   incomplete?: boolean
+  /** While a long list is still loading (partial updates only): how many chapters the page says it has. */
+  expected?: number
 }
 
 export interface CrawlProgress {
@@ -226,6 +241,8 @@ export interface FollowRecord extends FollowMeta {
   known: string[]
   newChapters: NewChapter[]
   lastChecked: number
+  /** Download new chapters of this series by itself. Missing: the Settings switch decides. */
+  autoDownload?: boolean
 }
 
 export interface FollowInfo extends Omit<FollowRecord, 'known'> {
@@ -261,6 +278,7 @@ export interface MangaApi {
   followSet: (meta: FollowMeta, following: boolean) => Promise<void>
   followDismiss: (seriesUrl: string) => Promise<void>
   followCategory: (seriesUrl: string, category: FollowCategory) => Promise<void>
+  followAutoDownload: (seriesUrl: string, on: boolean | undefined) => Promise<void>
   updatesCheck: () => Promise<void>
   updatesStatus: () => Promise<UpdateStatus>
   updatesSetAutoDownload: (on: boolean) => Promise<void>
@@ -276,13 +294,48 @@ export interface MangaApi {
   downloadRemove: (id: string) => Promise<void>
   /** Deletes several downloads (their files too) at once. */
   downloadRemoveMany: (ids: string[]) => Promise<void>
-  titleAdd: (url: string) => Promise<Result<{ sourceId: string; sourceName: string; url: string; title: string; cover: string; chapters: number; siteIsNew: boolean; already: boolean }>>
-  titleList: () => Promise<{ sourceId: string; sourceName: string; url: string; title: string; cover: string; chapters: number }[]>
+  titleAdd: (url: string) => Promise<
+    Result<{
+      sourceId: string
+      sourceName: string
+      url: string
+      title: string
+      cover: string
+      chapters: number
+      siteIsNew: boolean
+      already: boolean
+    }>
+  >
+  titleList: () => Promise<
+    {
+      sourceId: string
+      sourceName: string
+      url: string
+      title: string
+      cover: string
+      chapters: number
+    }[]
+  >
   titleRemove: (url: string) => Promise<void>
-  titleImport: (list: { sourceId: string; sourceName: string; url: string; title: string; cover: string; chapters: number }[]) => Promise<void>
+  titleImport: (
+    list: {
+      sourceId: string
+      sourceName: string
+      url: string
+      title: string
+      cover: string
+      chapters: number
+    }[]
+  ) => Promise<void>
   windowControl: (action: 'minimize' | 'maximize' | 'close') => void
   /** How far the genre scan of each site has got. */
-  genreStatus: () => Promise<{ sites: Record<string, { at: number; genres: number; titles: number; note?: string; running?: boolean }>; progress: Record<string, string> }>
+  genreStatus: () => Promise<{
+    sites: Record<
+      string,
+      { at: number; genres: number; titles: number; note?: string; running?: boolean }
+    >
+    progress: Record<string, string>
+  }>
   genreScanNow: (id: string) => Promise<boolean>
   /** The background genre reading, one entry per site (for the progress panel). */
   genreJobs: () => Promise<GenreJob[]>
@@ -306,6 +359,12 @@ export interface MangaApi {
   progressHide: (seriesUrl: string) => Promise<void>
   grabChapter: (url: string) => Promise<GrabResponse>
   listSources: () => Promise<SourceInfo[]>
+  /** True while the library could not be read from disk (it is tried again by itself). */
+  catalogTrouble: () => Promise<boolean>
+  restartApp: () => Promise<boolean>
+  catalogDiagnose: () => Promise<string>
+  /** A line from the screen into data-log.txt. */
+  clientLog: (m: string) => void
   siteHealth: () => Promise<SiteHealth[]>
   /** Tests one site end to end (titles, chapter list, chapter pages, an image). */
   siteCheck: (id: string) => Promise<SiteHealth>
@@ -313,12 +372,26 @@ export interface MangaApi {
   removeSite: (id: string) => Promise<void>
   getSettings: () => Promise<AppSettings>
   setSettings: (patch: Partial<AppSettings>) => Promise<AppSettings>
+  /** The bytes of a page picture shown in the reader (for cutting off white borders). */
+  pageBytes: (src: string) => Promise<{ type: string; data: Uint8Array } | null>
   crawl: (id: string) => Promise<void>
   cancelCrawl: (id: string) => Promise<void>
   /** `sourceIds`: the sites to search; an empty list searches all of them. */
-  search: (q: string, sourceIds: string[], sort: 'site' | 'az' | 'za' | 'sites' | 'genre', offset: number, limit: number, kind?: 'manga' | 'manhwa' | 'manhua', genre?: string) => Promise<SearchResult>
+  search: (
+    q: string,
+    sourceIds: string[],
+    sort: 'site' | 'az' | 'za' | 'sites' | 'genre',
+    offset: number,
+    limit: number,
+    kind?: 'manga' | 'manhwa' | 'manhua',
+    genre?: string
+  ) => Promise<SearchResult>
   /** auto: saved list (a quick look at the newest chapters if it is old); check: that look now; full: read everything again. */
-  getSeries: (sourceId: string, url: string, mode?: 'auto' | 'check' | 'full') => Promise<Result<SeriesDetail>>
+  getSeries: (
+    sourceId: string,
+    url: string,
+    mode?: 'auto' | 'check' | 'full'
+  ) => Promise<Result<SeriesDetail>>
   onProgress: (cb: (p: CrawlProgress) => void) => () => void
 }
 

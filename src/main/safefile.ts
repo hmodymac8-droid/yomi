@@ -1,11 +1,21 @@
-import { appendFileSync, copyFileSync, existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs'
-import { rename, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { appendFileSync, copyFileSync, existsSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs'
+import { copyFile, mkdir, readdir, rename, stat, unlink, writeFile } from 'fs/promises'
+import { basename, dirname, join } from 'path'
+import { tmpdir } from 'os'
 
 /** Problems reading or writing data files go to data-log.txt next to them. */
+export let lastLogError = ''
+export let lastReadError = ''
 export function dataLog(path: string, m: string): void {
+  const line = new Date().toISOString() + ' ' + m
   try {
-    appendFileSync(join(dirname(path), 'data-log.txt'), new Date().toISOString() + ' ' + m + '\n')
+    appendFileSync(join(dirname(path), 'data-log.txt'), line + '\n')
+  } catch (e) {
+    lastLogError = String((e as Error)?.message ?? e)
+  }
+  // a copy in the temp folder too: if the data folder's log can't be written, this one says so
+  try {
+    appendFileSync(join(tmpdir(), 'yomi-log.txt'), line + ' | ' + dirname(path) + (lastLogError ? ' | LOGERR ' + lastLogError : '') + '\n')
   } catch {
     /* no log */
   }
@@ -33,6 +43,12 @@ function sleepSync(ms: number): void {
 export function readJson<T>(path: string, tries = 8): T | null {
   if (!existsSync(path)) {
     unreadable.delete(path)
+    // gone entirely (deleted, or a drive that wasn't there yet): the newest backup brings it back
+    const b = readBackup<T>(path)
+    if (b) {
+      dataLog(path, 'file was missing: restored from backup ' + b.from)
+      return b.value
+    }
     return null
   }
   let last: unknown
@@ -40,9 +56,11 @@ export function readJson<T>(path: string, tries = 8): T | null {
     try {
       const v = JSON.parse(readFileSync(path, 'utf8')) as T
       unreadable.delete(path)
+      backupSoon(path)
       return v
     } catch (e) {
       last = e
+      lastReadError = String((e as Error)?.message ?? e)
       if (i < tries - 1) sleepSync(400)
     }
   }
@@ -56,14 +74,92 @@ export function readJson<T>(path: string, tries = 8): T | null {
     }
     dataLog(path, 'could not read ' + path + ' (' + size + ' bytes): ' + String((last as Error)?.message ?? last))
     // a copy of what is there now, in case the file itself is damaged (not just busy)
+    let kept = false
     try {
       copyFileSync(path, path.replace(/\.json$/, '') + '.unreadable-' + Date.now() + '.json')
+      kept = true
     } catch {
       /* busy: nothing to copy now */
+    }
+    // The file can be read but is broken (cut off, garbled): the newest backup replaces it. A file that is only busy
+    // is never replaced (its newer data would be lost), and neither is a damaged one whose copy couldn't be kept.
+    if (kept && last instanceof SyntaxError) {
+      const b = readBackup<T>(path)
+      if (b) {
+        dataLog(path, 'file was damaged: restored from backup ' + b.from)
+        unreadable.delete(path)
+        return b.value
+      }
     }
   }
   unreadable.add(path)
   return null
+}
+
+/*
+ * Backups: once a day (about a minute after a file was read fine), each data file is copied to the "backups" folder
+ * next to it, and the last few copies are kept. They are used when the file goes missing or is found damaged.
+ */
+const backedUp = new Set<string>()
+const backupDir = (path: string): string => join(dirname(path), 'backups')
+const stem = (path: string): string => basename(path).replace(/\.json$/, '')
+const KEEP_BACKUPS = 3
+const day = (): string => new Date().toISOString().slice(0, 10)
+
+function backupSoon(path: string): void {
+  if (backedUp.has(path) || !path.endsWith('.json')) return
+  backedUp.add(path)
+  setTimeout(() => {
+    void (async () => {
+      try {
+        const size = (await stat(path)).size
+        if (size < 8) return // nothing worth keeping
+        await mkdir(backupDir(path), { recursive: true })
+        const target = join(backupDir(path), stem(path) + '-' + day() + '.json')
+        if (!existsSync(target)) {
+          await copyFile(path, target + '.part')
+          await rename(target + '.part', target)
+        }
+        const mine = (await readdir(backupDir(path))).filter((n) => n.startsWith(stem(path) + '-') && n.endsWith('.json')).sort()
+        for (const n of mine.slice(0, Math.max(0, mine.length - KEEP_BACKUPS))) await unlink(join(backupDir(path), n)).catch(() => undefined)
+      } catch (e) {
+        dataLog(path, 'backup failed: ' + String((e as Error)?.message ?? e))
+      }
+    })()
+  }, 60_000).unref?.()
+}
+
+/** The newest backup of a file that can be read, with the name it was read from. */
+function readBackup<T>(path: string): { value: T; from: string } | null {
+  try {
+    const dir = backupDir(path)
+    if (!existsSync(dir)) return null
+    const names = readdirSync(dir)
+      .filter((n) => n.startsWith(stem(path) + '-') && n.endsWith('.json'))
+      .sort()
+      .reverse()
+    for (const n of names) {
+      try {
+        return { value: JSON.parse(readFileSync(join(dir, n), 'utf8')) as T, from: n }
+      } catch {
+        /* this one is damaged too: try the one before */
+      }
+    }
+  } catch {
+    /* no backups */
+  }
+  return null
+}
+
+/** For the catalog: the newest backup if the file in use holds nothing (an empty file can look fine and still be wrong). */
+export function backupIfEmpty<T>(path: string, current: T, empty: (v: T) => boolean): T {
+  if (!empty(current)) return current
+  const b = readBackup<T>(path)
+  if (b && !empty(b.value)) {
+    dataLog(path, 'file held nothing: restored from backup ' + b.from)
+    return b.value
+  }
+  return current
 }
 
 /** True while a file exists on disk but couldn't be read: whatever is in memory instead must not replace it. */

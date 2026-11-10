@@ -616,3 +616,89 @@ select { cursor: pointer; }
 /* Following: sort and Continue */
 .shelftools .sortpick { margin-left: auto; }
 .newcard .continue { width: 100%; margin-top: 6px; }
+/* the language switch sits in the All titles header, next to the type tabs */
+.secact .langtabs { margin: 0; }
+.secact .langtabs button { padding: 6px 12px; }
+/* Series: progress while the chapter list is being collected */
+.chprog { margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 6px; background: var(--paper); }
+.chprog-top { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--foreground); }
+.chprog-time { flex: none; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.chprog-bar { position: relative; height: 4px; margin-top: 10px; border-radius: 2px; background: var(--muted); overflow: hidden; }
+.chprog-bar span { display: block; height: 100%; width: 0; background: var(--primary); transition: width 0.4s ease; }
+.chprog-bar.moving span { position: absolute; width: 30%; animation: chprog-move 1.4s ease-in-out infinite; }
+@keyframes chprog-move { 0% { left: -30%; } 100% { left: 100%; } }
+.chprog-note { margin-top: 8px; font-size: 12px; color: var(--muted-foreground); }
+@media (prefers-reduced-motion: reduce) { .chprog-bar.moving span { animation: none; left: 0; width: 100%; opacity: 0.5; } }
+/* Downloads: the Offline library as titles; one title opened */
+.dltitles { margin-top: 8px; }
+.dltitles .card { text-align: left; background: none; border: 0; padding: 0; color: inherit; }
+.dltitlehead { margin: 8px 0 18px; }
+.dltitleinfo { display: flex; gap: 20px; align-items: flex-start; margin-top: 16px; }
+.dltitleinfo img { width: 110px; aspect-ratio: 5 / 7; object-fit: cover; border: 1px solid var(--border); border-radius: 4px; background: var(--muted); flex: none; }
+.dltitleinfo h2 { margin: 0 0 6px; font-family: var(--font-display); font-size: 30px; font-weight: 500; line-height: 1.1; }
+.dltitleact { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+/* the library could not be read from disk yet: told plainly, tried again by itself */
+.datatrouble {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: rgba(240, 200, 50, 0.12);
+  border-bottom: 1px solid rgba(240, 200, 50, 0.4);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.datatrouble .mini {
+  margin-left: auto;
+  flex: none;
+}
+.datatrouble { flex-wrap: wrap; }
+.datatrouble .datareport { flex-basis: 100%; opacity: 0.7; font-size: 11px; user-select: text; word-break: break-all; }
+
+/* Reader: a page still on its way keeps its place (with a spinner), so the chapter end never shows up early */
+.pagebox { position: relative; display: flex; justify-content: center; width: 100%; flex: none; }
+.page.waiting { min-height: 80vh; min-width: min(100%, 480px); background: color-mix(in oklab, var(--paper) 70%, var(--muted)); }
+.page.waiting:not([src]) , .page.waiting { color: transparent; }
+.pagewait { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted-foreground); font-size: 12px; pointer-events: none; }
+.pagewait.bad { color: var(--destructive); }
+.pagewait button { pointer-events: auto; }
+.spin { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--primary); animation: spin 0.8s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pagesleft { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; font-size: 13px; color: var(--muted-foreground); }
+.pagesleft.bad { color: var(--destructive); }
+.loadingpages .spin { width: 9px; height: 9px; border-width: 1.5px; margin-right: 5px; }
+
+/* Reader extras: page wrapper (for the cut borders), colour filters, auto-scroll control */
+.pageinner { position: relative; flex: none; max-width: 100%; }
+.pageinner.sized { container-type: inline-size; }
+.pageinner .page.fit-width { width: 100%; }
+.reader .page { filter: var(--pagefilter, none); }
+.autoscroll { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 11; display: flex; align-items: center; gap: 8px; padding: 5px 8px 5px 12px; border-radius: 8px; border: 1px solid var(--border); background: color-mix(in oklab, var(--background) 94%, transparent); font-size: 12px; color: var(--muted-foreground); }
+.autoscroll b { color: var(--foreground); font-weight: 500; font-variant-numeric: tabular-nums; }
+.autoscroll .secondary { padding: 5px 12px; }
+.spin.slow { width: 10px; height: 10px; border-width: 1.5px; animation-duration: 2s; }
+
+/* search box under the All titles heading: searches inside the chosen language / type / sites / genre */
+.gridfind { display: flex; align-items: center; gap: 10px; height: 36px; width: 100%; max-width: 380px; margin-top: 10px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); transition: border-color 0.3s; }
+.gridfind:focus-within { border-bottom-color: var(--primary); }
+.gridfind svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.gridfind input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; font-size: 13px; color: var(--foreground); }
+.gridfind input:focus { outline: none; }
+.gridfind input:disabled { opacity: 0.6; }
+
+/* Discover: the hero has no "Featured series" list any more; Add a site is bigger and easier to see */
+.featured { grid-template-columns: 140px 1fr; }
+.addsite { padding: 26px 0; }
+.addsite p { font-size: 14px; max-width: 460px; }
+.addsite p b { font-size: 16px; font-weight: 600; }
+.addsite .add { max-width: 620px; }
+.addsite .add input { height: 48px; font-size: 15px; padding: 0 16px; }
+.addsite .add button { height: 48px; padding: 0 24px; font-size: 15px; font-weight: 600; }
+/* Following: per-series auto-download switch */
+.autodl { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); cursor: pointer; margin-top: 4px; }
+.autoscroll .speedbar { width: 160px; accent-color: var(--primary); cursor: pointer; }
+.autoscroll .speednum { min-width: 2ch; text-align: center; }
+.autoscroll { transition: opacity 0.3s, transform 0.3s; }
+.autoscroll.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, 12px); }
+

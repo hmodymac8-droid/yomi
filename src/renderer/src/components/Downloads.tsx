@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DownloadItem } from '../../../preload/index.d'
+import { OpenChapter, OpenSeries, chapterNumber, coverSrc, localPage } from '../lib'
 
 const mb = (b: number): string => (b / 1024 / 1024).toFixed(1) + ' MB'
 
@@ -10,7 +11,29 @@ interface Box {
   y2: number
 }
 
-export default function Downloads(_props: { onBack: () => void }): React.JSX.Element {
+interface Props {
+  onBack: () => void
+  /** Read a saved chapter (it opens from this computer, no internet needed). */
+  onRead: (s: OpenSeries, c: OpenChapter) => void
+  /** Open the series' own page (its full chapter list on the site). */
+  onOpen: (s: OpenSeries) => void
+}
+
+/** A series' cover: the saved one if Yomi knows it, else the first page of its first saved chapter (works offline). */
+interface CoverInfo {
+  cover: string
+  referer: string
+}
+
+// chapters of one series in reading order (Chapter 1 first); ones without a number keep the order they were saved in
+const byChapter = (a: DownloadItem, b: DownloadItem): number => {
+  const x = chapterNumber(a.chapterTitle)
+  const y = chapterNumber(b.chapterTitle)
+  if (x !== null && y !== null && x !== y) return x - y
+  return a.queuedAt - b.queuedAt
+}
+
+export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element {
   const [items, setItems] = useState<Record<string, DownloadItem>>({})
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [box, setBox] = useState<Box | null>(null) // the drag rectangle, in the scrolling area's own coordinates
@@ -31,14 +54,22 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
     window.api.downloadList().then((list) => {
       if (!cancelled) setItems(Object.fromEntries(list.map((i) => [i.id, i])))
     })
-    const off = window.api.onDownload((i) =>
+    const off = window.api.onDownload((i) => {
       setItems((prev) => {
         const next = { ...prev }
         if (i.status === 'removed') delete next[i.id]
         else next[i.id] = i
         return next
       })
-    )
+      // something deleted is no longer selected
+      if (i.status === 'removed')
+        setSelected((prev) => {
+          if (!prev.has(i.id)) return prev
+          const next = new Set(prev)
+          next.delete(i.id)
+          return next
+        })
+    })
     return () => {
       cancelled = true
       off()
@@ -49,32 +80,83 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
   // Two lists: what is still on its way (queued, downloading, failed) and what is saved on this PC.
   const [tab, setTabState] = useState<'queue' | 'library'>('library')
   const pickedTab = useRef(false)
+  // the saved series opened in the Offline library (null: every saved title, as covers)
+  const [openUrl, setOpenUrl] = useState<string | null>(null)
   const setTab = (t: 'queue' | 'library'): void => {
     pickedTab.current = true
     setTabState(t)
+    setOpenUrl(null)
     setSelected(new Set())
+  }
+  const openTitle = (url: string | null): void => {
+    setOpenUrl(url)
+    setSelected(new Set())
+    area.current?.scrollTo(0, 0)
   }
   // open on the queue while something is downloading (until you choose a tab yourself)
   useEffect(() => {
     if (!pickedTab.current && all.some((i) => i.status !== 'done')) setTabState('queue')
   }, [all])
-  const visible = useMemo(() => all.filter((i) => (tab === 'library' ? i.status === 'done' : i.status !== 'done')), [all, tab])
+  const saved = useMemo(() => all.filter((i) => i.status === 'done'), [all])
+  // every saved title, newest saved first, with its chapters in reading order
+  const titles = useMemo(() => {
+    const m = new Map<string, DownloadItem[]>()
+    for (const i of saved) m.set(i.seriesUrl, [...(m.get(i.seriesUrl) ?? []), i])
+    return [...m.entries()]
+      .map(([url, list]) => ({ url, title: list[0].seriesTitle, list: [...list].sort(byChapter), bytes: list.reduce((s, i) => s + i.bytes, 0), last: Math.max(...list.map((i) => i.queuedAt)) }))
+      .sort((a, b) => b.last - a.last)
+  }, [saved])
+  // (when the open title loses its last chapter, this is null and the grid of titles shows again)
+  const openTitleInfo = titles.find((x) => x.url === openUrl) ?? null
+  // the rows on screen: the queue, or the chapters of the open title (the grid of titles has no rows)
+  const visible = useMemo(
+    () => (tab === 'queue' ? all.filter((i) => i.status !== 'done') : openTitleInfo ? openTitleInfo.list : []),
+    [all, tab, openTitleInfo]
+  )
   const bySeries = useMemo(() => {
     const m = new Map<string, DownloadItem[]>()
     for (const i of visible) m.set(i.seriesTitle, [...(m.get(i.seriesTitle) ?? []), i])
     return m
   }, [visible])
+
+  // covers: what Yomi saved about the series (follows, reading history, the saved series page)
+  const [covers, setCovers] = useState<Record<string, CoverInfo>>({})
+  const [siteNames, setSiteNames] = useState<Record<string, string>>({})
+  useEffect(() => void window.api.listSources().then((l) => setSiteNames(Object.fromEntries(l.map((s) => [s.id, s.name])))), [])
+  const titleUrls = titles.map((x) => x.url).join('|')
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const found: Record<string, CoverInfo> = {}
+      const [follows, recent] = await Promise.all([window.api.followList(), window.api.progressRecent(1000)])
+      for (const x of [...recent, ...follows]) if (x.cover) found[x.seriesUrl] = { cover: x.cover, referer: x.coverReferer }
+      for (const u of titleUrls.split('|').filter(Boolean)) {
+        if (found[u]) continue
+        const c = await window.api.getSeriesCached(u)
+        if (c?.cover) found[u] = { cover: c.cover, referer: new URL(u).origin + '/' }
+      }
+      if (!cancelled) setCovers(found)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [titleUrls])
+
+  const seriesOf = (list: DownloadItem[]): OpenSeries => ({
+    title: list[0].seriesTitle,
+    cover: covers[list[0].seriesUrl]?.cover ?? '',
+    coverReferer: covers[list[0].seriesUrl]?.referer ?? list[0].referer,
+    entries: [{ sourceId: list[0].sourceId, sourceName: siteNames[list[0].sourceId] ?? list[0].sourceId, url: list[0].seriesUrl }]
+  })
+  // read a saved chapter: Next / Previous move through the chapters saved for this title
+  const read = (i: DownloadItem, list: DownloadItem[]): void => {
+    const chapters = [...list].reverse().map((x) => ({ title: x.chapterTitle, url: x.id }))
+    onRead(seriesOf(list), { url: i.id, title: i.chapterTitle, chapters, referer: i.referer, seriesUrl: i.seriesUrl, sourceId: i.sourceId })
+  }
   const ordered = useMemo(() => [...bySeries.values()].flat(), [bySeries]) // the order rows appear on screen
   const active = all.filter((i) => i.status === 'queued' || i.status === 'downloading').length
   const total = all.filter((i) => i.status === 'done').reduce((s, i) => s + i.bytes, 0)
 
-  // things that disappeared (deleted) are no longer selected
-  useEffect(() => {
-    setSelected((prev) => {
-      const next = new Set([...prev].filter((id) => items[id]))
-      return next.size === prev.size ? prev : next
-    })
-  }, [items])
 
   const deleteIds = async (ids: string[], what: string): Promise<void> => {
     if (ids.length === 0) return
@@ -233,20 +315,20 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
           <div className="kicker">ダウンロード</div>
           <h1>Downloads</h1>
           <p>
-            {active} in queue · {all.filter((i) => i.status === 'done').length} chapters offline · {mb(total)} used
+            {active} in queue · {saved.length} chapters offline · {mb(total)} used
           </p>
         </div>
       </div>
       <div className="shelftabs">
         <button className={tab === 'queue' ? 'on' : ''} onClick={() => setTab('queue')}>
-          Queue <span>{all.length - all.filter((i) => i.status === 'done').length}</span>
+          Queue <span>{all.length - saved.length}</span>
         </button>
         <button className={tab === 'library' ? 'on' : ''} onClick={() => setTab('library')}>
-          Offline library <span>{all.filter((i) => i.status === 'done').length}</span>
+          Offline library <span>{saved.length}</span>
         </button>
       </div>
       <div className="meta">
-        {all.filter((i) => i.status === 'done').length} saved · {mb(total)} on disk
+        {saved.length} saved · {mb(total)} on disk
         {active > 0 && ` · ${active} in progress`}
         {failed.length > 0 && (
           <button
@@ -306,6 +388,43 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
           </select>
         </label>
       </div>
+      {tab === 'library' && openTitleInfo && (
+        <div className="dltitlehead">
+          <button className="mini big" onClick={() => openTitle(null)}>
+            ‹ All saved titles
+          </button>
+          <div className="dltitleinfo">
+            {covers[openTitleInfo.url] ? (
+              <img
+                src={coverSrc(covers[openTitleInfo.url].cover, covers[openTitleInfo.url].referer)}
+                alt=""
+                onError={(e) => {
+                  const img = e.currentTarget
+                  if (img.dataset.local) return
+                  img.dataset.local = '1'
+                  img.src = localPage(openTitleInfo.list[0], openTitleInfo.list[0].files[0])
+                }}
+              />
+            ) : (
+              <img src={localPage(openTitleInfo.list[0], openTitleInfo.list[0].files[0])} alt="" />
+            )}
+            <div>
+              <h2>{openTitleInfo.title}</h2>
+              <p className="sub">
+                {openTitleInfo.list.length} {openTitleInfo.list.length === 1 ? 'chapter' : 'chapters'} saved · {mb(openTitleInfo.bytes)} · reads without the internet
+              </p>
+              <div className="dltitleact">
+                <button className="primary" onClick={() => read(openTitleInfo.list[0], openTitleInfo.list)}>
+                  ▶ Read {openTitleInfo.list[0].chapterTitle}
+                </button>
+                <button className="mini big" onClick={() => onOpen(seriesOf(openTitleInfo.list))} title="The full chapter list on the site">
+                  Open series page
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {visible.length > 0 && (
         <div className="seltools">
           <button className="mini big" onClick={() => setSelected(new Set(visible.map((i) => i.id)))}>
@@ -329,8 +448,8 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
           )}
           {note && <span className="sub">{note}</span>}
           <span className="grow" />
-          <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds(visible.map((i) => i.id), tab === 'library' ? 'ALL saved chapters' : 'everything in the queue')}>
-            {deleting ? 'Deleting…' : 'Delete all'}
+          <button className="mini big danger" disabled={deleting} onClick={() => void deleteIds(visible.map((i) => i.id), tab === 'library' ? `every saved chapter of ${openTitleInfo?.title ?? 'this title'}` : 'everything in the queue')}>
+            {deleting ? 'Deleting…' : tab === 'library' ? 'Delete this title' : 'Delete all'}
           </button>
         </div>
       )}
@@ -338,18 +457,60 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
         <div className="sub seltip">Tip: press and drag across the list to select several, like in Windows. Ctrl keeps the earlier picks, Shift selects a range.</div>
       )}
 
-      {visible.length === 0 && (
-        <div className="hint">
-          {tab === 'queue'
-            ? 'Nothing waiting. Open a series and press Download on a chapter, or Download unread.'
-            : 'No chapters saved yet. Finished downloads show up here and read without the internet.'}
+      {tab === 'queue' && visible.length === 0 && (
+        <div className="hint">Nothing waiting. Open a series and press Download on a chapter, or Download unread.</div>
+      )}
+      {tab === 'library' && titles.length === 0 && (
+        <div className="hint">No chapters saved yet. Finished downloads show up here and read without the internet.</div>
+      )}
+
+      {tab === 'library' && !openTitleInfo && titles.length > 0 && (
+        <div className="grid dltitles">
+          {titles.map((x) => {
+            const c = covers[x.url]
+            const first = x.list[0]
+            return (
+              <button key={x.url} className="card" onClick={() => openTitle(x.url)} title={`Open ${x.title}: its saved chapters`}>
+                <div className="cover" data-letter={x.title.trim().slice(0, 1).toUpperCase()}>
+                  {c ? (
+                    <img
+                      loading="lazy"
+                      src={coverSrc(c.cover, c.referer)}
+                      alt=""
+                      // offline, or the picture is gone: the first saved page instead
+                      onError={(e) => {
+                        const img = e.currentTarget
+                        if (img.dataset.local) return
+                        img.dataset.local = '1'
+                        img.src = localPage(first, first.files[0])
+                      }}
+                    />
+                  ) : first.files[0] ? (
+                    <img loading="lazy" src={localPage(first, first.files[0])} alt="" />
+                  ) : (
+                    <div className="ph">{x.title.trim().slice(0, 1).toUpperCase()}</div>
+                  )}
+                  <span className="badge">{x.list.length} saved</span>
+                </div>
+                <div className="name" title={x.title}>
+                  {x.title}
+                </div>
+                <div className="from">
+                  {x.list.length === 1 ? x.list[0].chapterTitle : `${x.list[0].chapterTitle} – ${x.list[x.list.length - 1].chapterTitle}`} · {mb(x.bytes)}
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
+
       {[...bySeries.entries()].map(([title, list]) => (
         <section key={title} className="dlgroup">
-          <h3 className="dlgrouphead" onClick={() => toggleGroup(list)} title="Click to select every chapter of this series">
-            {title}
-          </h3>
+          {tab === 'queue' && (
+            <h3 className="dlgrouphead" onClick={() => toggleGroup(list)} title="Click to select every chapter of this series">
+              {title}
+            </h3>
+          )}
           {list.map((i) => (
             <div
               key={i.id}
@@ -385,9 +546,14 @@ export default function Downloads(_props: { onBack: () => void }): React.JSX.Ele
               {i.status !== 'downloading' && (
                 <>
                   {i.status === 'done' && (
-                    <button className="mini" onClick={() => void exportCbz([i.id])}>
-                      Export CBZ
-                    </button>
+                    <>
+                      <button className="mini on" onClick={() => read(i, list)}>
+                        Read
+                      </button>
+                      <button className="mini" onClick={() => void exportCbz([i.id])}>
+                        Export CBZ
+                      </button>
+                    </>
                   )}
                   <button className="mini" onClick={() => void deleteIds([i.id], i.chapterTitle)}>
                     {i.status === 'done' ? 'Delete' : 'Remove'}

@@ -124,19 +124,6 @@ export default function Featured({ recent, follows, sources, onOpen, onRead }: P
           </button>
         </div>
       </div>
-      {picks.length > 1 && (
-        <ol className="flist">
-          <li className="flabel">Featured series</li>
-          {picks.map((x, i) => (
-            <li key={x.seriesUrl}>
-              <button className={i === sel ? 'on' : ''} onClick={() => setSel(i)}>
-                <span className="fnum">{String(i + 1).padStart(2, '0')}</span>
-                <span className="ftitle">{x.title}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
     </section>
   )
 }

@@ -9,7 +9,7 @@ import { getMode } from './hostmode'
 import { hiddenWindow, loadPage } from './grabber'
 import { canonGenre, knownGenre, parseMeta, parseSeriesList, type SeriesType } from './staticParse'
 import type { SourceDef } from '../preload/index.d'
-import { addCatalogEntries, catalogUrls, getSource, listSources } from './catalog'
+import { addCatalogEntries, catalogUrls, crawlSource, getSource, listSources } from './catalog'
 import { isOffline } from './downloads'
 import { isUnreadable, readJson, writeAtomicAsync } from './safefile'
 
@@ -65,7 +65,9 @@ function saveIndex(): void {
 export function urlKey(u: string): string {
   try {
     const x = new URL(u)
-    return (x.hostname.replace(/^www\./, '') + decodeURIComponent(x.pathname).replace(/\/+$/, '')).toLowerCase()
+    return (
+      x.hostname.replace(/^www\./, '') + decodeURIComponent(x.pathname).replace(/\/+$/, '')
+    ).toLowerCase()
   } catch {
     return u.toLowerCase()
   }
@@ -78,9 +80,11 @@ export function genreIndexVersion(): number {
 
 /** What the genre pages said about one series (by its address). */
 export function crawledMeta(url: string): { g?: string[]; t?: SeriesType } | undefined {
+  // read the index first: reading it for the first time resets the lookup, which must not happen half-way through
+  const all = loadIndex()
   if (!lookup) {
     lookup = new Map()
-    for (const site of Object.values(loadIndex())) {
+    for (const site of Object.values(all)) {
       for (const [k, nums] of Object.entries(site.map)) {
         const cur = lookup.get(k) ?? {}
         cur.g = [...new Set([...(cur.g ?? []), ...nums.map((n) => site.genres[n])])]
@@ -96,18 +100,33 @@ export function crawledMeta(url: string): { g?: string[]; t?: SeriesType } | und
   return lookup.get(url)
 }
 
-export function genreScanStatus(): Record<string, { at: number; genres: number; titles: number; note?: string; running?: boolean }> {
-  const out: Record<string, { at: number; genres: number; titles: number; note?: string; running?: boolean }> = {}
-  for (const [id, s] of Object.entries(loadIndex())) out[id] = { at: s.at, genres: s.stats.genres, titles: s.stats.titles, note: s.stats.note }
-  for (const id of running) out[id] = { ...(out[id] ?? { at: 0, genres: 0, titles: 0 }), running: true }
+export function genreScanStatus(): Record<
+  string,
+  { at: number; genres: number; titles: number; note?: string; running?: boolean }
+> {
+  const out: Record<
+    string,
+    { at: number; genres: number; titles: number; note?: string; running?: boolean }
+  > = {}
+  for (const [id, s] of Object.entries(loadIndex()))
+    out[id] = { at: s.at, genres: s.stats.genres, titles: s.stats.titles, note: s.stats.note }
+  for (const id of running)
+    out[id] = { ...(out[id] ?? { at: 0, genres: 0, titles: 0 }), running: true }
   return out
 }
 
 // ---- finding a site's genre pages ---------------------------------------------------------------------------------
 
-const TYPE_WORDS: Record<string, SeriesType> = { manga: 'manga', manhwa: 'manhwa', manhua: 'manhua', webtoon: 'manhwa', webtoons: 'manhwa' }
+const TYPE_WORDS: Record<string, SeriesType> = {
+  manga: 'manga',
+  manhwa: 'manhwa',
+  manhua: 'manhua',
+  webtoon: 'manhwa',
+  webtoons: 'manhwa'
+}
 // /genre/action, /genres/action/, /manga-genre/action/, /category/action, /tag/action, /type/manhwa, ?genre=action
-const PATH_RE = /^(.*?\/(?:genres?|manga-genres?|genre-manga|comic-genres?|categor(?:y|ies)|tags?|types?|manga-type|comic-type))\/([^/?#]+)\/?$/i
+const PATH_RE =
+  /^(.*?\/(?:genres?|manga-genres?|genre-manga|comic-genres?|categor(?:y|ies)|tags?|types?|manga-type|comic-type))\/([^/?#]+)\/?$/i
 const QUERY_KEYS = ['genre', 'genres', 'genre[]', 'genres[]', 'type', 'types', 'category', 'tag']
 
 export interface GenrePage {
@@ -130,7 +149,11 @@ function findGenreLinks(html: string, pageUrl: string, host: string): GenrePage[
       return
     }
     if (u.hostname.replace(/^www\./, '') !== host) return
-    const text = $(a).text().replace(/\s+/g, ' ').replace(/\s*\(?\d[\d,.]*\)?\s*$/, '').trim()
+    const text = $(a)
+      .text()
+      .replace(/\s+/g, ' ')
+      .replace(/\s*\(?\d[\d,.]*\)?\s*$/, '')
+      .trim()
     let prefix = ''
     let slug = ''
     const m = PATH_RE.exec(u.pathname)
@@ -149,11 +172,19 @@ function findGenreLinks(html: string, pageUrl: string, host: string): GenrePage[
     label = label.replace(/^(top|best|hot)\s+/i, '')
     const typeWord = TYPE_WORDS[label.toLowerCase()] ?? TYPE_WORDS[slug.toLowerCase()]
     // the standard name from the label, else from the address ("/genre/award-winning" under an Arabic label)
-    const name = typeWord ? label : knownGenre(label) ?? knownGenre(slug.replace(/[-_+]+/g, ' ')) ?? canonGenre(label)
+    const name = typeWord
+      ? label
+      : (knownGenre(label) ?? knownGenre(slug.replace(/[-_+]+/g, ' ')) ?? canonGenre(label))
     if (!name) return
     u.hash = ''
     const g = groups.get(prefix) ?? new Map<string, GenrePage>()
-    if (!g.has(slug.toLowerCase())) g.set(slug.toLowerCase(), { name: typeWord ? typeWord : name, url: u.href, ...(typeWord ? { type: typeWord } : {}), ...(top ? { top: true } : {}) })
+    if (!g.has(slug.toLowerCase()))
+      g.set(slug.toLowerCase(), {
+        name: typeWord ? typeWord : name,
+        url: u.href,
+        ...(typeWord ? { type: typeWord } : {}),
+        ...(top ? { top: true } : {})
+      })
     groups.set(prefix, g)
   })
   $('input[name], select[name]').each((_, el) => {
@@ -166,24 +197,45 @@ function findGenreLinks(html: string, pageUrl: string, host: string): GenrePage[
     } catch {
       return
     }
-    if (action.hostname.replace(/^www\./, '') !== host || (form.attr('method') ?? 'get').toLowerCase() !== 'get') return
+    if (
+      action.hostname.replace(/^www\./, '') !== host ||
+      (form.attr('method') ?? 'get').toLowerCase() !== 'get'
+    )
+      return
     const choices: { value: string; label: string }[] =
       el.tagName === 'select'
-        ? $(el).find('option').toArray().map((o) => ({ value: $(o).attr('value') ?? '', label: $(o).text() }))
-        : [{ value: $(el).attr('value') ?? '', label: $(el).closest('label').text() || $(el).next('label').text() || ($(el).attr('id') ? $('label[for="' + $(el).attr('id') + '"]').text() : '') }]
+        ? $(el)
+            .find('option')
+            .toArray()
+            .map((o) => ({ value: $(o).attr('value') ?? '', label: $(o).text() }))
+        : [
+            {
+              value: $(el).attr('value') ?? '',
+              label:
+                $(el).closest('label').text() ||
+                $(el).next('label').text() ||
+                ($(el).attr('id') ? $('label[for="' + $(el).attr('id') + '"]').text() : '')
+            }
+          ]
     for (const c of choices) {
       const value = c.value.trim()
       if (!value || /^(all|any|0)$/i.test(value)) continue
-      const label = (c.label || value).replace(/\s+/g, ' ').replace(/\s*\(?\d[\d,.]*\)?\s*$/, '').trim()
+      const label = (c.label || value)
+        .replace(/\s+/g, ' ')
+        .replace(/\s*\(?\d[\d,.]*\)?\s*$/, '')
+        .trim()
       const typeWord = TYPE_WORDS[label.toLowerCase()] ?? TYPE_WORDS[value.toLowerCase()]
-      const name = typeWord ? typeWord : knownGenre(label) ?? knownGenre(value) ?? canonGenre(label)
+      const name = typeWord
+        ? typeWord
+        : (knownGenre(label) ?? knownGenre(value) ?? canonGenre(label))
       if (!name) continue
       const u = new URL(action.href)
       u.search = ''
       u.searchParams.set(nameAttr, value)
       const prefix = u.pathname + '?' + nameAttr
       const g = groups.get(prefix) ?? new Map<string, GenrePage>()
-      if (!g.has(value.toLowerCase())) g.set(value.toLowerCase(), { name, url: u.href, ...(typeWord ? { type: typeWord } : {}) })
+      if (!g.has(value.toLowerCase()))
+        g.set(value.toLowerCase(), { name, url: u.href, ...(typeWord ? { type: typeWord } : {}) })
       groups.set(prefix, g)
     }
   })
@@ -198,7 +250,9 @@ function findGenreLinks(html: string, pageUrl: string, host: string): GenrePage[
   // the same genre reachable two ways: keep one (the full genre page over a "Top …" list)
   out.sort((a, b) => Number(!!a.top) - Number(!!b.top))
   const seen = new Set<string>()
-  return out.filter((p) => (seen.has(p.name + (p.type ?? '')) ? false : (seen.add(p.name + (p.type ?? '')), true)))
+  return out.filter((p) =>
+    seen.has(p.name + (p.type ?? '')) ? false : (seen.add(p.name + (p.type ?? '')), true)
+  )
 }
 
 /** Links to a site's list of genres ("/Genre", "/genres/"), to look there too. */
@@ -208,7 +262,10 @@ function genreIndexLinks(html: string, pageUrl: string, host: string): string[] 
   $('a[href]').each((_, a) => {
     try {
       const u = new URL(($(a).attr('href') ?? '').trim(), pageUrl)
-      if (u.hostname.replace(/^www\./, '') === host && /^\/(genres?|manga-genres?|categories|tags|genre-list)\/?$/i.test(u.pathname)) {
+      if (
+        u.hostname.replace(/^www\./, '') === host &&
+        /^\/(genres?|manga-genres?|categories|tags|genre-list)\/?$/i.test(u.pathname)
+      ) {
         u.hash = ''
         out.add(u.href)
       }
@@ -265,7 +322,8 @@ export async function discoverGenres(src: SourceDef): Promise<GenrePage[]> {
   const browser = getMode(new URL(src.baseUrl).hostname + '|list') === 'browser'
   const tries = [src.baseUrl]
   if (src.listTemplate) tries.push(src.listTemplate.replace('{n}', '1'))
-  for (const p of ['genres/', 'genre/', 'manga-genres/', 'browse/', 'manga/', 'search']) tries.push(new URL('/' + p, src.baseUrl).href)
+  for (const p of ['genres/', 'genre/', 'manga-genres/', 'browse/', 'manga/', 'search'])
+    tries.push(new URL('/' + p, src.baseUrl).href)
   const found = new Map<string, GenrePage>()
   const queue = [...new Set(tries)]
   const done = new Set<string>()
@@ -277,7 +335,8 @@ export async function discoverGenres(src: SourceDef): Promise<GenrePage[]> {
       if (!(await robotsAllows(u))) continue
       const html = await getHtml(u, browser)
       // a link to the site's genre list goes to the front of the queue
-      for (const x of genreIndexLinks(html, u, host)) if (!done.has(x) && !queue.slice(i + 1).includes(x)) queue.splice(i + 1, 0, x)
+      for (const x of genreIndexLinks(html, u, host))
+        if (!done.has(x) && !queue.slice(i + 1).includes(x)) queue.splice(i + 1, 0, x)
       for (const g of findGenreLinks(html, u, host)) if (!found.has(g.url)) found.set(g.url, g)
     } catch {
       /* try the next page */
@@ -296,7 +355,9 @@ export async function discoverGenres(src: SourceDef): Promise<GenrePage[]> {
       }
       await sleep(800)
     }
-    if (combined) for (const g of findGenreLinks(combined, src.baseUrl, host)) if (!found.has(g.url)) found.set(g.url, g)
+    if (combined)
+      for (const g of findGenreLinks(combined, src.baseUrl, host))
+        if (!found.has(g.url)) found.set(g.url, g)
   }
   return [...found.values()]
 }
@@ -305,10 +366,15 @@ export async function discoverGenres(src: SourceDef): Promise<GenrePage[]> {
 
 function pageUrls(genreUrl: string, listTemplate: string): ((n: number) => string)[] {
   const base = genreUrl.replace(/\/?$/, genreUrl.includes('?') ? '' : '/')
-  const q = (k: string) => (n: number): string => genreUrl + (genreUrl.includes('?') ? '&' : '?') + k + '=' + n
+  const q =
+    (k: string) =>
+    (n: number): string =>
+      genreUrl + (genreUrl.includes('?') ? '&' : '?') + k + '=' + n
   const path = (n: number): string => base + 'page/' + n + '/'
   const plain = (n: number): string => base + n
-  const list = /\/page\/\{n\}/.test(listTemplate) ? [path, q('page'), plain] : [q('page'), path, plain]
+  const list = /\/page\/\{n\}/.test(listTemplate)
+    ? [path, q('page'), plain]
+    : [q('page'), path, plain]
   return list
 }
 
@@ -327,7 +393,11 @@ function fullListLink(html: string, g: GenrePage): string | null {
   let slug = ''
   try {
     const u = new URL(g.url)
-    slug = decodeURIComponent(u.search ? [...u.searchParams.values()][0] ?? '' : u.pathname.replace(/\/+$/, '').split('/').pop() ?? '').toLowerCase()
+    slug = decodeURIComponent(
+      u.search
+        ? ([...u.searchParams.values()][0] ?? '')
+        : (u.pathname.replace(/\/+$/, '').split('/').pop() ?? '')
+    ).toLowerCase()
   } catch {
     return null
   }
@@ -337,7 +407,8 @@ function fullListLink(html: string, g: GenrePage): string | null {
     try {
       const u = new URL($(a).attr('href') ?? '', g.url)
       if (u.hostname !== new URL(g.url).hostname) continue
-      for (const k of ['genre', 'genres', 'genre[]', 'genres[]']) if ((u.searchParams.get(k) ?? '').toLowerCase() === slug) return u.href
+      for (const k of ['genre', 'genres', 'genre[]', 'genres[]'])
+        if ((u.searchParams.get(k) ?? '').toLowerCase() === slug) return u.href
     } catch {
       /* not a link */
     }
@@ -367,11 +438,16 @@ async function crawlGenre(
     for (const it of items) {
       if (!out.urls.has(it.url)) fresh++
       out.urls.set(it.url, (out.urls.get(it.url) ?? 0) + 1)
-      if (!out.items.has(it.url) && it.title) out.items.set(it.url, { title: it.title, cover: it.cover })
+      if (!out.items.has(it.url) && it.title)
+        out.items.set(it.url, { title: it.title, cover: it.cover })
     }
     return fresh
   }
-  const first = parseSeriesList(g === g0 ? html0 : await getHtml(g.url, browser), g.url, src.seriesRe)
+  const first = parseSeriesList(
+    g === g0 ? html0 : await getHtml(g.url, browser),
+    g.url,
+    src.seriesRe
+  )
   out.pages = 1
   add(first)
   if (first.length < 5 || maxPages <= 1) return out
@@ -432,6 +508,24 @@ function emptySite(): SiteIndex {
   return { at: 0, genres: [], map: {}, types: {}, stats: { genres: 0, pages: 0, titles: 0 } }
 }
 
+/**
+ * A site with a data feed gives every title's genres and type with the title list itself: no genre pages to read, no
+ * title pages to open. The whole index of that site is replaced by what the feed said.
+ */
+export function setFeedTags(
+  siteId: string,
+  items: { url: string; type?: SeriesType; genres: string[] }[]
+): void {
+  const site = emptySite()
+  for (const it of items) tag(site, urlKey(it.url), it.genres, it.type)
+  restat(site)
+  site.at = Date.now()
+  site.genrePagesAt = Date.now()
+  site.complete = true
+  loadIndex()[siteId] = site
+  saveIndexNow()
+}
+
 /** Puts genres / a type on one title in a site's index (adds to what is there). */
 function tag(site: SiteIndex, key: string, names: string[], type?: SeriesType): void {
   for (const name of names) {
@@ -479,13 +573,19 @@ function saveIndexNow(): void {
  */
 export async function scanSiteGenres(
   src: SourceDef,
-  opts: { maxGenres?: number; maxPages?: number; save?: boolean; onProgress?: (done: number, total: number, page: number, genre: string) => void } = {}
+  opts: {
+    maxGenres?: number
+    maxPages?: number
+    save?: boolean
+    onProgress?: (done: number, total: number, page: number, genre: string) => void
+  } = {}
 ): Promise<ScanReport> {
   const stop = (): boolean => cancelled.has(src.id)
   const browser = getMode(new URL(src.baseUrl).hostname + '|list') === 'browser'
   const pause = browser ? 4000 : 1000
   let found = await discoverGenres(src)
-  if (found.filter((p) => !p.type).length > 60) found = found.filter((p) => p.type || knownGenre(p.name))
+  if (found.filter((p) => !p.type).length > 60)
+    found = found.filter((p) => p.type || knownGenre(p.name))
   const pages = found.slice(0, opts.maxGenres ?? 200)
   const results: { g: GenrePage; c: Crawled }[] = []
   let i = 0
@@ -494,7 +594,12 @@ export async function scanSiteGenres(
     opts.onProgress?.(i, pages.length, 0, g.name)
     try {
       if (!(await robotsAllows(g.url))) continue
-      results.push({ g, c: await crawlGenre(src, g, browser, opts.maxPages ?? 1500, pause, stop, (p) => opts.onProgress?.(i, pages.length, p, g.name)) })
+      results.push({
+        g,
+        c: await crawlGenre(src, g, browser, opts.maxPages ?? 1500, pause, stop, (p) =>
+          opts.onProgress?.(i, pages.length, p, g.name)
+        )
+      })
     } catch (e) {
       if (/refused/.test(String(e))) throw e // the site said no: the caller pauses this site
     }
@@ -512,16 +617,25 @@ export async function scanSiteGenres(
   }
   const realGenres = results.filter((r) => !r.g.type).length
   const sidebar = new Set<string>()
-  if (realGenres >= 6) for (const [u, n] of genreCount) if (n > Math.max(8, realGenres * 0.6)) sidebar.add(u)
+  if (realGenres >= 6)
+    for (const [u, n] of genreCount) if (n > Math.max(8, realGenres * 0.6)) sidebar.add(u)
 
   // titles the genre pages know but the catalog doesn't (sites whose own list is cut short)
   const extra: { url: string; title: string; cover: string }[] = []
-  for (const { c } of results) for (const [u, it] of c.items) if (!sidebar.has(u)) extra.push({ url: u, ...it })
+  for (const { c } of results)
+    for (const [u, it] of c.items) if (!sidebar.has(u)) extra.push({ url: u, ...it })
   const added = opts.save === false ? 0 : addCatalogEntries(src.id, extra)
 
   const inCatalog = new Set(catalogUrls(src.id).map(urlKey))
   const site = emptySite()
-  const report: ScanReport = { genres: [], titles: 0, pages: 0, topTagged: [], matchKeys: [], added }
+  const report: ScanReport = {
+    genres: [],
+    titles: 0,
+    pages: 0,
+    topTagged: [],
+    matchKeys: [],
+    added
+  }
   for (const { g, c } of results) {
     let kept = 0
     for (const [u, onPages] of c.urls) {
@@ -549,7 +663,12 @@ export async function scanSiteGenres(
     // keep what title pages found earlier, add what the genre pages found now
     const prev = all[src.id]
     if (prev) {
-      for (const [k, nums] of Object.entries(prev.map)) tag(site, k, nums.map((n) => prev.genres[n]))
+      for (const [k, nums] of Object.entries(prev.map))
+        tag(
+          site,
+          k,
+          nums.map((n) => prev.genres[n])
+        )
       for (const [k, t] of Object.entries(prev.types)) site.types[k] ??= t
       site.checked = prev.checked
     }
@@ -563,7 +682,10 @@ export async function scanSiteGenres(
 
 // ---- Weebcentral: its search lists 32 titles at a time WITH type, status and tags ---------------------------------
 
-async function weebcentralFeed(src: SourceDef, onProgress: (done: number, total: number) => void): Promise<void> {
+async function weebcentralFeed(
+  src: SourceDef,
+  onProgress: (done: number, total: number) => void
+): Promise<void> {
   const total = Math.max(1, Math.ceil(catalogUrls(src.id).length / 32))
   const all = loadIndex()
   const site = all[src.id] ?? emptySite()
@@ -586,7 +708,10 @@ async function weebcentralFeed(src: SourceDef, onProgress: (done: number, total:
       $(sec)
         .find('strong')
         .each((_, st) => {
-          const label = $(st).text().replace(/[:\s]+$/, '').toLowerCase()
+          const label = $(st)
+            .text()
+            .replace(/[:\s]+$/, '')
+            .toLowerCase()
           fields[label] = $(st)
             .parent()
             .find('span')
@@ -597,7 +722,9 @@ async function weebcentralFeed(src: SourceDef, onProgress: (done: number, total:
       if (!fields['tag(s)'] && !fields['type']) return
       n++
       const type = TYPE_WORDS[(fields['type']?.[0] ?? '').toLowerCase()]
-      const names = (fields['tag(s)'] ?? []).map((t) => canonGenre(t)).filter((x): x is string => !!x)
+      const names = (fields['tag(s)'] ?? [])
+        .map((t) => canonGenre(t))
+        .filter((x): x is string => !!x)
       tag(site, urlKey(new URL(href, url).href), names, type)
     })
     if (n === 0) break // past the end of the list
@@ -617,7 +744,10 @@ async function weebcentralFeed(src: SourceDef, onProgress: (done: number, total:
 
 // ---- reading each remaining title's own page (sites without usable genre pages) ------------------------------------
 
-async function titlePages(src: SourceDef, onProgress: (done: number, total: number) => void): Promise<void> {
+async function titlePages(
+  src: SourceDef,
+  onProgress: (done: number, total: number) => void
+): Promise<void> {
   const all = loadIndex()
   const site = all[src.id] ?? emptySite()
   all[src.id] = site
@@ -698,7 +828,15 @@ interface Live {
 const live = new Map<string, Live>()
 
 function setLive(id: string, patch: Partial<Live>): void {
-  const cur = live.get(id) ?? { state: 'waiting', phase: '', done: 0, total: 0, stepMs: 1000, t0: Date.now(), done0: 0 }
+  const cur = live.get(id) ?? {
+    state: 'waiting',
+    phase: '',
+    done: 0,
+    total: 0,
+    stepMs: 1000,
+    t0: Date.now(),
+    done0: 0
+  }
   if (patch.phase && patch.phase !== cur.phase) {
     cur.t0 = Date.now()
     cur.done0 = patch.done ?? 0
@@ -720,21 +858,28 @@ export function genreJobs(): GenreJob[] {
       const spent = Date.now() - l.t0
       // genre pages: a genre can be 3 pages or 380, so wait for a whole genre before estimating
       const need = l.stepMs >= 20000 ? 1 : 5
-      etaMs = did >= need && spent > 0 ? (left * spent) / did : l.stepMs >= 20000 ? null : left * l.stepMs
+      etaMs =
+        did >= need && spent > 0 ? (left * spent) / did : l.stepMs >= 20000 ? null : left * l.stepMs
     }
     const done = !l && site?.complete
     const resting = !l && !!site?.failedAt && Date.now() - site.failedAt < 24 * 3600 * 1000
     return {
       id: s.id,
       name: s.name,
-      state: l?.state ?? (done ? 'done' : s.id === 'comix-to' ? 'skipped' : resting ? 'paused' : 'waiting'),
+      state:
+        l?.state ??
+        (done ? 'done' : s.id === 'comix-to' ? 'skipped' : resting ? 'paused' : 'waiting'),
       phase: l?.phase ?? '',
       done: l?.done ?? 0,
       total: l?.total ?? 0,
       etaMs,
       tagged,
       titles: s.count,
-      note: l?.note ?? (resting ? 'Resting: the site asked us to slow down, trying again tomorrow' : site?.stats.note),
+      note:
+        l?.note ??
+        (resting
+          ? 'Resting: the site asked us to slow down, trying again tomorrow'
+          : site?.stats.note),
       detail: l?.detail
     }
   })
@@ -748,6 +893,7 @@ const SKIP = new Set(['comix-to'])
 /** Is a site's genre job due: never finished, or finished more than a week ago (refused ones wait a day). */
 export function genreScanDue(id: string): boolean {
   if (SKIP.has(id)) return false
+  if (getSource(id)?.api) return false // its genres arrive with its title list
   const s = loadIndex()[id]
   if (!s) return true
   if (s.failedAt && Date.now() - s.failedAt < 24 * 3600 * 1000) return false
@@ -765,6 +911,7 @@ export function forgetGenres(id: string): void {
 
 /** One site's whole genre job: its best source of genres, then each remaining title's own page. */
 async function runSite(src: SourceDef): Promise<void> {
+  if (src.api) return // (a site with a data feed gets its genres when its titles are read)
   if (running.has(src.id)) return
   running.add(src.id)
   glog(src.id + ' job begins')
@@ -774,17 +921,43 @@ async function runSite(src: SourceDef): Promise<void> {
     const site = loadIndex()[src.id]
     const fresh = site?.genrePagesAt && Date.now() - site.genrePagesAt < 7 * 24 * 3600 * 1000
     if (host === 'weebcentral.com') {
-      setLive(src.id, { state: 'running', phase: 'Reading the site’s title list with genres', done: 0, total: 0, stepMs: 10000 })
-      await weebcentralFeed(src, (done, total) => setLive(src.id, { state: 'running', done, total }))
+      setLive(src.id, {
+        state: 'running',
+        phase: 'Reading the site’s title list with genres',
+        done: 0,
+        total: 0,
+        stepMs: 10000
+      })
+      await weebcentralFeed(src, (done, total) =>
+        setLive(src.id, { state: 'running', done, total })
+      )
     } else {
       if (!fresh) {
-        setLive(src.id, { state: 'running', phase: 'Reading genre pages', done: 0, total: 0, stepMs: 20000 })
+        setLive(src.id, {
+          state: 'running',
+          phase: 'Reading genre pages',
+          done: 0,
+          total: 0,
+          stepMs: 20000
+        })
         await scanSiteGenres(src, {
-          onProgress: (done, total, page, genre) => setLive(src.id, { state: 'running', done, total, detail: genre ? genre + (page ? ', page ' + page : '') : undefined })
+          onProgress: (done, total, page, genre) =>
+            setLive(src.id, {
+              state: 'running',
+              done,
+              total,
+              detail: genre ? genre + (page ? ', page ' + page : '') : undefined
+            })
         })
       }
       const browserSeries = getMode(new URL(src.baseUrl).hostname + '|series') === 'browser'
-      setLive(src.id, { state: 'running', phase: 'Reading titles one by one', done: 0, total: 0, stepMs: browserSeries ? 1500 : 1300 })
+      setLive(src.id, {
+        state: 'running',
+        phase: 'Reading titles one by one',
+        done: 0,
+        total: 0,
+        stepMs: browserSeries ? 1500 : 1300
+      })
       await titlePages(src, (done, total) => setLive(src.id, { state: 'running', done, total }))
     }
     live.delete(src.id)
@@ -813,6 +986,10 @@ export const runGenreJob = (src: SourceDef): Promise<void> => runSite(src)
 export function scanGenresNow(id: string): boolean {
   const src = getSource(id)
   if (!src || running.has(id)) return false
+  if (src.api) {
+    void crawlSource(id, () => undefined) // reading its titles again refreshes its genres too
+    return true
+  }
   const s = loadIndex()[id]
   if (s) {
     s.failedAt = undefined
@@ -831,14 +1008,22 @@ export function scanGenresNow(id: string): boolean {
 function glog(m: string): void {
   if (process.env['MR_SCHED']) console.log('[genres] ' + m)
   try {
-    appendFileSync(join(app.getPath('userData'), 'genre-log.txt'), new Date().toISOString() + ' ' + m + '\n')
+    appendFileSync(
+      join(app.getPath('userData'), 'genre-log.txt'),
+      new Date().toISOString() + ' ' + m + '\n'
+    )
   } catch {
     /* no log */
   }
 }
 
 export function startGenreScheduler(): void {
-  glog('scheduler start, MR vars: ' + Object.keys(process.env).filter((k) => k.startsWith('MR_')).join(','))
+  glog(
+    'scheduler start, MR vars: ' +
+      Object.keys(process.env)
+        .filter((k) => k.startsWith('MR_'))
+        .join(',')
+  )
   // dev test runs: never in the background (MR_SCHED=1 turns it on for a test)
   if (!process.env['MR_SCHED'] && Object.keys(process.env).some((k) => k.startsWith('MR_'))) return
   const tick = (): void => {
@@ -851,7 +1036,13 @@ export function startGenreScheduler(): void {
       if (!offline && sources.length === 0) soon = true
       if (!offline) {
         for (const s of sources) {
-          const why = running.has(s.id) ? 'running' : s.crawling ? 'crawling' : !genreScanDue(s.id) ? 'not due' : ''
+          const why = running.has(s.id)
+            ? 'running'
+            : s.crawling
+              ? 'crawling'
+              : !genreScanDue(s.id)
+                ? 'not due'
+                : ''
           glog(s.id + ' ' + (why || 'start'))
           if (why === 'crawling') soon = true // its title list is being refreshed: start right after
           if (why) continue
@@ -879,6 +1070,7 @@ export function startGenreScheduler(): void {
 // kept for the Sites screen's older status line
 export function genreProgress(): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const j of genreJobs()) if (j.state === 'running') out[j.id] = `${j.phase}: ${j.done} of ${j.total || '…'}`
+  for (const j of genreJobs())
+    if (j.state === 'running') out[j.id] = `${j.phase}: ${j.done} of ${j.total || '…'}`
   return out
 }
