@@ -584,6 +584,9 @@ select { cursor: pointer; }
 .setting h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 22px; font-weight: 500; }
 .setting p { margin: 0 0 8px; color: var(--muted-foreground); font-size: 14px; line-height: 1.5; }
 .setting .sub { font-size: 12px; }
+.setting > button { flex-shrink: 0; white-space: nowrap; }
+.updbar { height: 4px; max-width: 320px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.updbar span { display: block; height: 100%; background: var(--primary); transition: width 0.3s; }
 .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; white-space: nowrap; font-size: 14px; }
 .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .switch .track { position: relative; width: 40px; height: 22px; border-radius: 999px; background: var(--muted); border: 1px solid var(--border); transition: background 0.2s; flex: none; }

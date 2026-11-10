@@ -13,6 +13,13 @@ export type GrabResponse = { ok: true; data: GrabResult } | { ok: false; error: 
  * the whole title list with genres in a few requests, chapter lists and chapter pages in one request each, with no
  * browser window. 'series-feed' = paged `series/` and `chapters/` lists (count / next / results).
  */
+/** Where the app update stands: checking GitHub, up to date, downloading a newer Yomi, ready to install, failed. */
+export type AppUpdateState =
+  | { state: 'idle' | 'checking' | 'none' | 'dev'; current: string; checkedAt?: number }
+  | { state: 'downloading'; current: string; version: string; percent: number; checkedAt?: number }
+  | { state: 'ready'; current: string; version: string; checkedAt?: number }
+  | { state: 'error'; current: string; error: string; checkedAt?: number }
+
 export interface FeedApiDef {
   kind: 'series-feed'
   /** The feed's address, ending in a slash (for example https://appswat.com/v2/api/v2/). */
@@ -344,6 +351,11 @@ export interface MangaApi {
   /** Restarts Yomi into the downloaded update. */
   updateInstall: () => Promise<void>
   onUpdateReady: (cb: (u: { version: string }) => void) => () => void
+  /** Where the app update stands (for Settings → Updates). */
+  appUpdateState: () => Promise<AppUpdateState>
+  /** Looks for a newer Yomi on GitHub now (it downloads by itself when there is one). */
+  appUpdateCheck: () => Promise<AppUpdateState>
+  onAppUpdateState: (cb: (s: AppUpdateState) => void) => () => void
   downloadGetPaused: () => Promise<boolean>
   downloadSetPaused: (on: boolean) => Promise<boolean>
   offlineGet: () => Promise<boolean>

@@ -53,6 +53,13 @@ const api = {
     ipcRenderer.on('update-ready', h)
     return () => ipcRenderer.removeListener('update-ready', h)
   },
+  appUpdateState: () => ipcRenderer.invoke('app-update-state'),
+  appUpdateCheck: () => ipcRenderer.invoke('app-update-check'),
+  onAppUpdateState: (cb: (s: unknown) => void) => {
+    const h = (_e: unknown, s: unknown): void => cb(s)
+    ipcRenderer.on('app-update-state', h)
+    return () => ipcRenderer.removeListener('app-update-state', h)
+  },
   genreScanNow: (id: string) => ipcRenderer.invoke('genre-scan-now', id),
   genreJobs: () => ipcRenderer.invoke('genre-jobs'),
   titleList: () => ipcRenderer.invoke('title-list'),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, SourceInfo } from '../../../preload/index.d'
+import type { AppSettings, AppUpdateState, SourceInfo } from '../../../preload/index.d'
 
 /** The Settings screen. For now: the Yomi Library (ready-made sites from your Yomi account), shown or hidden. */
 export default function Settings(): React.JSX.Element {
@@ -58,7 +58,65 @@ export default function Settings(): React.JSX.Element {
       </section>
 
       <AutoDownloadSetting />
+      <AppUpdateSetting />
     </div>
+  )
+}
+
+/** Yomi's own updates: the version you have, a "Check for updates" button and what the check found. */
+function AppUpdateSetting(): React.JSX.Element {
+  const [s, setS] = useState<AppUpdateState | null>(null)
+  useEffect(() => {
+    void window.api.appUpdateState().then(setS)
+    return window.api.onAppUpdateState(setS)
+  }, [])
+
+  const when = s?.checkedAt
+    ? new Date(s.checkedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+    : null
+  let line = 'Yomi looks for updates when it starts and every few hours.'
+  if (s?.state === 'checking') line = 'Looking for a newer version…'
+  else if (s?.state === 'none') line = `You have the newest version.${when ? ` Last checked ${when}.` : ''}`
+  else if (s?.state === 'downloading')
+    line = `Downloading Yomi ${s.version}… ${s.percent}%`
+  else if (s?.state === 'ready') line = `Yomi ${s.version} is downloaded and ready to install.`
+  else if (s?.state === 'error') line = `Couldn't check for updates: ${s.error}`
+  else if (s?.state === 'dev') line = 'Updates are only checked in the installed app.'
+
+  const busy = s?.state === 'checking' || s?.state === 'downloading'
+  return (
+    <section className="setting">
+      <div className="settext">
+        <h2>Updates</h2>
+        <p>
+          New versions download by themselves in the background. When one is ready you can restart
+          now to install it, or it installs the next time you close Yomi. Your library and settings
+          are kept.
+        </p>
+        <p className="sub">
+          {s ? `Version ${s.current}. ` : ''}
+          {line}
+        </p>
+        {s?.state === 'downloading' && (
+          <div className="updbar" aria-hidden="true">
+            <span style={{ width: `${s.percent}%` }} />
+          </div>
+        )}
+      </div>
+      {s?.state === 'ready' ? (
+        <button className="primary" onClick={() => void window.api.updateInstall()}>
+          Restart and update
+        </button>
+      ) : (
+        <button
+          className="primary"
+          disabled={!s || busy || s.state === 'dev'}
+          onClick={() => void window.api.appUpdateCheck().then(setS)}
+        >
+          {s?.state === 'checking' ? 'Checking…' : 'Check for updates'}
+        </button>
+      )}
+    </section>
   )
 }
 
