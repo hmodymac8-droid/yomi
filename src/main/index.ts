@@ -1365,6 +1365,27 @@ app.whenReady().then(async () => {
     return
   }
 
+  // Dev helper: MR_FEEDDETECT=<url>,<url>,… says whether each site has a data feed (and how long the lookup took).
+  if (process.env['MR_FEEDDETECT']) {
+    ;(async () => {
+      process.env['MR_NOHUMAN'] = '1'
+      const { detectFeedApi } = await import('./feedapi')
+      for (const u of process.env['MR_FEEDDETECT']!.split(',')) {
+        const t = Date.now()
+        const r = await detectFeedApi(new URL(u).origin).catch((e) => 'ERR ' + e)
+        console.log(
+          'FD ' +
+            JSON.stringify({
+              site: u,
+              ms: Date.now() - t,
+              feed: r && typeof r === 'object' ? r.base : r
+            })
+        )
+      }
+    })().finally(() => app.quit())
+    return
+  }
+
   // Dev helper: MR_FEEDTEST=<site url>[,<series url to open>] adds the site like "Add a site" does, reads its whole title
   // list, and reports titles / genres / types, then opens a series (and its first chapter) to check the feed reader.
   if (process.env['MR_FEEDTEST']) {
@@ -1411,7 +1432,15 @@ app.whenReady().then(async () => {
         if (!newest) {
           const t2 = Date.now()
           const g = await grabChapterFast(d.chapters[d.chapters.length - 1].url)
-          console.log('FT chapter ' + JSON.stringify({ ms: Date.now() - t2, title: g.title, pages: g.pages.length, p1: g.pages[0] }))
+          console.log(
+            'FT chapter ' +
+              JSON.stringify({
+                ms: Date.now() - t2,
+                title: g.title,
+                pages: g.pages.length,
+                p1: g.pages[0]
+              })
+          )
         }
       }
     })()
@@ -2388,7 +2417,7 @@ app.whenReady().then(async () => {
         continue
       }
       const homeOnly = s.maxPages <= 1 && !s.sitemaps?.length
-      if (s.crawling || (s.sitemapChecked && !homeOnly)) continue
+      if (s.api || s.crawling || (s.sitemapChecked && !homeOnly)) continue // (a site with a data feed has all it needs)
       try {
         const def = await detectSource(s.baseUrl)
         const gotSitemap = !!def.sitemaps?.length && !s.sitemaps?.length

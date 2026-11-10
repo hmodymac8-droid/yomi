@@ -172,9 +172,17 @@ async function feedChapters(
       )
     }
   }
+  // A chapter's number: the "chapter" field when it is a plain number; otherwise the number written in it
+  // ("FREE115", "el.115", "166 FREE") or in the chapter's title.
+  const numberIn = (t: string): number => {
+    const m = /(\d+(?:\.\d+)?)/.exec(t)
+    return m ? Number(m[1]) : NaN
+  }
   const rows = raw.map((c) => {
     const text = c.chapter == null ? '' : String(c.chapter).trim()
-    const n = text === '' ? NaN : Number(text)
+    let n = text === '' ? NaN : Number(text)
+    if (!Number.isFinite(n)) n = numberIn(text)
+    if (!Number.isFinite(n)) n = numberIn(String(c.title ?? ''))
     return {
       id: c.id,
       n,
@@ -191,6 +199,14 @@ async function feedChapters(
     if (fa !== fb) return fa ? -1 : 1
     return b.id - a.id
   })
+  // two chapters with the same number (a re-upload, a "FREE" copy): the later one is told apart, not hidden
+  const used = new Map<string, number>()
+  for (const r of rows) {
+    const k = r.title.toLowerCase()
+    const times = (used.get(k) ?? 0) + 1
+    used.set(k, times)
+    if (times > 1) r.title = `${r.title} (${times})`
+  }
   const seen = new Set<string>()
   return rows
     .filter((r) => !seen.has(r.url) && seen.add(r.url))
@@ -254,6 +270,14 @@ export async function feedChapter(
 
 /** Does this address answer like a 'series-feed'? (a paged list of series, and a chapter list for one of them) */
 async function probe(base: string): Promise<boolean> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (await probeOnce(base)) return true
+    await sleep(900)
+  }
+  return false
+}
+
+async function probeOnce(base: string): Promise<boolean> {
   try {
     const r = await fetchJson<{ count?: number; results?: { id?: unknown; title?: unknown }[] }>(
       base + 'series/?page=1&page_size=1',
@@ -284,14 +308,19 @@ async function probe(base: string): Promise<boolean> {
  * Null for an ordinary site (checked from its first page alone, so it costs one quick request).
  */
 export async function detectFeedApi(origin: string): Promise<FeedApiDef | null> {
+  const started = Date.now() // (reading scripts stops after ~10 s: a site with no feed must not slow adding it)
   let html = ''
-  try {
-    const r = await fetchHtml(origin + '/', 15000)
-    if (r.status !== 200) return null
-    html = r.html
-  } catch {
-    return null
+  for (let attempt = 0; attempt < 3 && !html; attempt++) {
+    try {
+      const r = await fetchHtml(origin + '/', 15000)
+      if (r.status === 200) html = r.html
+      else if (r.status >= 400 && r.status < 500 && r.status !== 429) return null // a closed door, not a hiccup
+    } catch {
+      /* a hiccup: try again */
+    }
+    if (!html) await sleep(900 * (attempt + 1))
   }
+  if (!html) return null
   // only sites built as JavaScript apps (an ordinary page lists its own titles and chapters)
   if (
     !/\/_next\/static\/|__NUXT__|\/_nuxt\/|__sveltekit|ng-version=|\/static\/js\/[^"']+\.js/i.test(
@@ -343,7 +372,7 @@ export async function detectFeedApi(origin: string): Promise<FeedApiDef | null> 
     })
     .filter((u) => u && hostKey(u) === host)
     .slice(0, 40)
-  for (let i = 0; i < scripts.length && !hit; i += 8) {
+  for (let i = 0; i < scripts.length && !hit && Date.now() - started < 10000; i += 8) {
     const texts = await Promise.all(
       scripts.slice(i, i + 8).map((u) =>
         fetchHtml(u, 10000)
