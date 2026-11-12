@@ -73,9 +73,17 @@ interface Props {
   series: OpenSeries
   onBack: () => void
   onNavigate: (c: OpenChapter) => void
+  /** Small always-on-top window: keep the bar, drop the extra controls. */
+  compact?: boolean
 }
 
-export default function Reader({ chapter, series, onBack, onNavigate }: Props): React.JSX.Element {
+export default function Reader({
+  chapter,
+  series,
+  onBack,
+  onNavigate,
+  compact = false
+}: Props): React.JSX.Element {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [title, setTitle] = useState('')
@@ -259,6 +267,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const lastTop = useRef(0)
   const showBar = (): void => {
     setBarVisible(true)
+    if (compact) return
     window.clearTimeout(hideTimer.current)
     hideTimer.current = window.setTimeout(() => {
       if (!barHover.current) setBarVisible(false)
@@ -340,6 +349,29 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     pos >= 0 && pos < chapter.chapters.length - 1 ? chapter.chapters[pos + 1] : undefined
   const go = (c?: { title: string; url: string }): void => {
     if (c) onNavigate({ ...chapter, url: c.url, title: c.title })
+  }
+
+  // Save the spot you are on, then keep reading in the small window that stays above other apps.
+  const popMini = async (): Promise<void> => {
+    const el = scroller.current
+    const pos =
+      el && el.scrollHeight > el.clientHeight + 4
+        ? el.scrollTop / (el.scrollHeight - el.clientHeight)
+        : pages.length > 1
+          ? index / (pages.length - 1)
+          : 0
+    await window.api.progressSave({
+      seriesUrl: chapter.seriesUrl,
+      sourceId: chapter.sourceId,
+      title: series.title,
+      cover: series.cover,
+      coverReferer: series.coverReferer,
+      chapterUrl: chapter.url,
+      chapterTitle: chapter.title,
+      pos: Math.max(0, Math.min(1, pos))
+    })
+    await window.api.miniOpen({ series, chapter })
+    onBack()
   }
 
   useEffect(() => {
@@ -741,7 +773,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     const crop = raw && !paged ? (raw.l + raw.r > 0 ? { ...raw, t: 0, b: 0 } : null) : raw
     const ar = aspect[i]
     const arShown = ar && crop ? (ar * (1 - crop.t - crop.b)) / (1 - crop.l - crop.r) : ar
-    const h = `calc((100vh - 56px) * ${zoom / 900})`
+    const h = `calc((100vh - ${compact ? 88 : 56}px) * ${zoom / 900})`
     const half = paged && !clickable
     const innerStyle: React.CSSProperties =
       fit === 'width'
@@ -795,7 +827,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
 
   return (
     <div
-      className="readerview"
+      className={`readerview${compact ? ' compact' : ''}`}
       ref={root}
       onMouseMove={(e) => {
         if (e.clientY < 60) showBar()
@@ -872,6 +904,16 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
             <Icon name="plus" />
           </button>
         </div>
+        {!compact && (
+          <button
+            className="iconbtn"
+            title="Mini reader: a small window that stays on top"
+            aria-label="Mini reader"
+            onClick={() => void popMini()}
+          >
+            <Icon name="pip" />
+          </button>
+        )}
         <button
           className="iconbtn"
           title="Download this chapter"
@@ -993,10 +1035,16 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                   <div className="rgroup">
                     <div className="rlabel">By type</div>
                     <div className="rseg">
-                      <button className={!openByType ? 'on' : ''} onClick={() => setOpenByType(false)}>
+                      <button
+                        className={!openByType ? 'on' : ''}
+                        onClick={() => setOpenByType(false)}
+                      >
                         Off
                       </button>
-                      <button className={openByType ? 'on' : ''} onClick={() => setOpenByType(true)}>
+                      <button
+                        className={openByType ? 'on' : ''}
+                        onClick={() => setOpenByType(true)}
+                      >
                         On — manga RTL, manhwa scroll
                       </button>
                     </div>

@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
+const isMini = process.argv.includes('--yomi-mini')
+
 // Custom APIs for renderer
 const api = {
   prefetchSeries: (sourceId: string, url: string) =>
@@ -116,6 +118,35 @@ const api = {
     const h = (_e: unknown, p: unknown): void => cb(p)
     ipcRenderer.on('crawl-progress', h)
     return () => ipcRenderer.removeListener('crawl-progress', h)
+  },
+  isMini,
+  miniOpen: (session: unknown) => ipcRenderer.invoke('mini-open', session),
+  miniUpdate: (session: unknown) => ipcRenderer.invoke('mini-update', session),
+  miniClose: () => ipcRenderer.invoke('mini-close'),
+  miniGet: () => ipcRenderer.invoke('mini-get'),
+  miniIs: () => ipcRenderer.invoke('mini-is'),
+  miniFocus: () => ipcRenderer.invoke('mini-focus'),
+  miniReturn: () => ipcRenderer.invoke('mini-return'),
+  miniSetPinned: (on: boolean) => ipcRenderer.invoke('mini-pin', on),
+  onMiniSession: (cb: (s: unknown) => void) => {
+    const h = (_e: unknown, s: unknown): void => cb(s)
+    ipcRenderer.on('mini-session', h)
+    return () => ipcRenderer.removeListener('mini-session', h)
+  },
+  onMiniOpened: (cb: () => void) => {
+    const h = (): void => cb()
+    ipcRenderer.on('mini-opened', h)
+    return () => ipcRenderer.removeListener('mini-opened', h)
+  },
+  onMiniClosed: (cb: () => void) => {
+    const h = (): void => cb()
+    ipcRenderer.on('mini-closed', h)
+    return () => ipcRenderer.removeListener('mini-closed', h)
+  },
+  onMiniReturn: (cb: (s: unknown) => void) => {
+    const h = (_e: unknown, s: unknown): void => cb(s)
+    ipcRenderer.on('mini-return', h)
+    return () => ipcRenderer.removeListener('mini-return', h)
   }
 }
 

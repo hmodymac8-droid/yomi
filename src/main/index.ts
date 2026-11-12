@@ -256,6 +256,80 @@ function createWindow(): void {
   }
 }
 
+/** The small always-on-top reader. Closing it does not quit Yomi. */
+interface MiniSession {
+  series: { title: string }
+  chapter: { url: string; seriesUrl: string }
+}
+let miniWin: BrowserWindow | null = null
+let miniSession: MiniSession | null = null
+let miniPinned = true
+
+function isMiniSession(v: unknown): v is MiniSession {
+  if (!v || typeof v !== 'object') return false
+  const s = v as MiniSession
+  return (
+    typeof s.series?.title === 'string' &&
+    typeof s.chapter?.url === 'string' &&
+    typeof s.chapter?.seriesUrl === 'string'
+  )
+}
+
+function tellMain(channel: string, data?: unknown): void {
+  if (mainWin && !mainWin.isDestroyed()) mainWin.webContents.send(channel, data)
+}
+
+function loadMini(win: BrowserWindow): void {
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    const u = new URL(process.env['ELECTRON_RENDERER_URL'])
+    u.searchParams.set('mini', '1')
+    void win.loadURL(u.toString())
+  } else {
+    void win.loadFile(join(__dirname, '../renderer/index.html'), { query: { mini: '1' } })
+  }
+}
+
+function openMini(session: MiniSession): void {
+  miniSession = session
+  if (miniWin && !miniWin.isDestroyed()) {
+    miniWin.webContents.send('mini-session', session)
+    if (miniWin.isMinimized()) miniWin.restore()
+    miniWin.show()
+    miniWin.focus()
+    tellMain('mini-opened')
+    return
+  }
+  const win = new BrowserWindow({
+    width: 420,
+    height: 760,
+    minWidth: 280,
+    minHeight: 420,
+    show: false,
+    frame: false,
+    alwaysOnTop: true,
+    title: 'Yomi Mini',
+    backgroundColor: '#020202',
+    autoHideMenuBar: true,
+    icon,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      additionalArguments: ['--yomi-mini']
+    }
+  })
+  miniWin = win
+  win.setAlwaysOnTop(miniPinned, 'floating')
+  win.on('ready-to-show', () => {
+    if (!win.isDestroyed()) win.show()
+  })
+  win.on('closed', () => {
+    if (miniWin === win) miniWin = null
+    tellMain('mini-closed')
+  })
+  loadMini(win)
+  tellMain('mini-opened')
+}
+
 const checking = new Map<string, Promise<void>>()
 
 /**
@@ -671,6 +745,39 @@ app.whenReady().then(async () => {
     if (action === 'minimize') w.minimize()
     else if (action === 'maximize') w.isMaximized() ? w.unmaximize() : w.maximize()
     else if (action === 'close') w.close()
+  })
+  ipcMain.handle('mini-open', (_e, raw: unknown) => {
+    if (!isMiniSession(raw)) throw new Error('Nothing to open in the mini reader')
+    openMini(raw)
+  })
+  ipcMain.handle('mini-update', (_e, raw: unknown) => {
+    if (isMiniSession(raw)) miniSession = raw
+  })
+  ipcMain.handle('mini-close', () => {
+    if (miniWin && !miniWin.isDestroyed()) miniWin.close()
+  })
+  ipcMain.handle('mini-get', () => miniSession)
+  ipcMain.handle('mini-is', () => !!(miniWin && !miniWin.isDestroyed()))
+  ipcMain.handle('mini-focus', () => {
+    if (!miniWin || miniWin.isDestroyed()) return
+    if (miniWin.isMinimized()) miniWin.restore()
+    miniWin.show()
+    miniWin.focus()
+  })
+  ipcMain.handle('mini-return', () => {
+    const s = miniSession
+    if (s) tellMain('mini-return', s)
+    if (mainWin && !mainWin.isDestroyed()) {
+      if (mainWin.isMinimized()) mainWin.restore()
+      mainWin.show()
+      mainWin.focus()
+    }
+    if (miniWin && !miniWin.isDestroyed()) miniWin.close()
+  })
+  ipcMain.handle('mini-pin', (_e, on: boolean) => {
+    miniPinned = !!on
+    if (miniWin && !miniWin.isDestroyed()) miniWin.setAlwaysOnTop(miniPinned, 'floating')
+    return miniPinned
   })
   ipcMain.handle('title-add', (_e, url: string) => wrap(() => addTitleByUrl(url)))
   ipcMain.handle('title-list', () => listAdded())

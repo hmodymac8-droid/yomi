@@ -726,3 +726,30 @@ select { cursor: pointer; }
 .readerview .bar .rmenupop .rmini.on { background: var(--accent); color: var(--accent-foreground); border-color: transparent; }
 .readerview .bar .rmenupop .rreset { display: inline-flex; justify-content: center; align-items: center; gap: 6px; align-self: flex-start; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--muted-foreground); font-size: 11px; }
 .readerview .bar .rmenupop .rreset:hover { background: var(--muted); color: var(--foreground); }
+
+/* ---------- mini reader (always-on-top window) ---------- */
+.miniapp { height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--reader); }
+.minibar {
+  height: 32px; flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding-left: 12px; background: var(--chrome); border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground); font-size: 11px; user-select: none; -webkit-app-region: drag;
+}
+.minibar .minititle { letter-spacing: 0.03em; }
+.minibar .slash { color: var(--border); margin: 0 6px; }
+.minibar .winctl button.on { color: var(--primary-text); }
+.readerview.compact { min-height: 0; flex: 1; }
+.readerview.compact .bar { position: relative; height: 44px; padding: 0 8px; }
+.readerview.compact .bar.hidden { transform: none; opacity: 1; pointer-events: auto; }
+.readerview.compact .progline { position: relative; top: 0; }
+.readerview.compact .bar.hidden + .progline { transform: none; opacity: 1; }
+.readerview.compact .widthctl,
+.readerview.compact .vdiv,
+.readerview.compact .rmenu,
+.readerview.compact .chpill,
+.readerview.compact .bar > .iconbtn[aria-label='Download this chapter'],
+.readerview.compact .bar > .iconbtn[aria-label='Full screen'],
+.readerview.compact .bar > .iconbtn[aria-label='Switch theme'] { display: none; }
+.readerview.compact .rtitle b { max-width: 42vw; font-size: 12px; }
+.readerview.compact .reader .title { padding: 10px 8px 8px; }
+.readerview.compact .page.fit-height { height: calc(100vh - 88px); }
+

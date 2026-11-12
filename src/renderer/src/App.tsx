@@ -26,7 +26,15 @@ type View =
 
 /** The screens in the top bar. A series remembers which one it was opened from, and Back returns there. */
 type Tab = 'browse' | 'new' | 'added' | 'following' | 'downloads' | 'sites' | 'settings'
-const TAB_LABEL: Record<Tab, string> = { browse: 'Discover', new: 'New', added: 'Added by me', following: 'Following', downloads: 'Downloads', sites: 'Sites', settings: 'Settings' }
+const TAB_LABEL: Record<Tab, string> = {
+  browse: 'Discover',
+  new: 'New',
+  added: 'Added by me',
+  following: 'Following',
+  downloads: 'Downloads',
+  sites: 'Sites',
+  settings: 'Settings'
+}
 
 /** If a screen ever crashes while drawing, show a message and a way back instead of a blank window. */
 class Boundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -68,7 +76,11 @@ function TitleBar(): React.JSX.Element {
         <button aria-label="Maximize" onClick={() => window.api.windowControl('maximize')}>
           <Icon name="square" />
         </button>
-        <button className="close" aria-label="Close" onClick={() => window.api.windowControl('close')}>
+        <button
+          className="close"
+          aria-label="Close"
+          onClick={() => window.api.windowControl('close')}
+        >
           <Icon name="x" />
         </button>
       </div>
@@ -100,9 +112,24 @@ function AppInner(): React.JSX.Element {
   const [sources, setSources] = useState<SourceInfo[]>([])
   // a newer Yomi has been downloaded in the background: offer to restart into it
   const [update, setUpdate] = useState<{ version: string } | null>(null)
+  const [miniOn, setMiniOn] = useState(false)
   useEffect(() => {
     window.api.updateStatus().then(setUpdate)
     return window.api.onUpdateReady(setUpdate)
+  }, [])
+  useEffect(() => {
+    void window.api.miniIs().then(setMiniOn)
+    const offOpen = window.api.onMiniOpened(() => setMiniOn(true))
+    const offClosed = window.api.onMiniClosed(() => setMiniOn(false))
+    const offReturn = window.api.onMiniReturn((s) => {
+      setMiniOn(false)
+      setView({ name: 'reader', series: s.series, chapter: s.chapter, from: 'browse' })
+    })
+    return () => {
+      offOpen()
+      offClosed()
+      offReturn()
+    }
   }, [])
   const [health, setHealth] = useState<Record<string, SiteHealth>>({})
 
@@ -141,10 +168,13 @@ function AppInner(): React.JSX.Element {
       setTrouble(t)
       if (t && !wasTrouble) {
         window.api.clientLog('library not readable at start')
-        void window.api.catalogDiagnose().then((d) => {
-          setReport(d)
-          window.api.clientLog('report: ' + d)
-        }, () => undefined)
+        void window.api.catalogDiagnose().then(
+          (d) => {
+            setReport(d)
+            window.api.clientLog('report: ' + d)
+          },
+          () => undefined
+        )
       }
       if (wasTrouble && !t) {
         window.api.clientLog('library readable again: reloading the screen')
@@ -165,7 +195,8 @@ function AppInner(): React.JSX.Element {
   // unread new chapters of the series you follow (the badge on New)
   const [newCount, setNewCount] = useState(0)
   useEffect(() => {
-    const countNew = (): void => void window.api.followList().then((l) => setNewCount(l.reduce((n, f) => n + f.unread, 0)))
+    const countNew = (): void =>
+      void window.api.followList().then((l) => setNewCount(l.reduce((n, f) => n + f.unread, 0)))
     window.api.updatesStatus().then(setUpd)
     countNew()
     return window.api.onUpdates((s) => {
@@ -179,7 +210,11 @@ function AppInner(): React.JSX.Element {
   }, [view.name])
   useEffect(() => {
     const countQueue = (): void =>
-      void window.api.downloadList().then((l) => setQueued(l.filter((i) => i.status === 'queued' || i.status === 'downloading').length))
+      void window.api
+        .downloadList()
+        .then((l) =>
+          setQueued(l.filter((i) => i.status === 'queued' || i.status === 'downloading').length)
+        )
     countQueue()
     let t: number | undefined
     const off = window.api.onDownload(() => {
@@ -196,7 +231,9 @@ function AppInner(): React.JSX.Element {
     window.api.titleList().then((l) => setAddedCount(l.length))
     // Yomi Library sites hidden in Settings are left out of the bars
     window.api.listSources().then((l) => setSources(l.filter((s) => !s.hidden)))
-    window.api.siteHealth().then((l) => setHealth(Object.fromEntries(l.map((h) => [h.sourceId, h]))))
+    window.api
+      .siteHealth()
+      .then((l) => setHealth(Object.fromEntries(l.map((h) => [h.sourceId, h]))))
   }, [view.name])
 
   const reading = view.name === 'reader'
@@ -217,17 +254,29 @@ function AppInner(): React.JSX.Element {
       <TitleBar />
       {trouble && (
         <div className="datatrouble" role="alert">
-          <strong>Your library is still loading from disk.</strong> Your sites and progress are safe — Yomi can&apos;t read the file this very second and is trying again. Nothing is being overwritten.
+          <strong>Your library is still loading from disk.</strong> Your sites and progress are safe
+          — Yomi can&apos;t read the file this very second and is trying again. Nothing is being
+          overwritten.
           {why && <em> ({why})</em>}
           {report && <small className="datareport">{report}</small>}
-          <button className="mini" onClick={() => void window.api.catalogTrouble().then(setTrouble, (e) => setWhy(String(e)))}>
+          <button
+            className="mini"
+            onClick={() =>
+              void window.api.catalogTrouble().then(setTrouble, (e) => setWhy(String(e)))
+            }
+          >
             Try again now
           </button>
         </div>
       )}
       {!reading && (
         <header className="topbar">
-          <button className="iconbtn" style={{ width: 'auto', padding: 0 }} onClick={() => setView({ name: 'browse' })} aria-label="Yomi home">
+          <button
+            className="iconbtn"
+            style={{ width: 'auto', padding: 0 }}
+            onClick={() => setView({ name: 'browse' })}
+            aria-label="Yomi home"
+          >
             <img className="logo" src={logo} alt="Yomi" width={90} height={36} />
           </button>
           <nav className="nav" aria-label="Main navigation">
@@ -278,7 +327,9 @@ function AppInner(): React.JSX.Element {
             <Following
               onBack={() => setView({ name: 'browse' })}
               onOpen={(series) => setView({ name: 'series', series, from: 'following' })}
-              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'following' })}
+              onRead={(series, chapter) =>
+                setView({ name: 'reader', series, chapter, from: 'following' })
+              }
             />
           </div>
         )}
@@ -291,7 +342,9 @@ function AppInner(): React.JSX.Element {
           <div className="pane">
             <NewChapters
               onOpen={(series) => setView({ name: 'series', series, from: 'new' })}
-              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'new' })}
+              onRead={(series, chapter) =>
+                setView({ name: 'reader', series, chapter, from: 'new' })
+              }
             />
           </div>
         )}
@@ -304,7 +357,9 @@ function AppInner(): React.JSX.Element {
           <div className="pane">
             <Downloads
               onBack={() => setView({ name: 'browse' })}
-              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'downloads' })}
+              onRead={(series, chapter) =>
+                setView({ name: 'reader', series, chapter, from: 'downloads' })
+              }
               onOpen={(series) => setView({ name: 'series', series, from: 'downloads' })}
             />
           </div>
@@ -315,7 +370,9 @@ function AppInner(): React.JSX.Element {
               series={view.series}
               backLabel={TAB_LABEL[view.from]}
               onBack={() => setView({ name: view.from } as View)}
-              onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
+              onRead={(chapter) =>
+                setView({ name: 'reader', series: view.series, chapter, from: view.from })
+              }
             />
           </div>
         )}
@@ -325,7 +382,9 @@ function AppInner(): React.JSX.Element {
               chapter={view.chapter}
               series={view.series}
               onBack={() => setView({ name: 'series', series: view.series, from: view.from })}
-              onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
+              onNavigate={(chapter) =>
+                setView({ name: 'reader', series: view.series, chapter, from: view.from })
+              }
             />
           </div>
         )}
@@ -349,6 +408,15 @@ function AppInner(): React.JSX.Element {
             <b>{totalTitles.toLocaleString()}</b> titles
           </span>
           <span>{sources.length} sites</span>
+          {miniOn && (
+            <button
+              className="more"
+              onClick={() => void window.api.miniFocus()}
+              title="The mini reader is open"
+            >
+              Mini reader
+            </button>
+          )}
           <span>
             {sources.slice(0, 5).map((s) => {
               const lvl = levelOf(health[s.id])
@@ -365,7 +433,9 @@ function AppInner(): React.JSX.Element {
               </button>
             )}
           </span>
-          <span className="right">{upd?.lastChecked ? `Checked for new chapters ${ago(upd.lastChecked)}` : ''}</span>
+          <span className="right">
+            {upd?.lastChecked ? `Checked for new chapters ${ago(upd.lastChecked)}` : ''}
+          </span>
         </footer>
       )}
     </div>
