@@ -115,13 +115,31 @@ export function sameSiteHost(a: string, b: string): boolean {
   }
 }
 
-/** Same title key the catalog uses, so a pin lines up with a search group. */
+/**
+ * The key two titles are matched by (search, pins, fallback). Not for display: it folds accents and Arabic
+ * letter forms (harakat, tatweel, alef/ya/ta-marbuta variants) so the same title written two ways lines up,
+ * and keeps letters and digits from every script (Arabic, CJK, Cyrillic...). Latin letters outside a-z become
+ * spaces, as they always have.
+ */
 export function normalizeTitle(t: string): string {
   return t
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
+    // Arabic folding, for matching keys only (never for display): harakat (including the hamza NFKD splits off
+    // أ إ آ), tatweel, and the letter forms that are written differently but read the same.
+    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06ED]/g, '')
+    .replace(/\u0640/g, '')
+    .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627') // آ أ إ ٱ -> ا
+    .replace(/\u0649/g, '\u064A') // ى -> ي
+    .replace(/\u0629/g, '\u0647') // ة -> ه
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660)) // ٠-٩ -> 0-9
+    .replace(/[\u06F0-\u06F9]/g, (d) => String(d.charCodeAt(0) - 0x06F0)) // ۰-۹ -> 0-9
+    // keep letters and digits from every script; punctuation and symbols become spaces
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    // Latin letters that are not a-z (ø, ß, ...) become spaces too, so Latin keys stay as they were
+    .replace(/[^\P{Script=Latin}a-z]/gu, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
