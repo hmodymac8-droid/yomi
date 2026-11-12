@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { join } from 'path'
 import type { ProgressPatch, ProgressRecord } from '../preload/index.d'
 import { isUnreadable, readJson, writeAtomic } from './safefile'
+import { mapHost } from './repair'
 
 let data: Record<string, ProgressRecord> | null = null
 let timer: NodeJS.Timeout | undefined
@@ -47,6 +48,26 @@ export function hideProgress(seriesUrl: string): void {
   rec.hidden = true
   if (timer) clearTimeout(timer)
   timer = setTimeout(flushProgress, 300)
+}
+
+/** Follow a source onto a new host so Continue reading still finds the series. */
+export function rewriteProgressHost(oldHost: string, newOrigin: string): number {
+  const all = load()
+  const next: Record<string, ProgressRecord> = {}
+  let n = 0
+  for (const rec of Object.values(all)) {
+    const seriesUrl = mapHost(rec.seriesUrl, oldHost, newOrigin)
+    const chapterUrl = mapHost(rec.chapterUrl, oldHost, newOrigin)
+    const read = rec.read.map((u) => mapHost(u, oldHost, newOrigin))
+    const coverReferer = mapHost(rec.coverReferer, oldHost, newOrigin)
+    if (seriesUrl !== rec.seriesUrl || chapterUrl !== rec.chapterUrl) n++
+    next[seriesUrl] = { ...rec, seriesUrl, chapterUrl, read, coverReferer }
+  }
+  if (n === 0) return 0
+  data = next
+  if (timer) clearTimeout(timer)
+  timer = setTimeout(flushProgress, 300)
+  return n
 }
 
 export function recentProgress(limit: number): ProgressRecord[] {

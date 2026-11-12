@@ -83,6 +83,12 @@ const api = {
   siteCheck: (id) => ipcRenderer.invoke('site-check', id),
   progressHide: (seriesUrl: string) => ipcRenderer.invoke('progress-hide', seriesUrl),
   grabChapter: (url: string) => ipcRenderer.invoke('grab-chapter', url),
+  sourceState: (id: string) => ipcRenderer.invoke('source-state', id),
+  sourceFailed: (id: string, message: string) => ipcRenderer.invoke('source-failed', id, message),
+  fallbackSites: (title: string, excludeIds: string[]) =>
+    ipcRenderer.invoke('fallback-sites', title, excludeIds),
+  pinSite: (title: string, sourceId: string) => ipcRenderer.invoke('pin-site', title, sourceId),
+  pinnedSite: (title: string) => ipcRenderer.invoke('pinned-site', title),
   listSources: () => ipcRenderer.invoke('list-sources'),
   clientLog: (m: string) => ipcRenderer.send('client-log', m),
   catalogDiagnose: () => ipcRenderer.invoke('catalog-diagnose') as Promise<string>,

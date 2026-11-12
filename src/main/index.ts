@@ -62,8 +62,19 @@ import {
   sourcesWithChapterTitles
 } from './catalog'
 import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen } from './health'
+import { classifyFailure } from './repair'
+import {
+  commitFailure,
+  onSourceSignal,
+  recordCheckOutcome,
+  reportFailure,
+  sourceState,
+  listFallbackSites
+} from './fallback'
+import { pinSite, pinnedSite } from './pins'
+import { startSourceProber } from './prober'
 import type { HealthStep } from '../preload/index.d'
-import { grabChapterFast, prefetchChapter, settleVerifications } from './fastgrab'
+import { grabChapterFast, prefetchChapter, setSourceSignal, settleVerifications } from './fastgrab'
 import { flushModes } from './hostmode'
 import { detectSource } from './sources'
 import { flushProgress, getProgress, hideProgress, recentProgress, saveProgress } from './progress'
@@ -376,6 +387,7 @@ async function runSiteCheck(id: string): Promise<void> {
       ? 'warn'
       : 'ok'
   recordCheck(id, { at: Date.now(), overall, steps })
+  recordCheckOutcome(id, overall, steps)
 }
 
 /**
@@ -530,6 +542,9 @@ app.whenReady().then(async () => {
         // (never Comix)
         if (!doubtful || /comix/i.test(h.sourceId) || !getSource(h.sourceId) || isOffline())
           continue
+        // A source already out of rotation is retried by the light prober, not this full check.
+        const avail = getSource(h.sourceId)?.availability
+        if (avail === 'down' || avail === 'degraded') continue
         if (h.check && Date.now() - h.check.at < 24 * 3600 * 1000) continue
         if (checking.has(h.sourceId)) continue
         const job = runSiteCheck(h.sourceId).catch(() => undefined)
@@ -543,6 +558,11 @@ app.whenReady().then(async () => {
   }, 90_000).unref?.()
   // every site gets its language (English / Arabic) for the language switch on Discover
   setTimeout(() => void fillSiteLanguages(), 8000)
+  // Down sources are probed in the background (not during a dev smoke run, which quits on its own).
+  const smoke = Object.keys(process.env).some(
+    (k) => k.startsWith('MR_') && k !== 'MR_DATADIR' && k !== 'MR_NOHUMAN'
+  )
+  if (!smoke) startSourceProber((id) => checking.has(id))
   ipcMain.handle('progress-recent', (_e, limit: number) => recentProgress(limit))
   ipcMain.handle('progress-hide', (_e, seriesUrl: string) => hideProgress(seriesUrl))
   ipcMain.handle('remove-site', (_e, id: string) => {
@@ -552,6 +572,18 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings-get', () => getSettings())
   ipcMain.handle('settings-set', (_e, patch: Partial<AppSettings>) => setSettings(patch))
   ipcMain.handle('page-bytes', (_e, src: string) => pageBytes(src))
+  setSourceSignal(onSourceSignal)
+  ipcMain.handle('source-state', (_e, id: string) => sourceState(id))
+  ipcMain.handle('source-failed', (_e, id: string, message: string) =>
+    reportFailure(id, String(message ?? ''))
+  )
+  ipcMain.handle('fallback-sites', (_e, title: string, excludeIds: string[]) =>
+    listFallbackSites(String(title ?? ''), Array.isArray(excludeIds) ? excludeIds.map(String) : [])
+  )
+  ipcMain.handle('pin-site', (_e, title: string, sourceId: string) =>
+    pinSite(String(title ?? ''), String(sourceId ?? ''))
+  )
+  ipcMain.handle('pinned-site', (_e, title: string) => pinnedSite(String(title ?? '')) ?? null)
   ipcMain.handle('site-health', () => allHealth())
   ipcMain.handle('site-check', async (_e, id: string) => {
     // one check per site at a time: a second click joins the first
@@ -611,7 +643,10 @@ app.whenReady().then(async () => {
           )
           return d
         } catch (e) {
-          recordOpen(sourceId, 'failed', e instanceof Error ? e.message : String(e))
+          const message = e instanceof Error ? e.message : String(e)
+          recordOpen(sourceId, 'failed', message)
+          const kind = classifyFailure(message)
+          if (kind !== 'none') commitFailure(sourceId, kind, message)
           const off = offlineSeries(url) // the site can't be reached: show what is saved
           if (off) return off
           throw e

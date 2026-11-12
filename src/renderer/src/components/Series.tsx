@@ -21,6 +21,19 @@ const chapterNumber = (t: string): number => {
 
 export default function Series({ series, onBack, onRead, backLabel }: Props): React.JSX.Element {
   const [entryIdx, setEntryIdx] = useState(0)
+  const [entries, setEntries] = useState(series.entries)
+  const [switchNote, setSwitchNote] = useState('')
+  const [pinReady, setPinReady] = useState(false)
+  const forced = useRef(false)
+  const switched = useRef(false)
+  const [seenTitle, setSeenTitle] = useState(series.title)
+  if (seenTitle !== series.title) {
+    setSeenTitle(series.title)
+    setEntries(series.entries)
+    setEntryIdx(0)
+    setSwitchNote('')
+    setPinReady(false)
+  }
   const [detail, setDetail] = useState<SeriesDetail | null>(null)
   const [error, setError] = useState('')
   const [offline, setOffline] = useState(false)
@@ -42,7 +55,7 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
     setAttempt((a) => a + 1)
   }
   const [newestFirst, setNewestFirst] = useState(true)
-  const entry = series.entries[entryIdx]
+  const entry = entries[entryIdx] ?? entries[0]
   const [progress, setProgress] = useState<ProgressRecord | null>(null)
   const [dls, setDls] = useState<Record<string, DownloadItem>>({})
   const [follow, setFollowInfo] = useState<FollowInfo | null>(null)
@@ -108,38 +121,80 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
   }, [entry.url])
 
   useEffect(() => {
+    forced.current = false
+    switched.current = false
+    let cancel = false
+    window.api.pinnedSite(series.title).then((id) => {
+      if (cancel) return
+      if (id) {
+        const idx = series.entries.findIndex((e) => e.sourceId === id)
+        if (idx >= 0) setEntryIdx(idx)
+      }
+      setPinReady(true)
+    })
+    return () => {
+      cancel = true
+    }
+  }, [series.title])
+
+  useEffect(() => {
+    if (!pinReady) return
     let cancelled = false
     let gotFresh = false
     let haveCached = false
-    setLoading(true)
-    setError('')
-    setOffline(false)
-    setDetail(null)
-    setRefreshing(false)
-    setRefreshError('')
-    setLoadStart(Date.now())
-    setExpected(undefined)
-    setPartial(false)
-    setFound(0)
-    // Show the last known chapter list instantly, then replace it with the fresh one when it arrives.
-    window.api.getSeriesCached(entry.url).then((cached) => {
-      if (cancelled || gotFresh || !cached) return
-      haveCached = true
-      setDetail(cached)
-      setLoading(false)
-      setRefreshing(true)
-    })
-    // Long lists (sites with a chapter pager) arrive in pieces: show each piece as soon as it's read.
-    const offPartial = window.api.onSeriesPartial((d) => {
-      if (cancelled || gotFresh || d.url !== entry.url) return
-      setDetail((prev) => (prev && prev.chapters.length >= d.chapters.length ? prev : d))
-      setExpected(d.expected)
-      setFound(d.chapters.length)
-      setPartial(true)
-      setLoading(false)
-      setRefreshing(true)
-    })
-    window.api.getSeries(entry.sourceId, entry.url, mode).then(async (res) => {
+    let offPartial = (): void => undefined
+    const goAlt = async (): Promise<boolean> => {
+      if (cancelled || switched.current) return false
+      const sites = await window.api.fallbackSites(series.title, [entry.sourceId])
+      if (cancelled) return false
+      const alt = sites[0]
+      if (!alt || alt.url === entry.url) return false
+      switched.current = true
+      setSwitchNote(`${entry.sourceName} is down. Showing ${alt.sourceName} instead.`)
+      const idx = entries.findIndex((e) => e.url === alt.url)
+      setEntries((prev) => (prev.some((e) => e.url === alt.url) ? prev : [...prev, alt]))
+      setEntryIdx(idx >= 0 ? idx : entries.length)
+      return true
+    }
+    void (async () => {
+      const offlineNow = await window.api.offlineGet()
+      if (!cancelled && !forced.current && !offlineNow) {
+        const state = await window.api.sourceState(entry.sourceId)
+        if (cancelled) return
+        if ((state.availability === 'down' || state.availability === 'degraded') && (await goAlt()))
+          return
+      }
+      forced.current = false
+      if (cancelled) return
+      setLoading(true)
+      setError('')
+      setOffline(false)
+      setDetail(null)
+      setRefreshing(false)
+      setRefreshError('')
+      setLoadStart(Date.now())
+      setExpected(undefined)
+      setPartial(false)
+      setFound(0)
+      // Show the last known chapter list instantly, then replace it with the fresh one when it arrives.
+      window.api.getSeriesCached(entry.url).then((cached) => {
+        if (cancelled || gotFresh || !cached) return
+        haveCached = true
+        setDetail(cached)
+        setLoading(false)
+        setRefreshing(true)
+      })
+      // Long lists (sites with a chapter pager) arrive in pieces: show each piece as soon as it's read.
+      offPartial = window.api.onSeriesPartial((d) => {
+        if (cancelled || gotFresh || d.url !== entry.url) return
+        setDetail((prev) => (prev && prev.chapters.length >= d.chapters.length ? prev : d))
+        setExpected(d.expected)
+        setFound(d.chapters.length)
+        setPartial(true)
+        setLoading(false)
+        setRefreshing(true)
+      })
+      const res = await window.api.getSeries(entry.sourceId, entry.url, mode)
       if (cancelled) return
       gotFresh = true
       setRefreshing(false)
@@ -149,15 +204,17 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
         setDetail(res.data)
         return setLoading(false)
       }
+      const rep = await window.api.sourceFailed(entry.sourceId, res.error)
       if (haveCached) {
         setRefreshError(res.error) // keep showing the saved list, but say why it couldn't be updated
         return
       }
-      // Couldn't reach the site: fall back to the chapters saved on this PC.
+      // Couldn't reach the site: another site with this title, or the chapters saved on this PC.
       const saved = (await window.api.downloadList())
         .filter((i) => i.seriesUrl === entry.url && i.status === 'done')
         .sort((a, b) => chapterNumber(b.chapterTitle) - chapterNumber(a.chapterTitle))
       if (cancelled) return
+      if (saved.length === 0 && rep.outOfRotation && (await goAlt())) return
       setLoading(false)
       if (saved.length > 0) {
         setOffline(true)
@@ -169,13 +226,13 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
           chapters: saved.map((i) => ({ title: i.chapterTitle, url: i.id }))
         })
       } else setError(res.error)
-    })
+    })()
     return () => {
       cancelled = true
       offPartial()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entry.sourceId, entry.url, series.title, series.cover, attempt])
+  }, [entry.sourceId, entry.url, series.title, series.cover, attempt, pinReady])
 
   const referer = new URL(entry.url).origin + '/'
   const chapters = detail ? (newestFirst ? detail.chapters : [...detail.chapters].reverse()) : []
@@ -320,16 +377,27 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
           </button>
           <Tags detail={detail} />
           <h2>{series.title}</h2>
-          {series.entries.length > 1 && (
+          {entries.length > 1 && (
             <div className="srcs">
               Read from:{' '}
-              {series.entries.map((e, i) => (
-                <button key={e.url} className={i === entryIdx ? 'on' : ''} onClick={() => setEntryIdx(i)}>
+              {entries.map((e, i) => (
+                <button
+                  key={e.url}
+                  className={i === entryIdx ? 'on' : ''}
+                  onClick={() => {
+                    forced.current = true
+                    switched.current = false
+                    setSwitchNote('')
+                    setEntryIdx(i)
+                    void window.api.pinSite(series.title, e.sourceId)
+                  }}
+                >
                   {e.sourceName}
                 </button>
               ))}
             </div>
           )}
+          {switchNote && <div className="sub">{switchNote}</div>}
           {offline && <p className="desc">Can&apos;t reach the site, so this shows only the chapters saved on this PC.</p>}
           {detail?.description && <p className="desc" dir="auto">{detail.description}</p>}
           {detail && (resume || first) && (

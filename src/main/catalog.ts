@@ -38,9 +38,11 @@ import {
 import { robotsAllows } from './robots'
 import { getMode, setMode, type Mode } from './hostmode'
 import { matchBuiltin } from './sources'
+import { applyRelocation, normalizeTitle, orderSourceIds, rewriteDetailUrls } from './repair'
+import { pinMap } from './pins'
 import { getSettings, settingsVersion } from './settings'
 import { crawledMeta, genreIndexVersion, setFeedTags, urlKey } from './genres'
-import { feedList, feedSeries, registerFeedSources } from './feedapi'
+import { feedList, feedSeries, registerFeedSources, reregisterFeed } from './feedapi'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const hostOf = (url: string): string => new URL(url).hostname
@@ -624,6 +626,61 @@ export function getSource(id: string): SourceDef | undefined {
   return load().sources.find((s) => s.id === id)
 }
 
+/** Every real source, including ones hidden by the library switch. Titles-only holders are left out. */
+export function sourceDefs(): SourceDef[] {
+  return load().sources.filter((s) => !s.titlesOnly)
+}
+
+/** The source whose home address is this host (a chapter URL on that host). */
+export function sourceForHost(url: string): SourceDef | undefined {
+  let host = ''
+  try {
+    host = bareHost(new URL(url).hostname)
+  } catch {
+    return undefined
+  }
+  return load().sources.find((s) => {
+    try {
+      return bareHost(new URL(s.baseUrl).hostname) === host
+    } catch {
+      return false
+    }
+  })
+}
+
+/**
+ * Changes one source row and saves catalog.json. This is the local source of truth for a site's
+ * address and status. This is the seam for a cloud copy of the same row: the web-supabase branch
+ * is not merged here, and a sources-table upsert would belong in this function and nowhere else.
+ */
+export function updateSource(id: string, mutate: (src: SourceDef) => void): SourceDef | undefined {
+  const src = load().sources.find((s) => s.id === id)
+  if (!src) return undefined
+  mutate(src)
+  freshSearch()
+  saveSoon(true)
+  return src
+}
+
+/** Point a source and its saved series at a new origin. Null when the host did not change. */
+export function relocateSource(
+  id: string,
+  newOrigin: string
+): { oldHost: string; previousBaseUrl: string } | null {
+  const s = load()
+  const src = s.sources.find((x) => x.id === id)
+  if (!src) return null
+  const series = s.series[id] ?? []
+  const added = (s.added ?? []).filter((a) => a.sourceId === id)
+  const moved = applyRelocation(src, series, added, newOrigin)
+  if (!moved) return null
+  rewriteSeriesCacheHost(moved.oldHost, newOrigin)
+  reregisterFeed(src, moved.previousBaseUrl)
+  freshSearch()
+  saveSoon(true)
+  return { oldHost: moved.oldHost, previousBaseUrl: moved.previousBaseUrl }
+}
+
 /** Arabic, English or another language, from the site's home page (its lang / dir tags, or the script of its text). */
 export function langOfHtml(html: string): 'ar' | 'en' | 'other' {
   const tag = html.match(/<html[^>]*>/i)?.[0] ?? ''
@@ -1187,13 +1244,7 @@ export async function crawlSource(id: string, emit: (p: CrawlProgress) => void):
 // Search
 // ---------------------------------------------------------------------------------------------
 
-const norm = (t: string): string =>
-  t
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
+const norm = normalizeTitle
 
 // Normalising a title (accents, punctuation, case) is the slow part of a search across 300,000 entries, so it is done
 // once per title and remembered (and redone only if the title changes).
@@ -1322,6 +1373,28 @@ export function search(
     }
   }
   const groups = [...map.values()]
+  // A site that is down gives its place to a healthy one, unless you pinned it. The choice is saved with the
+  // search, and thrown away when a source's status changes.
+  const pins = pinMap()
+  for (const g of groups) {
+    const members = [{ e: g.e, src: g.src }, ...(g.more ?? [])]
+    if (members.length < 2) continue
+    const ids = orderSourceIds(
+      members.map((m) => ({
+        id: m.src.id,
+        baseUrl: m.src.baseUrl,
+        availability: m.src.availability
+      })),
+      pins[g.key]
+    )
+    if (ids.every((id, i) => id === members[i].src.id)) continue
+    const by = new Map(members.map((m) => [m.src.id, m]))
+    const next = ids.map((id) => by.get(id)).filter((m): m is (typeof members)[number] => !!m)
+    if (next.length === 0) continue
+    g.e = next[0].e
+    g.src = next[0].src
+    g.more = next.slice(1)
+  }
   // In "site order" put titles that have a cover first (sitemap-only titles have none until they're filled in).
   if (sort === 'site' && !tokens.length) {
     // Several sites: their titles are mixed together (a fixed shuffle for this session, so pages stay stable),
@@ -2335,6 +2408,28 @@ function loadSeriesCache(): Record<string, SeriesCacheEntry> {
     seriesTimer = setTimeout(flushSeriesCache, 1500)
   }
   return seriesCache
+}
+
+/** Saved chapter lists follow a source when its host changes, so the next open uses the new address. */
+function rewriteSeriesCacheHost(oldHost: string, newOrigin: string): void {
+  const c = loadSeriesCache()
+  for (const k of Object.keys(c)) {
+    if (k === '__v') continue
+    const row = c[k]
+    if (!row?.detail?.url) continue
+    let host: string
+    try {
+      host = bareHost(new URL(row.detail.url).hostname)
+    } catch {
+      continue
+    }
+    if (host !== bareHost(oldHost)) continue
+    const detail = rewriteDetailUrls(row.detail, oldHost, newOrigin)
+    delete c[k]
+    c[detail.url] = { ...row, detail }
+  }
+  if (seriesTimer) clearTimeout(seriesTimer)
+  seriesTimer = setTimeout(flushSeriesCache, 1500)
 }
 
 export function flushSeriesCache(): void {

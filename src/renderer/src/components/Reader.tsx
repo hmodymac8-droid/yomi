@@ -252,6 +252,13 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     // Try the main link first, then any other providers that host the same chapter.
     const cur = chapter.chapters.find((c) => c.url === chapter.url)
     const urls = [chapter.url, ...(cur?.alts ?? [])]
+    const bare = (u: string): string => {
+      try {
+        return new URL(u).hostname.replace(/^www\./i, '').toLowerCase()
+      } catch {
+        return ''
+      }
+    }
     restoring.current = true
     finished.current = false
     setEager(false)
@@ -306,25 +313,34 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       }
 
       let lastError = 'No manga pages found on that chapter page.'
+      // A source already out of rotation is not waited on: another copy of the chapter is opened at once.
+      const state = await window.api.sourceState(chapter.sourceId)
+      let deadHost =
+        state.availability === 'down' || state.availability === 'degraded' ? bare(state.baseUrl) : ''
+      if (deadHost) setStage(`${state.name} is down. Looking for another copy…`)
       for (const u of urls) {
+        if (deadHost && bare(u) === deadHost) continue
         const res = await window.api.grabChapter(u)
         if (cancelled) return
         if (res.ok && res.data.pages.length > 0) {
           show(res.data.pages, res.data.title)
           return
         }
-        if (!res.ok) lastError = res.error
+        if (!res.ok) {
+          lastError = res.error
+          const rep = await window.api.sourceFailed(chapter.sourceId, res.error)
+          if (rep.outOfRotation) deadHost = bare(state.baseUrl) || bare(u)
+        }
       }
       // This site didn't give the chapter: look for the same chapter (by its number) on your other sites that have
       // this series, and read it from there.
-      const here =
-        series.entries.find((e) => e.sourceId === chapter.sourceId)?.sourceName ?? chapter.sourceId
+      const here = state.name || chapter.sourceId
       setStage(`${here} didn't open this chapter. Looking for it on your other sites…`)
       const other = await fromOtherSites(() => cancelled)
       if (cancelled) return
       if (other) {
         show(other.pages, other.title, other.referer)
-        setNote(`Opened from ${other.site}, because ${here} didn't load this chapter.`)
+        setNote(`Opened from ${other.site} — ${here} didn't load this chapter.`)
         return
       }
       setStage('')
@@ -343,19 +359,12 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   ): Promise<{ pages: string[]; title: string; site: string; referer: string } | null> {
     const num = chapterNumber(chapter.title)
     if (num === null) return null
-    const norm = (s: string): string =>
-      s
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}]+/gu, ' ')
-        .trim()
-    let entries = series.entries.filter((e) => e.sourceId !== chapter.sourceId)
+    // Pin, then last read, then the fastest healthy site. Comix and sites already down are left out.
+    let entries = await window.api.fallbackSites(series.title, [chapter.sourceId])
     if (entries.length === 0) {
-      // opened from Following / Continue reading (one site only): find the other sites by the title
-      const r = await window.api.search(series.title, [], 'az', 0, 10)
-      const hit = r.hits.find((h) => norm(h.title) === norm(series.title))
-      entries = hit ? hit.entries.filter((e) => e.sourceId !== chapter.sourceId) : []
+      entries = series.entries.filter((e) => e.sourceId !== chapter.sourceId).slice(0, 5)
     }
-    for (const e of entries.slice(0, 5)) {
+    for (const e of entries) {
       if (stop()) return null
       setStage(`Trying ${e.sourceName}…`)
       const res = await window.api.getSeries(e.sourceId, e.url)

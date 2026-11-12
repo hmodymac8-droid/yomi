@@ -9,6 +9,9 @@ import type { SeriesDetail } from '../preload/index.d'
 import type { DownloadItem, DownloadRequest } from '../preload/index.d'
 import { grabChapterFast } from './fastgrab'
 import { ensureSession, refererHints } from './grabber'
+import { getSource } from './catalog'
+import { classifyFailure, isOut, mapHost, urlsToTry } from './repair'
+import { commitFailure, pagesFromFallback } from './fallback'
 
 export const downloadsRoot = (): string => join(app.getPath('userData'), 'downloads')
 const indexFile = (): string => join(app.getPath('userData'), 'downloads.json')
@@ -367,21 +370,31 @@ async function fetchImage(url: string, referer: string): Promise<{ buf: Buffer; 
 }
 
 async function run(item: DownloadItem): Promise<void> {
-  update(item, { status: 'downloading', error: undefined, done: 0, files: [], bytes: 0 })
+  update(item, { status: 'downloading', error: undefined, notice: undefined, done: 0, files: [], bytes: 0 })
   const dir = join(downloadsRoot(), item.dir)
   try {
-    // 1) find the page image URLs (main link first, then the other providers' links)
+    // 1) find the page image URLs (main link first, then the other providers' links).
+    // A source already out of rotation is skipped, and the same chapter is taken from another site.
     let pages: string[] = []
     let lastErr = 'No pages found for this chapter.'
-    for (const u of item.urls) {
+    const src = getSource(item.sourceId)
+    const urls = isOut(src?.availability) ? urlsToTry(item.urls, src?.baseUrl ?? '') : item.urls
+    for (const u of urls) {
       try {
         pages = (await grabChapterFast(u)).pages
-        if (pages.length > 0) {
-          // the page list may come from a provider page: use its host as the Referer
-          break
-        }
+        if (pages.length > 0) break
       } catch (e) {
         lastErr = e instanceof Error ? e.message : String(e)
+        const kind = classifyFailure(lastErr)
+        if (kind !== 'none') commitFailure(item.sourceId, kind, lastErr)
+      }
+    }
+    if (pages.length === 0) {
+      const fb = await pagesFromFallback(item)
+      if (fb) {
+        pages = fb.pages
+        item.referer = fb.referer
+        update(item, { notice: fb.notice, referer: fb.referer })
       }
     }
     if (pages.length === 0) throw new Error(lastErr)
@@ -437,4 +450,28 @@ async function run(item: DownloadItem): Promise<void> {
 
 export function resumeDownloads(): void {
   if (listDownloads().some((i) => i.status === 'queued')) void pump()
+}
+
+/** Queued and finished rows follow a source onto a new host. A chapter that is downloading right now is left alone. */
+export function rewriteDownloadHost(oldHost: string, newOrigin: string): void {
+  const all = load()
+  const moved: DownloadItem[] = []
+  for (const i of Object.values(all)) {
+    if (active.has(i.id)) continue
+    const urls = i.urls.map((u) => mapHost(u, oldHost, newOrigin))
+    const seriesUrl = mapHost(i.seriesUrl, oldHost, newOrigin)
+    const referer = mapHost(i.referer, oldHost, newOrigin)
+    const id = mapHost(i.id, oldHost, newOrigin)
+    if (id === i.id && seriesUrl === i.seriesUrl && urls.every((u, n) => u === i.urls[n])) continue
+    delete all[i.id]
+    i.id = id
+    i.urls = urls
+    i.seriesUrl = seriesUrl
+    i.referer = referer
+    all[id] = i
+    moved.push(i)
+  }
+  if (moved.length === 0) return
+  saveSoon(true)
+  for (const i of moved) emitter({ ...i })
 }
