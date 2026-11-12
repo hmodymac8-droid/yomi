@@ -705,3 +705,8 @@ select { cursor: pointer; }
 .autoscroll { transition: opacity 0.3s, transform 0.3s; }
 .autoscroll.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, 12px); }
 
+/* Reader: two pages side by side (paged mode with the double-page spread on) */
+.spread { display: flex; justify-content: center; align-items: flex-start; width: 100%; }
+.spread .pagebox { flex: 1 1 0; min-width: 0; width: auto; }
+.spread .page { border-left: 0; border-right: 0; }
+.spread .pagebox + .pagebox { border-left: 1px solid var(--border); }

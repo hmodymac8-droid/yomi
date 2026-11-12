@@ -55,6 +55,8 @@ export interface OpenSeries {
   cover: string
   coverFallback?: string
   coverReferer: string
+  /** What the series page says it is, when it says it (manga / manhwa / manhua). */
+  type?: 'manga' | 'manhwa' | 'manhua'
   entries: { sourceId: string; sourceName: string; url: string }[]
 }
 
