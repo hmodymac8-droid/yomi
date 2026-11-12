@@ -537,6 +537,7 @@ export default function Downloads({ onRead, onOpen }: Props): React.JSX.Element 
                 {i.status === 'downloading' && <span className="pct">{i.total ? `${Math.round((i.done / i.total) * 100)}%` : 'Starting'}</span>}
                 {i.status === 'queued' && 'Waiting'}
                 {i.status === 'error' && <span className="bad">{i.error}</span>}
+                {i.notice && i.status !== 'error' && <span className="sub">{i.notice}</span>}
               </span>
               {(i.status === 'queued' || i.status === 'downloading') && (
                 <button className="mini" onClick={() => window.api.downloadCancel(i.id)}>

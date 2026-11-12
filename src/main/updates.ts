@@ -13,6 +13,7 @@ import { getSeries, getSeriesCached, getSource, mergeNewest, openSeries } from '
 import { enqueueDownloads } from './downloads'
 import { getProgress, recentProgress } from './progress'
 import { isUnreadable, readJson, writeAtomic } from './safefile'
+import { mapHost } from './repair'
 
 interface State {
   follows: Record<string, FollowRecord>
@@ -79,6 +80,31 @@ function toInfo(rec: FollowRecord): FollowInfo {
   const { known: _known, ...rest } = rec
   const unreadChapters = unreadOf(rec)
   return { ...rest, unread: unreadChapters.length, unreadChapters }
+}
+
+/** Follow a source onto a new host so Following still matches the series. */
+export function rewriteFollowHost(oldHost: string, newOrigin: string): void {
+  const s = load()
+  const next: Record<string, FollowRecord> = {}
+  let changed = false
+  for (const rec of Object.values(s.follows)) {
+    const seriesUrl = mapHost(rec.seriesUrl, oldHost, newOrigin)
+    if (seriesUrl !== rec.seriesUrl) changed = true
+    next[seriesUrl] = {
+      ...rec,
+      seriesUrl,
+      coverReferer: mapHost(rec.coverReferer, oldHost, newOrigin),
+      newChapters: rec.newChapters.map((c) => ({
+        ...c,
+        url: mapHost(c.url, oldHost, newOrigin),
+        alts: c.alts?.map((u) => mapHost(u, oldHost, newOrigin))
+      }))
+    }
+  }
+  if (!changed) return
+  s.follows = next
+  saveSoon()
+  emit()
 }
 
 export function listFollows(): FollowInfo[] {

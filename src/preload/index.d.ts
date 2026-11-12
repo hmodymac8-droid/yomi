@@ -57,6 +57,15 @@ export interface SourceDef {
   library?: boolean
   /** The site's data feed, when it has one (titles, chapters and pages are then read from it, not from web pages). */
   api?: FeedApiDef
+  /**
+   * Set when the site is taken out of rotation after a failed request. Missing means healthy. A background
+   * probe clears it when the original address answers again, and rewrites baseUrl if the site has moved.
+   */
+  availability?: 'ok' | 'degraded' | 'down'
+  availabilityAt?: number
+  availabilityReason?: string
+  /** The address this source used before the last automatic move. */
+  previousBaseUrl?: string
 }
 
 export interface SeriesEntry {
@@ -160,7 +169,7 @@ export interface HealthCheck {
   steps: HealthStep[]
 }
 
-/** How a site is doing: outcome of the last 20 series opens, plus the last "Re-check". */
+/** How a site is doing: outcome of the last 20 series opens, the last "Re-check", and a short outage history. */
 export interface SiteHealth {
   sourceId: string
   ok: number
@@ -169,6 +178,15 @@ export interface SiteHealth {
   lastAt: number
   lastError?: string
   check?: HealthCheck
+  /** Taken out of rotation until a probe or a successful read puts it back. Missing means healthy. */
+  availability?: 'ok' | 'degraded' | 'down'
+  failedAt?: number
+  reason?: string
+  history?: { at: number; availability: 'ok' | 'degraded' | 'down'; reason: string; kind: string }[]
+  /** When the background probe will try the original address again. */
+  nextProbeAt?: number
+  /** How long the last successful re-check took. Lower is faster. */
+  speedMs?: number
 }
 
 export interface ProgressRecord {
@@ -219,6 +237,8 @@ export interface DownloadItem {
   files: string[]
   bytes: number
   error?: string
+  /** A short note when the chapter was fetched from another site. */
+  notice?: string
   queuedAt: number
 }
 
@@ -370,6 +390,26 @@ export interface MangaApi {
   progressRecent: (limit: number) => Promise<ProgressRecord[]>
   progressHide: (seriesUrl: string) => Promise<void>
   grabChapter: (url: string) => Promise<GrabResponse>
+  /** Whether a source is in rotation, and the address a probe is watching. */
+  sourceState: (id: string) => Promise<{
+    availability: 'ok' | 'degraded' | 'down'
+    name: string
+    baseUrl: string
+    reason?: string
+  }>
+  /** A failed read. Network errors, 5xx, timeouts, browser checks and domain moves take the source out. */
+  sourceFailed: (
+    id: string,
+    message: string
+  ) => Promise<{ kind: string; availability: 'ok' | 'degraded' | 'down'; outOfRotation: boolean }>
+  /** Up to 5 other sites with this title: your pin, then last read, then the fastest healthy site. */
+  fallbackSites: (
+    title: string,
+    excludeIds: string[]
+  ) => Promise<{ sourceId: string; sourceName: string; url: string }[]>
+  /** Remember which site you chose with "Read from". A repair does not change this. */
+  pinSite: (title: string, sourceId: string) => Promise<void>
+  pinnedSite: (title: string) => Promise<string | null>
   listSources: () => Promise<SourceInfo[]>
   /** True while the library could not be read from disk (it is tried again by itself). */
   catalogTrouble: () => Promise<boolean>

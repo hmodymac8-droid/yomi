@@ -10,6 +10,7 @@ import { fetchHtml } from './http'
 import { feedChapter, feedFor } from './feedapi'
 import { parseChapterImages } from './staticParse'
 import { getMode, setMode } from './hostmode'
+import { classifyFailure, interpretChapter, outageError, type FailureKind } from './repair'
 
 const TTL = 20 * 60 * 1000
 const cache = new Map<string, { at: number; res: GrabResult }>()
@@ -17,13 +18,61 @@ const inflight = new Map<string, Promise<GrabResult>>()
 
 const usable = (r: GrabResult | null): r is GrabResult => !!r && r.pages.length >= 2
 
+const FAULT_RANK: Record<FailureKind, number> = {
+  none: 0,
+  timeout: 1,
+  network: 2,
+  http: 3,
+  cloudflare: 4,
+  moved: 5
+}
+const faults = new Map<string, { kind: FailureKind; detail: string }>()
+
+function rememberFault(url: string, kind: FailureKind, detail: string): void {
+  if (kind === 'none') return
+  const prev = faults.get(url)
+  if (!prev || FAULT_RANK[kind] >= FAULT_RANK[prev.kind]) {
+    faults.set(url, { kind, detail: detail.slice(0, 160) })
+  }
+}
+
+/** Pages win. An empty result after a real outage (5xx, timeout, block, dead host) is reported as one. */
+function finish(url: string, res: GrabResult): GrabResult {
+  const fault = faults.get(url)
+  faults.delete(url)
+  if (res.pages.length > 0) return res
+  if (fault) throw new Error(outageError(fault.kind, fault.detail))
+  return res
+}
+
+export interface SourceSignal {
+  url: string
+  ok: boolean
+  landed?: string
+  error?: string
+}
+
+let signal: (s: SourceSignal) => void = () => undefined
+/** The repair record hears about chapter fetches without this file knowing the catalog. */
+export function setSourceSignal(fn: (s: SourceSignal) => void): void {
+  signal = fn
+}
+
 async function viaHttp(url: string): Promise<GrabResult | null> {
   try {
     const r = await fetchHtml(url)
+    const verdict = interpretChapter({ status: r.status, html: r.html, finalUrl: r.finalUrl }, url)
+    // A dead host, a 5xx or a browser check is remembered, then the browser ways still get a turn.
+    if (!verdict.up && verdict.kind !== 'none') {
+      rememberFault(url, verdict.kind, verdict.detail)
+      return null
+    }
     if (r.status !== 200) return null
     const p = parseChapterImages(r.html, url)
     return { url, title: p.title, pages: p.pages, landed: pageAddress(r.html, r.finalUrl) }
-  } catch {
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    rememberFault(url, classifyFailure(message), message)
     return null
   }
 }
@@ -48,7 +97,9 @@ function pageAddress(html: string, fetched: string): string {
 async function viaLight(url: string): Promise<GrabResult | null> {
   try {
     return await grabChapterLight(url)
-  } catch {
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    rememberFault(url, classifyFailure(message), message)
     return null
   }
 }
@@ -80,6 +131,15 @@ function agreesWithFull(fast: GrabResult | null, full: GrabResult): boolean {
  * Per site we remember the fastest one that agreed with the others.
  */
 async function grab(url: string): Promise<GrabResult> {
+  try {
+    return finish(url, await grabInner(url))
+  } catch (e) {
+    faults.delete(url)
+    throw e
+  }
+}
+
+async function grabInner(url: string): Promise<GrabResult> {
   const key = new URL(url).hostname + '|chapter'
   const mode = getMode(key)
 
@@ -239,8 +299,15 @@ export function grabChapterFast(url: string): Promise<GrabResult> {
         .then((res) => extendSequence(res).catch(() => res))
   const p = read
     .then((res) => {
-      if (res.pages.length > 0) cache.set(url, { at: Date.now(), res })
+      if (res.pages.length > 0) {
+        signal({ url, ok: true, landed: res.landed })
+        cache.set(url, { at: Date.now(), res })
+      }
       return res
+    })
+    .catch((err: unknown) => {
+      signal({ url, ok: false, error: err instanceof Error ? err.message : String(err) })
+      throw err
     })
     .finally(() => inflight.delete(url))
   inflight.set(url, p)

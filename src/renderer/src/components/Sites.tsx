@@ -16,6 +16,8 @@ type Level = 'ok' | 'warn' | 'fail' | 'unknown'
 /** One word for the site: the last Re-check if there is one, otherwise how your recent series opens went. */
 export function levelOf(h: SiteHealth | undefined): Level {
   if (!h) return 'unknown'
+  if (h.availability === 'down') return 'fail'
+  if (h.availability === 'degraded') return 'warn'
   const opens = h.ok + h.incomplete + h.failed
   if (h.check) {
     const fresh = h.lastAt <= h.check.at // no series opened since the check
@@ -171,6 +173,30 @@ export default function Sites({ onBack }: { onBack: () => void }): React.JSX.Ele
                     : 'No series opened from this site yet.'}
                   {h?.lastError && h.failed > 0 && <span className="bad"> · last error: {h.lastError}</span>}
                 </div>
+                {h?.availability && h.availability !== 'ok' && (
+                  <div className="sub">
+                    {h.availability === 'down' ? 'Out of rotation' : 'Unsteady'}
+                    {h.reason ? `: ${h.reason}` : ''}
+                    {h.failedAt ? ` · since ${ago(h.failedAt)}` : ''}
+                    {h.nextProbeAt
+                      ? h.nextProbeAt > Date.now()
+                        ? ` · the old address is tried again in ${Math.max(1, Math.round((h.nextProbeAt - Date.now()) / 60000))} min`
+                        : ' · the old address is being tried again'
+                      : ''}
+                  </div>
+                )}
+                {h?.history && h.history.length > 0 && (
+                  <div className="sub">
+                    {h.history
+                      .slice(-5)
+                      .reverse()
+                      .map((ev) => (
+                        <div key={ev.at + ev.reason}>
+                          {ago(ev.at)} · {ev.availability === 'ok' ? 'back up' : ev.availability} · {ev.reason}
+                        </div>
+                      ))}
+                  </div>
+                )}
                 {h?.check ? (
                   <>
                     <div className="sub">Last re-check {ago(h.check.at)}:</div>

@@ -45,6 +45,18 @@ export function registerFeedSources(list: SourceDef[]): void {
   }
 }
 
+/** Drop the old host after a source moves, and register the feed at its new address. */
+export function reregisterFeed(src: SourceDef, previousBaseUrl?: string): void {
+  if (previousBaseUrl) {
+    try {
+      feeds.delete(hostKey(previousBaseUrl))
+    } catch {
+      /* not an address */
+    }
+  }
+  registerFeedSources([src])
+}
+
 export function feedFor(url: string): { def: FeedApiDef; origin: string } | undefined {
   try {
     return feeds.get(hostKey(url))
