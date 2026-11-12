@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  ORIGINAL_DEFAULTS,
   resolveReaderSettings,
   snapSpreadStart,
   spreadView,
@@ -15,16 +16,38 @@ const global: GlobalReaderSettings = {
   coverSingle: false
 }
 
-test('no override and no type keeps the global settings', () => {
-  assert.deepEqual(resolveReaderSettings(undefined, undefined, global), global)
-  assert.deepEqual(resolveReaderSettings({}, null, global), global)
-  const other: GlobalReaderSettings = { mode: 'paged', dir: 'rtl', spread: true, coverSingle: true }
-  assert.deepEqual(resolveReaderSettings(undefined, undefined, other), other)
-  assert.deepEqual(resolveReaderSettings({}, undefined, other), other)
+const wide: GlobalReaderSettings = {
+  mode: 'paged',
+  dir: 'rtl',
+  spread: true,
+  coverSingle: true
+}
+
+const TYPES = ['manga', 'manhwa', 'manhua', undefined, null] as const
+
+test('the original program defaults are a vertical scroll, left to right, no spread, no cover', () => {
+  assert.deepEqual(ORIGINAL_DEFAULTS, {
+    mode: 'webtoon',
+    dir: 'ltr',
+    spread: false,
+    coverSingle: false
+  })
 })
 
-test('a manga reads paged and right to left', () => {
-  const r = resolveReaderSettings(undefined, 'manga', global)
+test('with the type defaults off, the type has no effect at all', () => {
+  for (const g of [ORIGINAL_DEFAULTS, wide]) {
+    for (const t of TYPES) {
+      assert.deepEqual(resolveReaderSettings(undefined, t, g, false), g)
+      assert.deepEqual(resolveReaderSettings({}, t, g, false), g)
+      // leaving the toggle out behaves like false
+      assert.deepEqual(resolveReaderSettings(undefined, t, g), g)
+      assert.deepEqual(resolveReaderSettings({}, t, g), g)
+    }
+  }
+})
+
+test('with the type defaults on, a manga reads paged and right to left', () => {
+  const r = resolveReaderSettings(undefined, 'manga', global, true)
   assert.equal(r.mode, 'paged')
   assert.equal(r.dir, 'rtl')
   // spread and cover are not type defaults: they stay global
@@ -32,10 +55,9 @@ test('a manga reads paged and right to left', () => {
   assert.equal(r.coverSingle, false)
 })
 
-test('manhwa and manhua read as a vertical scroll, left to right', () => {
-  const wide: GlobalReaderSettings = { mode: 'paged', dir: 'rtl', spread: true, coverSingle: true }
+test('with the type defaults on, manhwa and manhua read as a vertical scroll, left to right', () => {
   for (const t of ['manhwa', 'manhua'] as const) {
-    const r = resolveReaderSettings(undefined, t, wide)
+    const r = resolveReaderSettings(undefined, t, wide, true)
     assert.equal(r.mode, 'webtoon')
     assert.equal(r.dir, 'ltr')
     assert.equal(r.spread, true)
@@ -43,38 +65,48 @@ test('manhwa and manhua read as a vertical scroll, left to right', () => {
   }
 })
 
-test('one field of the series override leaves the other to the type', () => {
-  const r = resolveReaderSettings({ mode: 'webtoon' }, 'manga', global)
-  assert.equal(r.mode, 'webtoon')
-  assert.equal(r.dir, 'rtl')
+test('with the type defaults on, an unknown type keeps the global settings', () => {
+  for (const t of [undefined, null] as const) {
+    assert.deepEqual(resolveReaderSettings(undefined, t, wide, true), wide)
+    assert.deepEqual(resolveReaderSettings({}, t, global, true), global)
+  }
+})
 
-  const back = resolveReaderSettings({ dir: 'ltr' }, 'manga', global)
+test('a series override wins whether the type defaults are on or off', () => {
+  for (const on of [true, false]) {
+    const r = resolveReaderSettings({ mode: 'paged', dir: 'ltr' }, 'manhwa', global, on)
+    assert.equal(r.mode, 'paged')
+    assert.equal(r.dir, 'ltr')
+  }
+})
+
+test('one field of the series override leaves the other to the type (when on), then the global setting', () => {
+  const on = resolveReaderSettings({ mode: 'webtoon' }, 'manga', global, true)
+  assert.equal(on.mode, 'webtoon')
+  assert.equal(on.dir, 'rtl')
+
+  const off = resolveReaderSettings({ mode: 'webtoon' }, 'manga', global, false)
+  assert.equal(off.mode, 'webtoon')
+  assert.equal(off.dir, 'ltr')
+
+  const back = resolveReaderSettings({ dir: 'ltr' }, 'manga', global, true)
   assert.equal(back.mode, 'paged')
   assert.equal(back.dir, 'ltr')
 })
 
-test('the series override wins over the type and the global setting', () => {
-  const r = resolveReaderSettings({ mode: 'paged', dir: 'ltr' }, 'manhwa', global)
-  assert.equal(r.mode, 'paged')
-  assert.equal(r.dir, 'ltr')
-})
-
-test('an empty override falls back to the type, then to the global setting', () => {
-  assert.deepEqual(
-    resolveReaderSettings({}, 'manga', global),
-    resolveReaderSettings(undefined, 'manga', global)
-  )
-  assert.deepEqual(resolveReaderSettings({}, undefined, global), global)
+test('an empty override with the type defaults off gives back exactly the global settings', () => {
+  for (const g of [ORIGINAL_DEFAULTS, wide]) {
+    for (const t of TYPES) {
+      assert.deepEqual(resolveReaderSettings({}, t, g, false), g)
+    }
+  }
 })
 
 test('spread and cover can be set per series', () => {
-  const r = resolveReaderSettings({ spread: true, coverSingle: true }, 'manga', global)
+  const r = resolveReaderSettings({ spread: true, coverSingle: true }, 'manga', global, false)
   assert.equal(r.spread, true)
   assert.equal(r.coverSingle, true)
-  const off = resolveReaderSettings({ spread: false }, 'manga', {
-    ...global,
-    spread: true
-  })
+  const off = resolveReaderSettings({ spread: false }, 'manga', { ...global, spread: true }, false)
   assert.equal(off.spread, false)
 })
 

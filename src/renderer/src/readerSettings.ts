@@ -1,5 +1,5 @@
 /**
- * How a series is read: the series' own choice, else the default for its type, else the global setting.
+ * How a series is read: the series' own choice, else (only if the type defaults are on) the default for its type, else the global setting.
  * Plain functions only (no React, no Electron) so the tests can import this file directly.
  */
 
@@ -23,20 +23,39 @@ export interface SeriesReaderOverride {
   coverSingle?: boolean
 }
 
-/** What a series type is usually read like. A type we don't know says nothing. */
+/**
+ * What the program did before any setting was touched: a vertical scroll, left to right, no spread, no cover.
+ * Someone who never opens the reading settings gets exactly this.
+ */
+export const ORIGINAL_DEFAULTS: GlobalReaderSettings = {
+  mode: 'webtoon',
+  dir: 'ltr',
+  spread: false,
+  coverSingle: false
+}
+
+/**
+ * What a series type is usually read like. A helper only: it says nothing about spread or cover, and it is
+ * used only when the reader has turned the type defaults on (see resolveReaderSettings).
+ */
 export function typeDefault(type?: SeriesType | null): Partial<GlobalReaderSettings> {
   if (type === 'manga') return { mode: 'paged', dir: 'rtl' }
   if (type === 'manhwa' || type === 'manhua') return { mode: 'webtoon', dir: 'ltr' }
   return {}
 }
 
-/** Series override, then the type's default, then the global setting, field by field. */
+/**
+ * Series override, then the type's default (only when `openByType` is on), then the global setting, field by field.
+ * With `openByType` off — the default — the type is ignored completely, so the result is the global setting unless
+ * the series has a choice of its own.
+ */
 export function resolveReaderSettings(
   override: SeriesReaderOverride | undefined,
   type: SeriesType | null | undefined,
-  global: GlobalReaderSettings
+  global: GlobalReaderSettings,
+  openByType = false
 ): GlobalReaderSettings {
-  const byType = typeDefault(type)
+  const byType = openByType ? typeDefault(type) : {}
   return {
     mode: override?.mode ?? byType.mode ?? global.mode,
     dir: override?.dir ?? byType.dir ?? global.dir,

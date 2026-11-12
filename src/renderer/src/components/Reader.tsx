@@ -4,6 +4,7 @@ import { Icon } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
 import { findBorders, type Insets } from '../pagetools'
 import {
+  ORIGINAL_DEFAULTS,
   loadSeriesOverride,
   resolveReaderSettings,
   saveSeriesOverride,
@@ -88,6 +89,10 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     () => saved('spread', ['on', 'off'] as const, 'off') === 'on'
   )
   const [gCover, setGCover] = useState(() => saved('cover', ['on', 'off'] as const, 'off') === 'on')
+  // "By type": manga reads right-to-left, manhwa scrolls. Off unless you turn it on.
+  const [openByType, setOpenByType] = useState(
+    () => saved('openByType', ['on', 'off'] as const, 'off') === 'on'
+  )
   const [fit, setFit] = useState<'width' | 'height'>(() =>
     saved('fit', ['width', 'height'] as const, 'width')
   )
@@ -95,6 +100,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const [zoom, setZoom] = useState(() => clampW(savedNum('zoom', 400, 2000, 900))) // page width in px when fitting width
   const [pct, setPct] = useState(0)
   const [menu, setMenu] = useState(false)
+  // Menu-only UI state (not remembered): the "How you read" fold, and whether changes go to this series or all.
+  const [howOpen, setHowOpen] = useState(false)
+  const [scope, setScope] = useState<'series' | 'all'>('series')
   const [index, setIndex] = useState(0)
   const [, setEager] = useState(false) // every page loads eagerly now; kept so resuming still flags it
   const scroller = useRef<HTMLDivElement>(null)
@@ -136,12 +144,17 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     () => loadSeriesOverride(skey) ?? {}
   )
   const [stype, setStype] = useState<SeriesType | undefined>(series.type)
-  const resolved = resolveReaderSettings(override, stype, {
-    mode: gMode,
-    dir: gDir,
-    spread: gSpread,
-    coverSingle: gCover
-  })
+  const resolved = resolveReaderSettings(
+    override,
+    stype,
+    {
+      mode: gMode,
+      dir: gDir,
+      spread: gSpread,
+      coverSingle: gCover
+    },
+    openByType
+  )
   const mode = resolved.mode
   const dir = resolved.dir
   const spread = resolved.spread
@@ -154,39 +167,40 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     setOverride(next)
     saveSeriesOverride(skey, next)
   }
-  const cycleMode = (): void =>
-    setSeries({
-      mode:
-        override.mode === undefined ? 'webtoon' : override.mode === 'webtoon' ? 'paged' : undefined
-    })
-  const cycleDir = (): void =>
-    setSeries({
-      dir: override.dir === undefined ? 'ltr' : override.dir === 'ltr' ? 'rtl' : undefined
-    })
-  const cycleSpread = (): void =>
-    setSeries({
-      spread: override.spread === undefined ? true : override.spread ? false : undefined
-    })
-  const cycleCover = (): void =>
-    setSeries({
-      coverSingle:
-        override.coverSingle === undefined ? true : override.coverSingle ? false : undefined
-    })
-  const modeLabel =
-    override.mode === undefined
-      ? 'Use default'
-      : override.mode === 'webtoon'
-        ? 'Vertical scroll'
-        : 'One page at a time'
-  const dirLabel =
-    override.dir === undefined
-      ? 'Use default'
-      : override.dir === 'ltr'
-        ? 'Left to right'
-        : 'Right to left'
-  const spreadLabel = override.spread === undefined ? 'Use default' : override.spread ? 'On' : 'Off'
-  const coverLabel =
-    override.coverSingle === undefined ? 'Use default' : override.coverSingle ? 'On' : 'Off'
+
+  // The menu writes either this series' choice or the global default, depending on the scope picked.
+  const setMode = (m: Mode): void => {
+    if (scope === 'all') setGMode(m)
+    else setSeries({ mode: m })
+  }
+  const setDir = (d: Dir): void => {
+    if (scope === 'all') setGDir(d)
+    else setSeries({ dir: d })
+  }
+  const setSpread = (on: boolean): void => {
+    if (scope === 'all') setGSpread(on)
+    else setSeries({ spread: on })
+  }
+  const setCover = (on: boolean): void => {
+    if (scope === 'all') setGCover(on)
+    else setSeries({ coverSingle: on })
+  }
+  // Back to the plain defaults: this series' choice is cleared, or the globals go back to the originals.
+  // "By type" is left as it is.
+  const resetLayout = (): void => {
+    if (scope === 'all') {
+      setGMode(ORIGINAL_DEFAULTS.mode)
+      setGDir(ORIGINAL_DEFAULTS.dir)
+      setGSpread(ORIGINAL_DEFAULTS.spread)
+      setGCover(ORIGINAL_DEFAULTS.coverSingle)
+    } else {
+      saveSeriesOverride(skey, undefined)
+      setOverride({})
+    }
+  }
+  // Keyboard shortcuts (M / D) flip the resolved value, through the same scope-aware helpers.
+  const cycleMode = (): void => setMode(mode === 'webtoon' ? 'paged' : 'webtoon')
+  const cycleDir = (): void => setDir(dir === 'ltr' ? 'rtl' : 'ltr')
 
   // ---- page tools (all off until you turn them on in the reading settings) ----
   const [tone, setTone] = useState<Tone>(() => saved('tone', TONES, 'off'))
@@ -278,6 +292,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   useEffect(() => remember('dir', gDir), [gDir])
   useEffect(() => remember('spread', gSpread ? 'on' : 'off'), [gSpread])
   useEffect(() => remember('cover', gCover ? 'on' : 'off'), [gCover])
+  useEffect(() => remember('openByType', openByType ? 'on' : 'off'), [openByType])
   useEffect(() => remember('fit', fit), [fit])
   useEffect(() => remember('bg', bg), [bg])
   useEffect(() => remember('zoom', zoom), [zoom])
@@ -893,7 +908,12 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
         <div className="rmenu">
           <button
             className={`iconbtn${menu ? ' on' : ''}`}
-            onClick={() => setMenu((m) => !m)}
+            onClick={() =>
+              setMenu((m) => {
+                if (m) setHowOpen(false)
+                return !m
+              })
+            }
             title="Reading settings"
             aria-label="Reading settings"
           >
@@ -901,39 +921,132 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
           </button>
           {menu && (
             <div className="rmenupop">
-              <div className="sub">This series</div>
-              <button onClick={cycleMode} title="Shortcut: M">
-                Layout for this series <b>{modeLabel}</b>
+              <button
+                className="rfold"
+                onClick={() => setHowOpen((v) => !v)}
+                aria-expanded={howOpen}
+                title="How you read this chapter"
+              >
+                <span>
+                  <span lang="ar">طريقة القراءة</span> · How you read
+                </span>
+                <b>
+                  {mode === 'webtoon' ? (
+                    <>
+                      <span lang="ar">تمرير لتحت</span> · Scroll down
+                    </>
+                  ) : (
+                    <>
+                      <span lang="ar">صفحة صفحة</span> · Page by page
+                    </>
+                  )}
+                </b>
+                <span className="rchev">{howOpen ? '▴' : '▾'}</span>
               </button>
-              <button onClick={cycleDir} title="Shortcut: D">
-                Direction for this series <b>{dirLabel}</b>
-              </button>
-              {mode === 'paged' && (
-                <button onClick={cycleSpread} title="Two pages side by side">
-                  Double-page spread <b>{spreadLabel}</b>
-                </button>
+              {howOpen && (
+                <>
+                  <div className="rgroup">
+                    <div className="rlabel">
+                      <span lang="ar">طريقة القراءة</span> · How you read
+                    </div>
+                    <div className="rseg">
+                      <button
+                        className={mode === 'webtoon' ? 'on' : ''}
+                        onClick={() => setMode('webtoon')}
+                      >
+                        <span lang="ar">تمرير لتحت</span> · Scroll down
+                      </button>
+                      <button
+                        className={mode === 'paged' ? 'on' : ''}
+                        onClick={() => setMode('paged')}
+                      >
+                        <span lang="ar">صفحة صفحة</span> · Page by page
+                      </button>
+                    </div>
+                  </div>
+                  {mode === 'paged' && (
+                    <>
+                      <div className="rgroup">
+                        <div className="rlabel">
+                          <span lang="ar">الاتجاه</span> · Direction
+                        </div>
+                        <div className="rseg">
+                          <button
+                            className={dir === 'rtl' ? 'on' : ''}
+                            onClick={() => setDir('rtl')}
+                          >
+                            <span lang="ar">من اليمين لليسار</span> · Right to left
+                          </button>
+                          <button
+                            className={dir === 'ltr' ? 'on' : ''}
+                            onClick={() => setDir('ltr')}
+                          >
+                            <span lang="ar">من اليسار لليمين</span> · Left to right
+                          </button>
+                        </div>
+                      </div>
+                      <div className="rgroup">
+                        <div className="rlabel">
+                          <span lang="ar">عدد الصفحات</span> · Pages
+                        </div>
+                        <div className="rseg">
+                          <button className={!spread ? 'on' : ''} onClick={() => setSpread(false)}>
+                            <span lang="ar">صفحة وحدة</span> · One page
+                          </button>
+                          <button className={spread ? 'on' : ''} onClick={() => setSpread(true)}>
+                            <span lang="ar">صفحتين جنب بعض</span> · Two pages
+                          </button>
+                        </div>
+                        {spread && (
+                          <button
+                            className={`rmini${coverSingle ? ' on' : ''}`}
+                            onClick={() => setCover(!coverSingle)}
+                          >
+                            <span lang="ar">الغلاف لحاله</span> · Cover on its own
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  <div className="rgroup">
+                    <div className="rlabel">
+                      <span lang="ar">حسب النوع</span> · By type
+                    </div>
+                    <div className="rseg">
+                      <button className={!openByType ? 'on' : ''} onClick={() => setOpenByType(false)}>
+                        <span lang="ar">لا</span> · No
+                      </button>
+                      <button className={openByType ? 'on' : ''} onClick={() => setOpenByType(true)}>
+                        <span lang="ar">نعم، المانجا يمين، المانهوا تمرير</span> · Yes, manga
+                        right-to-left, manhwa scroll
+                      </button>
+                    </div>
+                  </div>
+                  <div className="rgroup">
+                    <div className="rlabel">
+                      <span lang="ar">النطاق</span> · Scope
+                    </div>
+                    <div className="rseg">
+                      <button
+                        className={scope === 'series' ? 'on' : ''}
+                        onClick={() => setScope('series')}
+                      >
+                        <span lang="ar">لهذي السلسلة بس</span> · This series only
+                      </button>
+                      <button
+                        className={scope === 'all' ? 'on' : ''}
+                        onClick={() => setScope('all')}
+                      >
+                        <span lang="ar">لكل السلاسل</span> · All series
+                      </button>
+                    </div>
+                    <button className="rreset" onClick={resetLayout}>
+                      <span lang="ar">رجّع الافتراضي</span> · Reset to default
+                    </button>
+                  </div>
+                </>
               )}
-              {mode === 'paged' && spread && (
-                <button onClick={cycleCover} title="Show the first page alone, then pair the rest">
-                  First page as cover <b>{coverLabel}</b>
-                </button>
-              )}
-              <div className="sub">Defaults for all series</div>
-              <button onClick={() => setGMode(gMode === 'webtoon' ? 'paged' : 'webtoon')}>
-                Default layout{' '}
-                <b>{gMode === 'webtoon' ? 'Vertical scroll' : 'One page at a time'}</b>
-              </button>
-              <button onClick={() => setGDir(gDir === 'ltr' ? 'rtl' : 'ltr')}>
-                Default direction <b>{gDir === 'ltr' ? 'Left to right' : 'Right to left'}</b>
-              </button>
-              <button onClick={() => setGSpread(!gSpread)}>
-                Default double-page spread <b>{gSpread ? 'On' : 'Off'}</b>
-              </button>
-              {gSpread && (
-                <button onClick={() => setGCover(!gCover)}>
-                  Default first page as cover <b>{gCover ? 'On' : 'Off'}</b>
-                </button>
-              )}
+              <div className="sub">Extras (all optional)</div>
               <button
                 onClick={() => setFit(fit === 'width' ? 'height' : 'width')}
                 title="Shortcut: F"
@@ -951,7 +1064,6 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
               >
                 Background <b>{bg === 'dark' ? 'Theme' : bg === 'black' ? 'Black' : 'Sepia'}</b>
               </button>
-              <div className="sub">Extras (all optional)</div>
               <button
                 onClick={() => setAutoRun((r) => !r)}
                 disabled={mode !== 'webtoon'}
