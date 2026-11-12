@@ -3,6 +3,18 @@ import { OpenChapter, OpenSeries, chapterNumber, localPage, pageSrc } from '../l
 import { Icon } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
 import { findBorders, type Insets } from '../pagetools'
+import {
+  loadSeriesOverride,
+  resolveReaderSettings,
+  saveSeriesOverride,
+  seriesKey,
+  snapSpreadStart,
+  spreadView,
+  type Dir,
+  type Mode,
+  type SeriesReaderOverride,
+  type SeriesType
+} from '../readerSettings'
 
 // Page width control: 480 to 1100 px in steps of 80 (Ctrl + wheel and the + / - keys use the same steps).
 const WMIN = 480
@@ -10,8 +22,6 @@ const WMAX = 1100
 const WSTEP = 80
 const clampW = (n: number): number => Math.max(WMIN, Math.min(WMAX, n))
 
-type Mode = 'webtoon' | 'paged'
-type Dir = 'ltr' | 'rtl'
 type Bg = 'dark' | 'black' | 'sepia'
 type Tone = 'off' | 'warm' | 'dim' | 'gray'
 const TONES = ['off', 'warm', 'dim', 'gray'] as const
@@ -69,13 +79,18 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const [error, setError] = useState('')
   const [title, setTitle] = useState('')
   const [pages, setPages] = useState<string[]>([])
-  const [mode, setMode] = useState<Mode>(() =>
+  // Layout is chosen per series: the series' own choice, else its type's default, else these global settings.
+  const [gMode, setGMode] = useState<Mode>(() =>
     saved('mode', ['webtoon', 'paged'] as const, 'webtoon')
   )
+  const [gDir, setGDir] = useState<Dir>(() => saved('dir', ['ltr', 'rtl'] as const, 'ltr'))
+  const [gSpread, setGSpread] = useState(
+    () => saved('spread', ['on', 'off'] as const, 'off') === 'on'
+  )
+  const [gCover, setGCover] = useState(() => saved('cover', ['on', 'off'] as const, 'off') === 'on')
   const [fit, setFit] = useState<'width' | 'height'>(() =>
     saved('fit', ['width', 'height'] as const, 'width')
   )
-  const [dir, setDir] = useState<Dir>(() => saved('dir', ['ltr', 'rtl'] as const, 'ltr'))
   const [bg, setBg] = useState<Bg>(() => saved('bg', ['dark', 'black', 'sepia'] as const, 'dark'))
   const [zoom, setZoom] = useState(() => clampW(savedNum('zoom', 400, 2000, 900))) // page width in px when fitting width
   const [pct, setPct] = useState(0)
@@ -114,6 +129,64 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const settledN = pages.reduce((n, _, i) => n + (pageState[i] ? 1 : 0), 0)
   const stillLoading = pages.length > 0 && settledN < pages.length
   const failedN = settledN - loadedN
+
+  // ---- this series' own layout, and the type it falls back to ----
+  const skey = seriesKey(series.title, chapter.seriesUrl)
+  const [override, setOverride] = useState<SeriesReaderOverride>(
+    () => loadSeriesOverride(skey) ?? {}
+  )
+  const [stype, setStype] = useState<SeriesType | undefined>(series.type)
+  const resolved = resolveReaderSettings(override, stype, {
+    mode: gMode,
+    dir: gDir,
+    spread: gSpread,
+    coverSingle: gCover
+  })
+  const mode = resolved.mode
+  const dir = resolved.dir
+  const spread = resolved.spread
+  const coverSingle = resolved.coverSingle
+  const view = spreadView(index, pages.length, dir, coverSingle)
+
+  // Changing a series' layout only writes that series' choice; the global default is left alone.
+  const setSeries = (patch: SeriesReaderOverride): void => {
+    const next: SeriesReaderOverride = { ...override, ...patch }
+    setOverride(next)
+    saveSeriesOverride(skey, next)
+  }
+  const cycleMode = (): void =>
+    setSeries({
+      mode:
+        override.mode === undefined ? 'webtoon' : override.mode === 'webtoon' ? 'paged' : undefined
+    })
+  const cycleDir = (): void =>
+    setSeries({
+      dir: override.dir === undefined ? 'ltr' : override.dir === 'ltr' ? 'rtl' : undefined
+    })
+  const cycleSpread = (): void =>
+    setSeries({
+      spread: override.spread === undefined ? true : override.spread ? false : undefined
+    })
+  const cycleCover = (): void =>
+    setSeries({
+      coverSingle:
+        override.coverSingle === undefined ? true : override.coverSingle ? false : undefined
+    })
+  const modeLabel =
+    override.mode === undefined
+      ? 'Use default'
+      : override.mode === 'webtoon'
+        ? 'Vertical scroll'
+        : 'One page at a time'
+  const dirLabel =
+    override.dir === undefined
+      ? 'Use default'
+      : override.dir === 'ltr'
+        ? 'Left to right'
+        : 'Right to left'
+  const spreadLabel = override.spread === undefined ? 'Use default' : override.spread ? 'On' : 'Off'
+  const coverLabel =
+    override.coverSingle === undefined ? 'Use default' : override.coverSingle ? 'On' : 'Off'
 
   // ---- page tools (all off until you turn them on in the reading settings) ----
   const [tone, setTone] = useState<Tone>(() => saved('tone', TONES, 'off'))
@@ -200,12 +273,35 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
-  useEffect(() => remember('mode', mode), [mode])
+  // Only the global defaults are written back; a type default or a series choice never overwrites them.
+  useEffect(() => remember('mode', gMode), [gMode])
+  useEffect(() => remember('dir', gDir), [gDir])
+  useEffect(() => remember('spread', gSpread ? 'on' : 'off'), [gSpread])
+  useEffect(() => remember('cover', gCover ? 'on' : 'off'), [gCover])
   useEffect(() => remember('fit', fit), [fit])
-  useEffect(() => remember('dir', dir), [dir])
   useEffect(() => remember('bg', bg), [bg])
   useEffect(() => remember('zoom', zoom), [zoom])
   useEffect(() => remember('autonext', autoNext ? 'on' : 'off'), [autoNext])
+
+  // Another series was opened: read its own layout.
+  useEffect(() => {
+    setOverride(loadSeriesOverride(skey) ?? {})
+  }, [skey])
+
+  // A series' type (manga / manhwa / manhua) decides its default layout; the saved chapter list knows it.
+  useEffect(() => {
+    if (series.type) {
+      setStype(series.type)
+      return
+    }
+    let cancelled = false
+    void window.api.getSeriesCached(chapter.seriesUrl).then((d) => {
+      if (!cancelled && d?.type) setStype(d.type)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [chapter.seriesUrl, series.type])
 
   // Saves where you are (pos 0..1) for this series; markRead flags the chapter as finished.
   const persist = (pos: number, markRead = false): void => {
@@ -316,7 +412,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       // A source already out of rotation is not waited on: another copy of the chapter is opened at once.
       const state = await window.api.sourceState(chapter.sourceId)
       let deadHost =
-        state.availability === 'down' || state.availability === 'degraded' ? bare(state.baseUrl) : ''
+        state.availability === 'down' || state.availability === 'degraded'
+          ? bare(state.baseUrl)
+          : ''
       if (deadHost) setStage(`${state.name} is down. Looking for another copy…`)
       for (const u of urls) {
         if (deadHost && bare(u) === deadHost) continue
@@ -447,25 +545,51 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     }
   }
 
-  // Paged mode: save the page you are on; the last page counts as finished.
+  // Paged mode: save the page you are on; the last page (or the last spread) counts as finished.
   useEffect(() => {
     if (mode !== 'paged' || pages.length === 0 || restoring.current) return
-    const f = pages.length > 1 ? index / (pages.length - 1) : 1
-    const done = index >= pages.length - 1
+    const v = spreadView(index, pages.length, dir, coverSingle)
+    const last = spread ? Math.min(pages.length - 1, v.start + v.size - 1) : index
+    const f = pages.length > 1 ? last / (pages.length - 1) : 1
+    const done = last >= pages.length - 1
     if (done) finished.current = true
     persist(f, done)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, mode, pages.length])
+  }, [index, mode, pages.length, spread, dir, coverSingle])
 
-  // Paged mode: load the next few pages (and the previous one) ahead of time so turning a page never waits.
+  // A spread always starts on its first page, even when the saved position was the second one.
+  useEffect(() => {
+    if (mode !== 'paged' || !spread || pages.length === 0) return
+    const s = snapSpreadStart(index, pages.length, coverSingle)
+    if (s !== index) setIndex(s)
+  }, [index, mode, spread, pages.length, coverSingle])
+
+  // Paged mode: load the pages of this spread and the next one ahead of time, so turning a page never waits.
   useEffect(() => {
     if (mode !== 'paged' || pages.length === 0) return
-    for (const i of [index + 1, index + 2, index + 3, index - 1]) {
-      if (i < 0 || i >= pages.length) continue
+    const want = new Set<number>()
+    if (spread) {
+      const v = spreadView(index, pages.length, dir, coverSingle)
+      for (const i of [
+        v.left,
+        v.right,
+        v.single,
+        v.start + v.size,
+        v.start + v.size + 1,
+        v.start - 1
+      ]) {
+        if (i !== undefined && i >= 0 && i < pages.length) want.add(i)
+      }
+    } else {
+      for (const i of [index + 1, index + 2, index + 3, index - 1]) {
+        if (i >= 0 && i < pages.length) want.add(i)
+      }
+    }
+    for (const i of want) {
       const img = new Image()
       img.src = pageSrc(pages[i], pageRef)
     }
-  }, [index, mode, pages, pageRef])
+  }, [index, mode, pages, pageRef, spread, dir, coverSingle])
 
   // Cut white borders: each page is looked at once it has loaded.
   useEffect(() => {
@@ -525,16 +649,33 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRun, mode, pages.length, loading, speed, autoNext, nextCh, stillLoading])
 
-  // Turning pages: in right-to-left reading the next page is to the LEFT.
-  const nextPage = (): void => (index >= pages.length - 1 ? go(nextCh) : setIndex((i) => i + 1))
-  const prevPage = (): void => (index <= 0 ? go(prevCh) : setIndex((i) => i - 1))
+  // Turning pages: in right-to-left reading the next page is to the LEFT. A spread moves by two (or one for a cover).
+  const nextPage = (): void => {
+    if (!spread) {
+      if (index >= pages.length - 1) go(nextCh)
+      else setIndex((i) => i + 1)
+      return
+    }
+    const next = view.start + view.size
+    if (next >= pages.length) go(nextCh)
+    else setIndex(next)
+  }
+  const prevPage = (): void => {
+    if (!spread) {
+      if (index <= 0) go(prevCh)
+      else setIndex((i) => i - 1)
+      return
+    }
+    if (view.start <= 0) go(prevCh)
+    else setIndex(snapSpreadStart(view.start - 1, pages.length, coverSingle))
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') return onBack()
-      if (e.key === 'm') setMode((m) => (m === 'webtoon' ? 'paged' : 'webtoon'))
+      if (e.key === 'm') cycleMode()
       if (e.key === 'f') setFit((f) => (f === 'width' ? 'height' : 'width'))
-      if (e.key === 'd') setDir((d) => (d === 'ltr' ? 'rtl' : 'ltr'))
+      if (e.key === 'd') cycleDir()
       if (e.key === '+' || e.key === '=') setZoom((z) => clampW(z + WSTEP))
       if (e.key === '-') setZoom((z) => clampW(z - WSTEP))
       if (e.key === 'a' && mode === 'webtoon') setAutoRun((r) => !r)
@@ -566,18 +707,30 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  // Click the left or right third to turn the page (which side is "next" depends on the direction).
+  const turnFromClick = (e: React.MouseEvent<HTMLElement>): void => {
+    if ((e.target as HTMLElement).closest('button')) return
+    const r = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - r.left) / r.width
+    const leftIsNext = dir === 'rtl'
+    if (x < 0.33) (leftIsNext ? nextPage : prevPage)()
+    else if (x > 0.67) (leftIsNext ? prevPage : nextPage)()
+    else nextPage()
+  }
+
   // One page: its picture (with the optional border cut) and its loading frame.
   // In vertical scroll only the side borders are cut, so the gaps between panels stay as the artist made them.
-  function renderPage(p: string, i: number, paged: boolean): React.JSX.Element {
+  function renderPage(p: string, i: number, paged: boolean, clickable = true): React.JSX.Element {
     const st = pageState[i]
     const raw = autocrop ? (crops[i] ?? null) : null
     const crop = raw && !paged ? (raw.l + raw.r > 0 ? { ...raw, t: 0, b: 0 } : null) : raw
     const ar = aspect[i]
     const arShown = ar && crop ? (ar * (1 - crop.t - crop.b)) / (1 - crop.l - crop.r) : ar
     const h = `calc((100vh - 56px) * ${zoom / 900})`
+    const half = paged && !clickable
     const innerStyle: React.CSSProperties =
       fit === 'width'
-        ? { width: `min(100%, ${zoom}px)` }
+        ? { width: half ? '100%' : `min(100%, ${zoom}px)` }
         : arShown
           ? { width: `calc(${h} / ${arShown})` }
           : {}
@@ -595,20 +748,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
         <div
           className={`pageinner${sized ? ' sized' : ''}`}
           style={innerStyle}
-          onClick={
-            paged
-              ? (e) => {
-                  // click the left or right third to turn the page (which side is "next" depends on the direction)
-                  if ((e.target as HTMLElement).closest('button')) return
-                  const r = e.currentTarget.getBoundingClientRect()
-                  const x = (e.clientX - r.left) / r.width
-                  const leftIsNext = dir === 'rtl'
-                  if (x < 0.33) (leftIsNext ? nextPage : prevPage)()
-                  else if (x > 0.67) (leftIsNext ? prevPage : nextPage)()
-                  else nextPage()
-                }
-              : undefined
-          }
+          onClick={paged && clickable ? turnFromClick : undefined}
         >
           <img
             className={`page fit-${fit}${st === 'ok' ? '' : ' waiting'}`}
@@ -761,20 +901,44 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
           </button>
           {menu && (
             <div className="rmenupop">
-              <button
-                onClick={() => setMode(mode === 'webtoon' ? 'paged' : 'webtoon')}
-                title="Shortcut: M"
-              >
-                Layout <b>{mode === 'webtoon' ? 'Vertical scroll' : 'One page at a time'}</b>
+              <div className="sub">This series</div>
+              <button onClick={cycleMode} title="Shortcut: M">
+                Layout for this series <b>{modeLabel}</b>
               </button>
+              <button onClick={cycleDir} title="Shortcut: D">
+                Direction for this series <b>{dirLabel}</b>
+              </button>
+              {mode === 'paged' && (
+                <button onClick={cycleSpread} title="Two pages side by side">
+                  Double-page spread <b>{spreadLabel}</b>
+                </button>
+              )}
+              {mode === 'paged' && spread && (
+                <button onClick={cycleCover} title="Show the first page alone, then pair the rest">
+                  First page as cover <b>{coverLabel}</b>
+                </button>
+              )}
+              <div className="sub">Defaults for all series</div>
+              <button onClick={() => setGMode(gMode === 'webtoon' ? 'paged' : 'webtoon')}>
+                Default layout{' '}
+                <b>{gMode === 'webtoon' ? 'Vertical scroll' : 'One page at a time'}</b>
+              </button>
+              <button onClick={() => setGDir(gDir === 'ltr' ? 'rtl' : 'ltr')}>
+                Default direction <b>{gDir === 'ltr' ? 'Left to right' : 'Right to left'}</b>
+              </button>
+              <button onClick={() => setGSpread(!gSpread)}>
+                Default double-page spread <b>{gSpread ? 'On' : 'Off'}</b>
+              </button>
+              {gSpread && (
+                <button onClick={() => setGCover(!gCover)}>
+                  Default first page as cover <b>{gCover ? 'On' : 'Off'}</b>
+                </button>
+              )}
               <button
                 onClick={() => setFit(fit === 'width' ? 'height' : 'width')}
                 title="Shortcut: F"
               >
                 Fit <b>{fit === 'width' ? 'Width' : 'Height'}</b>
-              </button>
-              <button onClick={() => setDir(dir === 'ltr' ? 'rtl' : 'ltr')} title="Shortcut: D">
-                Direction <b>{dir === 'ltr' ? 'Left to right' : 'Right to left'}</b>
               </button>
               <button
                 onClick={() => setAutoNext((a) => !a)}
@@ -832,7 +996,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
               {pages.length > 0 && (
                 <div className="sub">
                   {mode === 'paged'
-                    ? `Page ${index + 1} of ${pages.length}`
+                    ? spread && view.size === 2
+                      ? `Pages ${view.start + 1}–${view.start + 2} of ${pages.length}`
+                      : `Page ${index + 1} of ${pages.length}`
                     : `${pages.length} pages`}
                 </div>
               )}
@@ -971,6 +1137,19 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                 )}
               </div>
             </>
+          ) : spread ? (
+            view.size === 2 && view.left !== undefined && view.right !== undefined ? (
+              <div
+                className="spread"
+                style={{ width: `min(100%, ${zoom * 2}px)` }}
+                onClick={turnFromClick}
+              >
+                {renderPage(pages[view.left], view.left, true, false)}
+                {renderPage(pages[view.right], view.right, true, false)}
+              </div>
+            ) : (
+              renderPage(pages[view.single ?? view.start], view.single ?? view.start, true)
+            )
           ) : (
             renderPage(pages[index], index, true)
           )}
