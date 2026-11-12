@@ -15,6 +15,7 @@ import {
   interpretResponse,
   isBlockedSource,
   mapHost,
+  normalizeTitle,
   noteCandidate,
   orderSourceIds,
   probeDelay,
@@ -517,4 +518,51 @@ test('recovery clears the outage fields that the source row stores', () => {
   assert.equal(src.availability, undefined)
   assert.equal(src.availabilityReason, undefined)
   assert.equal(healed.availability, 'ok')
+})
+
+test('normalizeTitle keeps the Latin keys it always had', () => {
+  assert.equal(normalizeTitle('One Piece'), 'one piece')
+  assert.equal(normalizeTitle('  Café!  '), 'cafe')
+  assert.equal(normalizeTitle('Naruto: Shippuden'), 'naruto shippuden')
+  assert.equal(normalizeTitle('Foo-Bar'), 'foo bar')
+  assert.equal(normalizeTitle('Søren'), 's ren')
+  assert.equal(normalizeTitle('Straße'), 'stra e')
+  assert.equal(normalizeTitle('Étoile'), 'etoile')
+  assert.equal(normalizeTitle('ONE-PUNCH MAN'), 'one punch man')
+  assert.equal(normalizeTitle('Attack on Titan #2'), 'attack on titan 2')
+  assert.equal(normalizeTitle('   '), '')
+  assert.equal(normalizeTitle('!!!'), '')
+  assert.equal(normalizeTitle('Book 12'), 'book 12')
+})
+
+test('normalizeTitle folds Arabic harakat, tatweel and letter forms for matching', () => {
+  const key = normalizeTitle('كتاب')
+  assert.equal(key, 'كتاب')
+  assert.equal(normalizeTitle('كِتَابٌ'), key)
+  assert.equal(normalizeTitle('كـــتاب'), key)
+  assert.equal(normalizeTitle('أحمد'), normalizeTitle('احمد'))
+  assert.equal(normalizeTitle('فتى'), normalizeTitle('فتي'))
+  assert.equal(normalizeTitle('مدرسة'), normalizeTitle('مدرسه'))
+  assert.equal(normalizeTitle('ٱلرحمن'), normalizeTitle('الرحمن'))
+})
+
+test('normalizeTitle keeps both halves of a mixed Latin and Arabic title', () => {
+  assert.equal(normalizeTitle('Solo Leveling أَحْمَد'), 'solo leveling احمد')
+  assert.equal(normalizeTitle('Solo Leveling أَحْمَد'), normalizeTitle('solo leveling احمد'))
+})
+
+test('normalizeTitle keeps letters from other scripts', () => {
+  assert.equal(normalizeTitle('進撃の巨人'), '進撃の巨人')
+  assert.equal(normalizeTitle('Наруто'), 'наруто')
+  assert.notEqual(normalizeTitle('進撃の巨人'), '')
+  assert.notEqual(normalizeTitle('Наруто'), '')
+})
+
+test('a folded Arabic query token is found inside the folded title key', () => {
+  const key = normalizeTitle('كِتَابُ الأَسْبَاب')
+  assert.ok(key.includes(normalizeTitle('الاسباب')))
+})
+
+test('normalizeTitle lines up Arabic-Indic digits with 0-9', () => {
+  assert.equal(normalizeTitle('الفصل ١٢'), normalizeTitle('الفصل 12'))
 })
