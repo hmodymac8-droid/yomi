@@ -100,7 +100,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const [zoom, setZoom] = useState(() => clampW(savedNum('zoom', 400, 2000, 900))) // page width in px when fitting width
   const [pct, setPct] = useState(0)
   const [menu, setMenu] = useState(false)
-  // Menu-only UI state (not remembered): the "How you read" fold, and whether changes go to this series or all.
+  // Menu-only UI state (not remembered): the Reading mode fold, and whether changes go to this series or all.
   const [howOpen, setHowOpen] = useState(false)
   const [scope, setScope] = useState<'series' | 'all'>('series')
   const [index, setIndex] = useState(0)
@@ -925,76 +925,58 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                 className="rfold"
                 onClick={() => setHowOpen((v) => !v)}
                 aria-expanded={howOpen}
-                title="How you read this chapter"
+                title="Reading mode"
               >
-                <span>
-                  <span lang="ar">طريقة القراءة</span> · How you read
-                </span>
-                <b>
-                  {mode === 'webtoon' ? (
-                    <>
-                      <span lang="ar">تمرير لتحت</span> · Scroll down
-                    </>
-                  ) : (
-                    <>
-                      <span lang="ar">صفحة صفحة</span> · Page by page
-                    </>
-                  )}
-                </b>
+                <span>Reading mode</span>
+                <b>{mode === 'webtoon' ? 'Scroll down' : 'Page by page'}</b>
                 <span className="rchev">{howOpen ? '▴' : '▾'}</span>
               </button>
               {howOpen && (
                 <>
                   <div className="rgroup">
-                    <div className="rlabel">
-                      <span lang="ar">طريقة القراءة</span> · How you read
-                    </div>
+                    <div className="rlabel">Mode</div>
                     <div className="rseg">
                       <button
                         className={mode === 'webtoon' ? 'on' : ''}
                         onClick={() => setMode('webtoon')}
                       >
-                        <span lang="ar">تمرير لتحت</span> · Scroll down
+                        Scroll down
                       </button>
                       <button
                         className={mode === 'paged' ? 'on' : ''}
                         onClick={() => setMode('paged')}
                       >
-                        <span lang="ar">صفحة صفحة</span> · Page by page
+                        Page by page
                       </button>
                     </div>
                   </div>
                   {mode === 'paged' && (
                     <>
                       <div className="rgroup">
-                        <div className="rlabel">
-                          <span lang="ar">الاتجاه</span> · Direction
-                        </div>
+                        <div className="rlabel">Direction</div>
                         <div className="rseg">
                           <button
                             className={dir === 'rtl' ? 'on' : ''}
                             onClick={() => setDir('rtl')}
                           >
-                            <span lang="ar">من اليمين لليسار</span> · Right to left
+                            Right to left
                           </button>
                           <button
                             className={dir === 'ltr' ? 'on' : ''}
                             onClick={() => setDir('ltr')}
                           >
-                            <span lang="ar">من اليسار لليمين</span> · Left to right
+                            Left to right
                           </button>
                         </div>
                       </div>
                       <div className="rgroup">
-                        <div className="rlabel">
-                          <span lang="ar">عدد الصفحات</span> · Pages
-                        </div>
+                        <div className="rlabel">Pages</div>
                         <div className="rseg">
                           <button className={!spread ? 'on' : ''} onClick={() => setSpread(false)}>
-                            <span lang="ar">صفحة وحدة</span> · One page
+                            Single page
                           </button>
                           <button className={spread ? 'on' : ''} onClick={() => setSpread(true)}>
-                            <span lang="ar">صفحتين جنب بعض</span> · Two pages
+                            Two pages
                           </button>
                         </div>
                         {spread && (
@@ -1002,46 +984,41 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                             className={`rmini${coverSingle ? ' on' : ''}`}
                             onClick={() => setCover(!coverSingle)}
                           >
-                            <span lang="ar">الغلاف لحاله</span> · Cover on its own
+                            Cover on its own
                           </button>
                         )}
                       </div>
                     </>
                   )}
                   <div className="rgroup">
-                    <div className="rlabel">
-                      <span lang="ar">حسب النوع</span> · By type
-                    </div>
+                    <div className="rlabel">By type</div>
                     <div className="rseg">
                       <button className={!openByType ? 'on' : ''} onClick={() => setOpenByType(false)}>
-                        <span lang="ar">لا</span> · No
+                        Off
                       </button>
                       <button className={openByType ? 'on' : ''} onClick={() => setOpenByType(true)}>
-                        <span lang="ar">نعم، المانجا يمين، المانهوا تمرير</span> · Yes, manga
-                        right-to-left, manhwa scroll
+                        On — manga RTL, manhwa scroll
                       </button>
                     </div>
                   </div>
                   <div className="rgroup">
-                    <div className="rlabel">
-                      <span lang="ar">النطاق</span> · Scope
-                    </div>
+                    <div className="rlabel">Apply to</div>
                     <div className="rseg">
                       <button
                         className={scope === 'series' ? 'on' : ''}
                         onClick={() => setScope('series')}
                       >
-                        <span lang="ar">لهذي السلسلة بس</span> · This series only
+                        This series
                       </button>
                       <button
                         className={scope === 'all' ? 'on' : ''}
                         onClick={() => setScope('all')}
                       >
-                        <span lang="ar">لكل السلاسل</span> · All series
+                        All series
                       </button>
                     </div>
                     <button className="rreset" onClick={resetLayout}>
-                      <span lang="ar">رجّع الافتراضي</span> · Reset to default
+                      Reset to default
                     </button>
                   </div>
                 </>
