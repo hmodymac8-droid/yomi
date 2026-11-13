@@ -753,3 +753,19 @@ select { cursor: pointer; }
 .readerview.compact .reader .title { padding: 10px 8px 8px; }
 .readerview.compact .page.fit-height { height: calc(100vh - 88px); }
 
+.miniapp { background: var(--background); }
+.miniapp .topbar {
+  height: auto; min-height: 48px; flex-wrap: wrap; gap: 8px 12px; padding: 8px 10px;
+}
+.miniapp .topbar .logo { height: 24px; }
+.miniapp .searchfield { flex: 1 1 100%; min-width: 0; }
+.miniapp .searchfield input { font-size: 12px; }
+.miniapp .searchfield kbd { display: none; }
+.miniapp .main { flex: 1; min-height: 0; overflow: auto; }
+.miniapp .pagehead { padding: 12px 0 16px; margin-bottom: 16px; gap: 12px; }
+.miniapp .pagehead h1 { font-size: 28px; }
+.miniapp .pagehead p { font-size: 12px; }
+.miniapp .featured { grid-template-columns: 96px 1fr; gap: 16px; padding: 20px 0; }
+.miniapp .flist { display: none; }
+
+
