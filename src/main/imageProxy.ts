@@ -205,3 +205,30 @@ export function installImageProxy(): void {
     }
   })
 }
+
+/**
+ * A cover as a picture for a Windows notice (new chapters): the small cached copy when there is one, else it is
+ * downloaded (and cached) like a cover card would. Null when it can't be had within a few seconds.
+ */
+export async function coverBytes(
+  url: string,
+  referer: string | undefined
+): Promise<{ buf: Buffer; type: string } | null> {
+  if (!/^https?:/i.test(url)) return null
+  const key = url + '#cover'
+  const hit = (await cacheGet(key)) ?? (await cacheGet(url))
+  if (hit) return hit
+  try {
+    const res = await Promise.race([
+      fetchRemote(url, referer),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('slow')), 8000))
+    ])
+    const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+    if (!res.ok || !type.startsWith('image/')) return null
+    const s = shrinkCover(Buffer.from(await res.arrayBuffer()), type)
+    cachePut(key, s.type, s.buf)
+    return s
+  } catch {
+    return null
+  }
+}
