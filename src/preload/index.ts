@@ -87,6 +87,8 @@ const api = {
   sourceFailed: (id: string, message: string) => ipcRenderer.invoke('source-failed', id, message),
   fallbackSites: (title: string, excludeIds: string[]) =>
     ipcRenderer.invoke('fallback-sites', title, excludeIds),
+  statsTime: (ms: number) => ipcRenderer.invoke('stats-time', ms),
+  statsGet: () => ipcRenderer.invoke('stats-get'),
   mihonImport: () => ipcRenderer.invoke('mihon-import'),
   onMihonProgress: (cb: (p: unknown) => void) => {
     const h = (_e: unknown, p: unknown): void => cb(p)

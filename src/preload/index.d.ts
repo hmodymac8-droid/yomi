@@ -20,6 +20,20 @@ export type AppUpdateState =
   | { state: 'ready'; current: string; version: string; checkedAt?: number }
   | { state: 'error'; current: string; error: string; checkedAt?: number }
 
+/** Your reading, counted on this computer: chapters finished and time in the reader. */
+export interface ReadingStats {
+  totalChapters: number
+  totalMs: number
+  weekChapters: number
+  weekMs: number
+  streak: number
+  longestStreak: number
+  /** The last 30 days, oldest first (day is YYYY-MM-DD). */
+  daily: { day: string; chapters: number; ms: number }[]
+  topGenres: { name: string; chapters: number }[]
+  topSeries: { title: string; seriesUrl: string; chapters: number }[]
+}
+
 export interface FeedApiDef {
   kind: 'series-feed'
   /** The feed's address, ending in a slash (for example https://appswat.com/v2/api/v2/). */
@@ -487,6 +501,9 @@ export interface MangaApi {
     title: string,
     excludeIds: string[]
   ) => Promise<{ sourceId: string; sourceName: string; url: string }[]>
+  /** Time spent in the reader (ms since the last report), for your reading stats. */
+  statsTime: (ms: number) => Promise<void>
+  statsGet: () => Promise<ReadingStats>
   /** Asks for a Mihon / Tachiyomi backup file and imports its library (null when no file was chosen). */
   mihonImport: () => Promise<{
     total: number

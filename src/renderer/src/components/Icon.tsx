@@ -20,6 +20,7 @@ const PATHS: Record<string, string> = {
   settings: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5',
   play: 'M7 4l13 8-13 8z',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   link:'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'
 }
 

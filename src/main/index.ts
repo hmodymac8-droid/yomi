@@ -8,6 +8,7 @@ import { fetchHtml } from './http'
 import { startAutoUpdates } from './updater'
 import { fillGaps } from './gapfill'
 import { importMihonBackup } from './mihon'
+import { flushStats, readingStats, statChapter, statTime } from './stats'
 import { becauseYouRead, similarTo } from './recs'
 import type { SeriesDetail } from '../preload/index.d'
 import {
@@ -531,6 +532,9 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('progress-get', (_e, seriesUrl: string) => getProgress(seriesUrl))
   ipcMain.handle('progress-save', (_e, p: ProgressPatch) => {
+    // a chapter counts for your stats the first time it is finished
+    if (p.markRead && !(getProgress(p.seriesUrl)?.read ?? []).includes(p.markRead))
+      statChapter({ seriesUrl: p.seriesUrl, title: p.title, chapterTitle: p.chapterTitle })
     saveProgress(p)
     // reading a series follows it (so you hear about its new chapters)
     autoFollow({
@@ -663,6 +667,8 @@ app.whenReady().then(async () => {
       mihonRunning = false
     }
   })
+  ipcMain.handle('stats-time', (_e, ms: number) => statTime(Number(ms)))
+  ipcMain.handle('stats-get', () => readingStats())
   ipcMain.handle('recs-similar', (_e, title: string, seriesUrl?: string) =>
     similarTo(String(title ?? ''), seriesUrl ? String(seriesUrl) : undefined).catch(() => [])
   )
@@ -2594,6 +2600,7 @@ app.whenReady().then(async () => {
 function saveEverything(): void {
   flushCatalog()
   flushProgress()
+  flushStats()
   flushDownloads()
   flushSeriesCache()
   flushModes()

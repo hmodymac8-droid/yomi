@@ -83,3 +83,15 @@ test('shelfFor maps category names to Yomi shelves', () => {
   assert.equal(shelfFor(['Action', 'Reading']), 'reading')
   assert.equal(shelfFor([]), 'reading')
 })
+
+test('parseBackup reads categories written as one packed block too', () => {
+  const packed = [...key(17, 2), ...varint(2n), 0, 1] // categories [order 0, order 1] packed
+  const b = parseBackup(
+    Uint8Array.from([
+      ...vMsg(1, [...vInt(1, 1), ...vStr(2, '/m'), ...vStr(3, 'Packed'), ...packed]),
+      ...vMsg(2, [...vStr(1, 'Reading'), ...vInt(2, 0)]),
+      ...vMsg(2, [...vStr(1, 'Completed'), ...vInt(2, 1)])
+    ])
+  )
+  assert.deepEqual(b.manga[0].categories, ['Reading', 'Completed'])
+})

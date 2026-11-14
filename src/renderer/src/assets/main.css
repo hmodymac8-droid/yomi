@@ -773,3 +773,35 @@ select { cursor: pointer; }
 /* Settings → Import from Mihon */
 .linkbtn { background: none; border: 0; padding: 0; color: var(--primary); cursor: pointer; font: inherit; text-decoration: underline; }
 .missinglist { max-height: 180px; overflow-y: auto; margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted-foreground); }
+
+/* Stats screen. Chart marks use one hue (Yomi's gold); light mode takes a deeper step so bars keep >= 3:1 on the card. */
+:root { --chart-mark: var(--primary); }
+.light { --chart-mark: oklch(0.62 0.13 85); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.stats .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.stats .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.stats .kpi-label { font-size: 12px; color: var(--muted-foreground); margin-bottom: 6px; }
+.stats .kpi-value { font-size: 40px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.stats .kpi-value span { font-size: 15px; font-weight: 400; color: var(--muted-foreground); letter-spacing: 0; }
+.stats .kpi-note { margin-top: 6px; font-size: 12px; color: var(--muted-foreground); }
+.stats .statcard { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; }
+.stats .statcard-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.stats .statcard-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.stats .sub { font-size: 12px; color: var(--muted-foreground); margin: 0; }
+.stats .statcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.daychart { position: relative; padding-left: 26px; }
+.daychart svg { display: block; width: 100%; height: 160px; overflow: visible; }
+.daychart .grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.daychart .base { stroke: var(--muted-foreground); stroke-width: 1; opacity: 0.6; vector-effect: non-scaling-stroke; }
+.daychart .bar { fill: var(--chart-mark); opacity: 0.85; }
+.daychart .bar.on { opacity: 1; }
+.daychart-top { position: absolute; left: 0; top: -6px; font-size: 11px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.daychart-axis { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted-foreground); }
+.daytip { position: absolute; top: -8px; transform: translate(-50%, -100%); margin-left: 13px; background: var(--background); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; white-space: nowrap; pointer-events: none; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; gap: 2px; color: var(--foreground); }
+.daytip span { color: var(--muted-foreground); }
+.meters { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.meters li { display: grid; grid-template-columns: minmax(90px, 1.2fr) 2fr auto; align-items: center; gap: 12px; font-size: 13px; }
+.meters .mname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); }
+.meters .mbar { height: 8px; background: color-mix(in oklab, var(--border) 60%, transparent); border-radius: 4px; overflow: hidden; }
+.meters .mbar span { display: block; height: 100%; background: var(--chart-mark); border-radius: 0 4px 4px 0; }
+.meters .mnum { color: var(--muted-foreground); font-variant-numeric: tabular-nums; min-width: 2.5em; text-align: right; }

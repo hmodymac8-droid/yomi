@@ -264,6 +264,32 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       if (!barHover.current) setBarVisible(false)
     }, 2200)
   }
+  // Reading time for your stats: counted while the reader is on screen and you used it in the last 90 s
+  // (scrolling, the mouse, a key) or auto-scroll is running. Reported every 30 s.
+  const autoRunRef = useRef(false)
+  autoRunRef.current = autoRun
+  useEffect(() => {
+    let lastUse = Date.now()
+    let lastTick = Date.now()
+    const used = (): void => {
+      lastUse = Date.now()
+    }
+    const evs = ['wheel', 'keydown', 'mousemove', 'mousedown', 'touchstart', 'scroll'] as const
+    for (const ev of evs) window.addEventListener(ev, used, { passive: true, capture: true })
+    const report = (): void => {
+      const now = Date.now()
+      const active =
+        document.visibilityState === 'visible' && (autoRunRef.current || now - lastUse < 90000)
+      if (active) void window.api.statsTime(now - lastTick)
+      lastTick = now
+    }
+    const t = window.setInterval(report, 30000)
+    return () => {
+      report()
+      window.clearInterval(t)
+      for (const ev of evs) window.removeEventListener(ev, used, { capture: true })
+    }
+  }, [])
   const restoring = useRef(true) // true while we jump back to the saved position: don't overwrite it
   const lastSave = useRef(0)
   const finished = useRef(false)
