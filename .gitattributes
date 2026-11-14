@@ -1,0 +1,2 @@
+# Extension files are checked by their SHA-256, so they must stay byte-for-byte as published (no line-ending changes)
+examples/extensions/** -text
