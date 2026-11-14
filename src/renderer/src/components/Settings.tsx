@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, AppUpdateState, SourceInfo } from '../../../preload/index.d'
+import type { AniListImportResult, AniListStatus, AppSettings, AppUpdateState, SourceInfo } from '../../../preload/index.d'
 
 /** The Settings screen. For now: the Yomi Library (ready-made sites from your Yomi account), shown or hidden. */
 export default function Settings(): React.JSX.Element {
@@ -58,6 +58,7 @@ export default function Settings(): React.JSX.Element {
       </section>
 
       <AutoDownloadSetting />
+      <TrackingSetting />
       <AppUpdateSetting />
     </div>
   )
@@ -150,6 +151,129 @@ function AutoDownloadSetting(): React.JSX.Element {
         <span className="track" aria-hidden="true" />
         <span>For all followed series</span>
       </label>
+    </section>
+  )
+}
+
+/** Opt-in AniList tracking: off until you add a client ID and connect an account. */
+function TrackingSetting(): React.JSX.Element {
+  const [s, setS] = useState<AniListStatus | null>(null)
+  const [clientId, setClientId] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [imported, setImported] = useState<AniListImportResult | null>(null)
+
+  useEffect(() => {
+    void window.api.anilistStatus().then((st) => {
+      setS(st)
+      setClientId(st.clientId)
+    })
+  }, [])
+
+  const saveId = async (id: string): Promise<AniListStatus> => {
+    const next = await window.api.anilistSetClientId(id.trim())
+    setS(next)
+    setClientId(next.clientId)
+    return next
+  }
+
+  const connect = async (): Promise<void> => {
+    setBusy(true)
+    setError('')
+    setImported(null)
+    try {
+      await saveId(clientId)
+      setS(await window.api.anilistConnect())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const disconnect = async (): Promise<void> => {
+    setBusy(true)
+    setError('')
+    try {
+      setS(await window.api.anilistDisconnect())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const doImport = async (): Promise<void> => {
+    setBusy(true)
+    setError('')
+    setImported(null)
+    try {
+      setImported(await window.api.anilistImport())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const connected = s?.connected ?? false
+  return (
+    <section className="setting">
+      <div className="settext">
+        <h2>Tracking</h2>
+        <p>
+          Connect AniList to update your reading progress when you finish a chapter. This stays off
+          until you add a client ID and sign in. Linked series, and how to register a client, are
+          explained in the README.
+        </p>
+        <p className="sub">
+          {connected
+            ? `Connected${s?.name ? ` as ${s.name}` : ''}.`
+            : s?.hasClientId
+              ? 'Client ID saved. Press Connect AniList to sign in.'
+              : 'No client ID yet. Register an AniList API client and paste the ID below.'}
+        </p>
+        <label className="setfieldwrap">
+          <span>Client ID</span>
+          <input
+            className="setfield"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            spellCheck={false}
+            value={clientId}
+            disabled={busy}
+            placeholder="AniList client ID"
+            onChange={(e) => setClientId(e.target.value)}
+            onBlur={() => {
+              if (clientId.trim() !== (s?.clientId ?? '')) void saveId(clientId)
+            }}
+          />
+        </label>
+        {error && <p className="sub">{error}</p>}
+        {imported && (
+          <p className="sub">
+            Import finished: {imported.updated} updated, {imported.skipped} already ahead or equal,{' '}
+            {imported.failed} failed. Local progress never moved backward.
+          </p>
+        )}
+      </div>
+      <div className="settingcol">
+        {connected ? (
+          <button className="primary" disabled={busy} onClick={() => void disconnect()}>
+            Disconnect
+          </button>
+        ) : (
+          <button className="primary" disabled={busy || !clientId.trim()} onClick={() => void connect()}>
+            {busy ? 'Connecting…' : 'Connect AniList'}
+          </button>
+        )}
+        {connected && (
+          <button className="mini" disabled={busy} onClick={() => void doImport()}>
+            Import progress from AniList
+          </button>
+        )}
+      </div>
     </section>
   )
 }

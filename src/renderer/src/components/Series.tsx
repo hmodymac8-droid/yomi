@@ -3,6 +3,7 @@ import { Icon } from './Icon'
 import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, coverSrc } from '../lib'
+import AniListLinkPanel from './AniListLink'
 
 interface Props {
   series: OpenSeries
@@ -429,6 +430,7 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
               {follow && follow.unread > 0 && <span className="count">{follow.unread} new</span>}
             </div>
           )}
+          {detail && <AniListLinkPanel seriesUrl={entry.url} title={detail.title || series.title} />}
           {detail && !offline && list.length > 0 && (
             <div className="resume">
               <button className="mini big" onClick={() => downloadMany(unread, 'unread')}>

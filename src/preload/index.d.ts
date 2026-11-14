@@ -154,6 +154,41 @@ export interface SourceInfo extends SourceDef {
 export interface AppSettings {
   /** Show the sites that came ready-made from the Yomi Library. */
   showLibrary: boolean
+  /** Public AniList OAuth client id (not a secret). Empty until you paste one in Settings. */
+  anilistClientId?: string
+}
+
+export interface AniListStatus {
+  connected: boolean
+  name?: string
+  clientId: string
+  hasClientId: boolean
+}
+
+export interface AniListMediaInfo {
+  id: number
+  title: string
+  titles: { romaji?: string; english?: string; native?: string }
+  format?: string
+  status?: string
+  chapters?: number
+  siteUrl?: string
+  cover?: string
+}
+
+export interface AniListLink {
+  seriesUrl: string
+  mediaId: number
+  title: string
+  siteUrl?: string
+  cover?: string
+  linkedAt: number
+}
+
+export interface AniListImportResult {
+  updated: number
+  skipped: number
+  failed: number
 }
 
 export interface HealthStep {
@@ -445,6 +480,16 @@ export interface MangaApi {
     mode?: 'auto' | 'check' | 'full'
   ) => Promise<Result<SeriesDetail>>
   onProgress: (cb: (p: CrawlProgress) => void) => () => void
+  /** AniList tracking (opt-in). Does nothing until you connect an account in Settings. */
+  anilistStatus: () => Promise<AniListStatus>
+  anilistSetClientId: (id: string) => Promise<AniListStatus>
+  anilistConnect: () => Promise<AniListStatus>
+  anilistDisconnect: () => Promise<AniListStatus>
+  anilistSearch: (title: string) => Promise<{ hits: AniListMediaInfo[]; suggested: AniListMediaInfo | null }>
+  anilistLink: (seriesUrl: string, media: AniListMediaInfo) => Promise<AniListLink>
+  anilistUnlink: (seriesUrl: string) => Promise<void>
+  anilistLinkFor: (seriesUrl: string) => Promise<AniListLink | null>
+  anilistImport: () => Promise<AniListImportResult>
 }
 
 declare global {

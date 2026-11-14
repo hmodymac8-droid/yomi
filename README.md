@@ -57,6 +57,7 @@ Tested end to end (title list, chapters, pages and images). Copy an address, pas
 - **Follow series** and see new chapters as they come out.
 - **Download chapters** to read offline, or export them as CBZ.
 - Dark and light themes.
+- **Optional AniList tracking**: connect your account to sync progress when you finish a chapter.
 
 ## How to use
 
@@ -65,6 +66,27 @@ Tested end to end (title list, chapters, pages and images). Copy an address, pas
 2. On **Discover**, paste a manga site's address into **Add a site** and press **Add**.
 3. Search with the top bar (**Ctrl + K**), open a title, and press **Start** or **Continue**.
 4. Press **☆ Follow** to get new chapters, or **⬇** to save chapters for offline.
+
+
+## AniList tracking (optional)
+
+Yomi can update your AniList reading progress when you finish a chapter. This is off until you connect an account in **Settings → Tracking**. Nothing is sent, and no default reading behavior changes, until you opt in.
+
+### Register an AniList API client
+
+Yomi does not ship with an AniList client ID. You create your own (free) and paste it into Settings.
+
+1. Sign in at [anilist.co](https://anilist.co) and open [Developer Settings](https://anilist.co/settings/developer).
+2. Click **Create New Client**.
+3. Give it a name such as `Yomi`.
+4. Set **Redirect URL** to exactly:
+
+   `https://anilist.co/api/v2/oauth/pin`
+
+5. Create the client and copy the **Client ID** (a number). You do not need the client secret: Yomi uses the implicit grant (`response_type=token`).
+6. In Yomi, open **Settings → Tracking**, paste the Client ID, and press **Connect AniList**. Sign in and approve access. Yomi captures the token from the redirect and stores it in the main process, encrypted with Electron `safeStorage` when the OS allows it.
+
+Then, on a series page, press **Link to AniList** and confirm the suggested match (or search and pick another). When you finish a chapter, Yomi updates AniList progress with status `CURRENT`, or `COMPLETED` if the series is finished and that was the last chapter. Updates made while offline are queued and retried. **Import progress from AniList** only moves your local progress forward; it never marks chapters unread or moves a bookmark backward.
 
 ## Build from source
 

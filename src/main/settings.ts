@@ -11,6 +11,8 @@ import { readJson, writeAtomic } from './safefile'
  */
 export interface AppSettings {
   showLibrary: boolean
+  /** Public AniList OAuth client id (not a secret). Empty means Tracking is not set up yet. */
+  anilistClientId?: string
 }
 
 const DEFAULTS: AppSettings = { showLibrary: true }
