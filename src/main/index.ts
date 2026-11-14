@@ -1519,6 +1519,73 @@ app.whenReady().then(async () => {
     return
   }
 
+  // Dev helper: MR_UITEST=<folder for pictures> tries the newer features on the data folder's library (fill missing
+  // chapters, recommendations, stats) and takes pictures of their screens in a hidden window.
+  if (process.env['MR_UITEST']) {
+    ;(async () => {
+      process.env['MR_NOHUMAN'] = '1'
+      const out = process.env['MR_UITEST']!
+      const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+      // 1. fill missing chapters on your followed / read series
+      const cands = [...listFollows().map((f) => ({ url: f.seriesUrl, id: f.sourceId, title: f.title })), ...recentProgress(30).map((p) => ({ url: p.seriesUrl, id: p.sourceId, title: p.title }))]
+      let tried = 0
+      for (const c of cands) {
+        const d = getSeriesCached(c.url)
+        if (!d || d.chapters.length < 2) continue
+        const others = listFallbackSites(c.title, [c.id])
+        if (others.length === 0) continue
+        tried++
+        const t0 = Date.now()
+        const fills = await fillGaps(c.title, c.id, d.chapters)
+        console.log('UT fill ' + JSON.stringify({ title: c.title, site: c.id, own: d.chapters.length, others: others.map((o) => o.sourceId), fills: fills.length, sample: fills.slice(0, 4).map((f) => f.title + ' <- ' + f.fillName), ms: Date.now() - t0 }))
+        if (tried >= 8) break
+      }
+      console.log('UT fill tried ' + tried + ' of ' + cands.length)
+      // 2. recommendations
+      const t1 = Date.now()
+      const rows = await becauseYouRead(2)
+      console.log('UT because ' + JSON.stringify({ ms: Date.now() - t1, rows: rows.map((r) => ({ from: r.title, n: r.hits.length, first: r.hits.slice(0, 5).map((h) => h.title) })) }))
+      // 3. stats (test folder only)
+      statChapter({ seriesUrl: cands[0]?.url ?? 'x', title: cands[0]?.title ?? 'Test', chapterTitle: 'Chapter 1' })
+      statTime(25 * 60000)
+      console.log('UT stats ' + JSON.stringify(readingStats()).slice(0, 300))
+      // 4. pictures of the screens, in a window that is never shown
+      const w = new BrowserWindow({ width: 1280, height: 860, show: false, webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false } })
+      if (is.dev && process.env['ELECTRON_RENDERER_URL']) await w.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      else await w.loadFile(join(__dirname, '../renderer/index.html'))
+      await wait(6000)
+      const js = (code: string): Promise<unknown> => w.webContents.executeJavaScript(code).catch((e) => 'ERR ' + e)
+      const shot = async (name: string): Promise<void> => {
+        await wait(1500)
+        const img = await w.webContents.capturePage()
+        writeFileSync(join(out, name + '.png'), img.toPNG())
+        console.log('UT shot ' + name)
+      }
+      await shot('1-discover')
+      await js(`[...document.querySelectorAll('.navitem')].find(b => b.textContent.includes('Stats')).click()`)
+      await wait(2500)
+      await shot('2-stats')
+      await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true }))`)
+      await wait(400)
+      await js(`(() => { const i = document.querySelector('.qo-field input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'solo'); i.dispatchEvent(new Event('input', { bubbles: true })); return 1 })()`)
+      await shot('3-quickopen')
+      console.log('UT quickopen ' + (await js(`JSON.stringify([...document.querySelectorAll('.qo-item')].slice(0, 8).map(b => b.innerText.replace(/\\n/g, ' | ')))`)))
+      await js(`document.querySelector('.qo-item.on')?.click()`)
+      await wait(5000)
+      await js(`document.querySelector('.similar')?.scrollIntoView()`)
+      await shot('4-series')
+      console.log('UT series ' + (await js(`JSON.stringify({ title: document.querySelector('.series h2')?.textContent, similar: [...document.querySelectorAll('.similar .name')].map(n => n.textContent).slice(0, 8), filled: document.querySelectorAll('.filltag').length, chapters: document.querySelectorAll('.chapter').length })`)))
+      await js(`[...document.querySelectorAll('.navitem')].find(b => b.textContent.includes('Settings')).click()`)
+      await wait(800)
+      await js(`[...document.querySelectorAll('.setting h2')].find(h => h.textContent.includes('Mihon'))?.scrollIntoView()`)
+      await shot('5-settings-import')
+      w.destroy()
+    })()
+      .catch((e) => console.log('UT_ERROR ' + (e instanceof Error ? e.stack : String(e))))
+      .finally(() => app.quit())
+    return
+  }
+
   // Dev helper: MR_EXTTEST=1 runs known sandbox escapes through the JS extension sandbox and reports what they reached.
   if (process.env['MR_EXTTEST']) {
     ;(async () => {

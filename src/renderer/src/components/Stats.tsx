@@ -27,7 +27,10 @@ export default function Stats(): React.JSX.Element {
         <div>
           <div className="kicker">統計</div>
           <h1>Your reading</h1>
-          <p>Counted on this computer as you read: each chapter the first time you finish it, and time in the reader.</p>
+          <p>
+            Counted on this computer as you read: each chapter the first time you finish it, and
+            time in the reader.
+          </p>
         </div>
       </div>
       {!s ? null : s.totalChapters === 0 && s.totalMs < 60000 ? (
@@ -35,14 +38,39 @@ export default function Stats(): React.JSX.Element {
       ) : (
         <>
           <div className="kpis">
-            <Tile label="This week" value={s.weekChapters.toLocaleString()} unit={s.weekChapters === 1 ? 'chapter' : 'chapters'} note={duration(s.weekMs) + ' reading'} />
-            <Tile label="Streak" value={String(s.streak)} unit={s.streak === 1 ? 'day' : 'days'} note={`Longest: ${s.longestStreak} ${s.longestStreak === 1 ? 'day' : 'days'}`} />
-            <Tile label="All time" value={s.totalChapters.toLocaleString()} unit={s.totalChapters === 1 ? 'chapter' : 'chapters'} note={duration(s.totalMs) + ' reading'} />
+            <Tile
+              label="This week"
+              value={s.weekChapters.toLocaleString()}
+              unit={s.weekChapters === 1 ? 'chapter' : 'chapters'}
+              note={duration(s.weekMs) + ' reading'}
+            />
+            <Tile
+              label="Streak"
+              value={String(s.streak)}
+              unit={s.streak === 1 ? 'day' : 'days'}
+              note={`Longest: ${s.longestStreak} ${s.longestStreak === 1 ? 'day' : 'days'}`}
+            />
+            <Tile
+              label="All time"
+              value={s.totalChapters.toLocaleString()}
+              unit={s.totalChapters === 1 ? 'chapter' : 'chapters'}
+              note={duration(s.totalMs) + ' reading'}
+            />
           </div>
           <DailyChart daily={s.daily} />
           <div className="statcols">
-            <MeterList title="Top genres" sub="Last 90 days, by chapters read" rows={s.topGenres.map((g) => ({ name: g.name, n: g.chapters }))} empty="Genres show up once the series you read have them." />
-            <MeterList title="Most read" sub="Last 90 days" rows={s.topSeries.map((x) => ({ name: x.title, n: x.chapters }))} empty="" />
+            <MeterList
+              title="Top genres"
+              sub="Last 90 days, by chapters read"
+              rows={s.topGenres.map((g) => ({ name: g.name, n: g.chapters }))}
+              empty="Genres show up once the series you read have them."
+            />
+            <MeterList
+              title="Most read"
+              sub="Last 90 days"
+              rows={s.topSeries.map((x) => ({ name: x.title, n: x.chapters }))}
+              empty=""
+            />
           </div>
         </>
       )}
@@ -50,7 +78,17 @@ export default function Stats(): React.JSX.Element {
   )
 }
 
-function Tile({ label, value, unit, note }: { label: string; value: string; unit: string; note: string }): React.JSX.Element {
+function Tile({
+  label,
+  value,
+  unit,
+  note
+}: {
+  label: string
+  value: string
+  unit: string
+  note: string
+}): React.JSX.Element {
   return (
     <div className="kpi">
       <div className="kpi-label">{label}</div>
@@ -83,7 +121,12 @@ function DailyChart({ daily }: { daily: ReadingStats['daily'] }): React.JSX.Elem
       </div>
       <div className="daychart" onMouseLeave={() => setHover(null)}>
         <div className="daychart-top">{top}</div>
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Chapters read per day for the last 30 days">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="Chapters read per day for the last 30 days"
+        >
           <line x1="0" x2={W} y1={0.5} y2={0.5} className="grid" />
           <line x1="0" x2={W} y1={H / 2} y2={H / 2} className="grid" />
           {daily.map((d, i) => {
@@ -99,14 +142,25 @@ function DailyChart({ daily }: { daily: ReadingStats['daily'] }): React.JSX.Elem
                   />
                 )}
                 {/* the hover target is the whole column, bigger than the bar */}
-                <rect x={i * colW} y={0} width={colW} height={H} fill="transparent" onMouseEnter={() => setHover(i)} />
+                <rect
+                  x={i * colW}
+                  y={0}
+                  width={colW}
+                  height={H}
+                  fill="transparent"
+                  onMouseEnter={() => setHover(i)}
+                />
               </g>
             )
           })}
           <line x1="0" x2={W} y1={H - 0.5} y2={H - 0.5} className="base" />
         </svg>
         {h && hover !== null && (
-          <div className="daytip" style={{ left: `${((hover + 0.5) / daily.length) * 100}%` }} role="status">
+          <div
+            className="daytip"
+            style={{ left: `${((hover + 0.5) / daily.length) * 100}%` }}
+            role="status"
+          >
             <b>{dayLabel(h.day, { weekday: 'short', month: 'short', day: 'numeric' })}</b>
             <span>
               {h.chapters} {h.chapters === 1 ? 'chapter' : 'chapters'} · {duration(h.ms)}
@@ -119,7 +173,9 @@ function DailyChart({ daily }: { daily: ReadingStats['daily'] }): React.JSX.Elem
           <tbody>
             {daily.map((d) => (
               <tr key={d.day}>
-                <th scope="row">{dayLabel(d.day, { weekday: 'short', month: 'short', day: 'numeric' })}</th>
+                <th scope="row">
+                  {dayLabel(d.day, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </th>
                 <td>{d.chapters} chapters</td>
                 <td>{duration(d.ms)}</td>
               </tr>
@@ -137,7 +193,17 @@ function DailyChart({ daily }: { daily: ReadingStats['daily'] }): React.JSX.Elem
 }
 
 /** A ranked list: name, a bar against the top row, and the number. */
-function MeterList({ title, sub, rows, empty }: { title: string; sub: string; rows: { name: string; n: number }[]; empty: string }): React.JSX.Element {
+function MeterList({
+  title,
+  sub,
+  rows,
+  empty
+}: {
+  title: string
+  sub: string
+  rows: { name: string; n: number }[]
+  empty: string
+}): React.JSX.Element {
   const max = Math.max(1, ...rows.map((r) => r.n))
   return (
     <section className="statcard">

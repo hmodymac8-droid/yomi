@@ -54,24 +54,35 @@ export function SimilarRow({
   seriesUrl: string
   onOpen: (s: OpenSeries) => void
 }): React.JSX.Element | null {
-  const [hits, setHits] = useState<SearchHit[]>([])
+  // the answer remembers which title it is for, so a new title never shows the previous one's row
+  const [got, setGot] = useState<{ for: string; hits: SearchHit[] }>({ for: '', hits: [] })
+  const want = `${title}|${seriesUrl}`
   useEffect(() => {
     let cancelled = false
-    setHits([])
     if (!title) return
     void window.api
       .recsSimilar(title, seriesUrl)
-      .then((h) => !cancelled && setHits(h))
+      .then((h) => !cancelled && setGot({ for: want, hits: h }))
       .catch(() => undefined)
     return () => {
       cancelled = true
     }
-  }, [title, seriesUrl])
-  return <HitStrip label="Similar on your sites" hits={hits} onOpen={onOpen} />
+  }, [title, seriesUrl, want])
+  return (
+    <HitStrip
+      label="Similar on your sites"
+      hits={got.for === want ? got.hits : []}
+      onOpen={onOpen}
+    />
+  )
 }
 
 /** "Because you read X" rows for Discover. */
-export function BecauseYouRead({ onOpen }: { onOpen: (s: OpenSeries) => void }): React.JSX.Element | null {
+export function BecauseYouRead({
+  onOpen
+}: {
+  onOpen: (s: OpenSeries) => void
+}): React.JSX.Element | null {
   const [rows, setRows] = useState<{ title: string; hits: SearchHit[] }[]>([])
   useEffect(() => {
     let cancelled = false

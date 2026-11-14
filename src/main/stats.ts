@@ -43,7 +43,12 @@ export function statChapter(c: { seriesUrl: string; title: string; chapterTitle:
   const k = dayKey(Date.now())
   const day = (d.days[k] ??= { chapters: 0, ms: 0 })
   day.chapters++
-  d.finished.push({ at: Date.now(), seriesUrl: c.seriesUrl, title: c.title, chapter: c.chapterTitle })
+  d.finished.push({
+    at: Date.now(),
+    seriesUrl: c.seriesUrl,
+    title: c.title,
+    chapter: c.chapterTitle
+  })
   if (d.finished.length > 20000) d.finished = d.finished.slice(-20000)
   saveSoon()
 }

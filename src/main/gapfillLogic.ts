@@ -66,7 +66,15 @@ export function pickFills(
     for (const c of o.chapters) {
       const n = numberOf(c.title)
       if (n === null || !Number.isFinite(n) || have.has(n) || taken.has(n)) continue
-      const inHole = holes.has(n) || (!Number.isInteger(n) && n > Math.min(...have) && n < newest)
+      // a decimal chapter inside the list: a ".5" extra, or a part (12.1, 12.2) only when the site lacks chapter 12
+      // itself (sites that split chapters into parts would otherwise add copies of chapters you have)
+      const frac = Math.round((n % 1) * 100) / 100
+      const extra =
+        !Number.isInteger(n) &&
+        n > Math.min(...have) &&
+        n < newest &&
+        (frac === 0.5 || !have.has(Math.floor(n)))
+      const inHole = holes.has(n) || extra
       const newer = n > newest && n - newest <= maxNewer
       if (!inHole && !newer) continue
       taken.set(n, { ...c, fill: o.sourceId, fillName: o.name })

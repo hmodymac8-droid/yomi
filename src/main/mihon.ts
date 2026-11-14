@@ -28,10 +28,15 @@ export interface MihonImportResult {
   notFound: string[]
 }
 
-const cleanName = (s: string): string => s.toLowerCase().replace(/\(.*?\)|\b(scans?|comics?|toons?|manga|manhwa|\.\w+)\b|[^a-z0-9؀-ۿ]+/g, '')
+const cleanName = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/\(.*?\)|\b(scans?|comics?|toons?|manga|manhwa|\.\w+)\b|[^a-z0-9؀-ۿ]+/g, '')
 
 /** The same title on your sites; the site with the same name as the Mihon source first. */
-function findOnYourSites(m: MihonManga): { hit: SearchHit; entry: SearchHit['entries'][number] } | null {
+function findOnYourSites(
+  m: MihonManga
+): { hit: SearchHit; entry: SearchHit['entries'][number] } | null {
   const want = normalizeTitle(m.title)
   if (!want) return null
   const hit = search(m.title, [], 'az', 0, 8).hits.find((h) => normalizeTitle(h.title) === want)
@@ -48,7 +53,9 @@ function findOnYourSites(m: MihonManga): { hit: SearchHit; entry: SearchHit['ent
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
-  return Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]).catch(() => null)
+  return Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]).catch(
+    () => null
+  )
 }
 
 export async function importMihonBackup(
@@ -80,7 +87,13 @@ export async function importMihonBackup(
     if (existing?.following) result.alreadyFollowed++
     else {
       setFollow(
-        { seriesUrl: entry.url, sourceId: entry.sourceId, title: hit.title, cover: hit.cover, coverReferer: hit.coverReferer },
+        {
+          seriesUrl: entry.url,
+          sourceId: entry.sourceId,
+          title: hit.title,
+          cover: hit.cover,
+          coverReferer: hit.coverReferer
+        },
         true
       )
       setCategory(entry.url, shelfFor(m.categories))
@@ -97,7 +110,8 @@ export async function importMihonBackup(
       const job = toMark[next++]
       onProgress({ done: done++, total: library.length * 2, title: job.m.title })
       let d: SeriesDetail | null = getSeriesCached(job.url)
-      if (!d || d.chapters.length === 0) d = await withTimeout(openSeries(job.sourceId, job.url, 'auto'), 45000)
+      if (!d || d.chapters.length === 0)
+        d = await withTimeout(openSeries(job.sourceId, job.url, 'auto'), 45000)
       if (!d || d.chapters.length === 0) continue
       const nums = readNumbers(job.m)
       const readUrls = d.chapters.filter((c) => {
@@ -106,16 +120,24 @@ export async function importMihonBackup(
       })
       if (readUrls.length === 0) continue
       // newest read chapter = where you are
-      const newest = readUrls.reduce((a, b) => ((numberOf(b.title) ?? 0) > (numberOf(a.title) ?? 0) ? b : a))
+      const newest = readUrls.reduce((a, b) =>
+        (numberOf(b.title) ?? 0) > (numberOf(a.title) ?? 0) ? b : a
+      )
       // the reading position only ever moves forward (Yomi may already be further than Mihon)
       const local = getProgress(job.url)
       const localN = local?.chapterTitle ? numberOf(local.chapterTitle) : null
-      const forward = !local?.chapterUrl || localN === null || (numberOf(newest.title) ?? 0) > localN
+      const forward =
+        !local?.chapterUrl || localN === null || (numberOf(newest.title) ?? 0) > localN
       const changed = applyForwardProgress(
         job.url,
         readUrls.map((c) => c.url),
         forward ? { chapterUrl: newest.url, chapterTitle: newest.title, pos: 1 } : undefined,
-        { sourceId: job.sourceId, title: job.hit.title, cover: job.hit.cover, coverReferer: job.hit.coverReferer }
+        {
+          sourceId: job.sourceId,
+          title: job.hit.title,
+          cover: job.hit.cover,
+          coverReferer: job.hit.coverReferer
+        }
       )
       if (changed) {
         result.withProgress++

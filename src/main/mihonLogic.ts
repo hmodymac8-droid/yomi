@@ -119,7 +119,10 @@ export function parseBackup(file: Uint8Array): MihonBackup {
   for (const f of top) {
     if (f.no !== 101 || !(f.v instanceof Uint8Array)) continue
     const s = readFields(f.v)
-    sources.set(int(s.find((x) => x.no === 2)?.v ?? 0n), text(s.find((x) => x.no === 1)?.v ?? new Uint8Array()))
+    sources.set(
+      int(s.find((x) => x.no === 2)?.v ?? 0n),
+      text(s.find((x) => x.no === 1)?.v ?? new Uint8Array())
+    )
   }
   const manga: MihonManga[] = []
   for (const f of top) {
@@ -130,7 +133,10 @@ export function parseBackup(file: Uint8Array): MihonBackup {
     const fav = m.find((x) => x.no === 100)
     const catRefs = ints(m, 17)
     const categories = catRefs
-      .map((ref) => (cats.find((c) => c.id !== 0n && c.id === ref) ?? cats.find((c) => c.order === ref))?.name)
+      .map(
+        (ref) =>
+          (cats.find((c) => c.id !== 0n && c.id === ref) ?? cats.find((c) => c.order === ref))?.name
+      )
       .filter((n): n is string => !!n)
     const chapters: MihonChapter[] = []
     for (const cf of m) {

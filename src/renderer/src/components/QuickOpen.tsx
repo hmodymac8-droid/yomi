@@ -54,10 +54,7 @@ export default function QuickOpen({
   // titles on your sites, as you type (a short pause first so typing stays smooth)
   useEffect(() => {
     const t = q.trim()
-    if (t.length < 2) {
-      setHits([])
-      return
-    }
+    if (t.length < 2) return // (the list only uses title hits from 2 letters on)
     let cancelled = false
     const timer = setTimeout(() => {
       void window.api.search(t, [], 'sites', 0, 12).then((r) => !cancelled && setHits(r.hits))
@@ -69,7 +66,13 @@ export default function QuickOpen({
   }, [q])
 
   const siteName = (id: string): string => sources.find((s) => s.id === id)?.name ?? id
-  const one = (r: { title: string; cover: string; coverReferer: string; sourceId: string; seriesUrl: string }): OpenSeries => ({
+  const one = (r: {
+    title: string
+    cover: string
+    coverReferer: string
+    sourceId: string
+    seriesUrl: string
+  }): OpenSeries => ({
     title: r.title,
     cover: r.cover,
     coverReferer: r.coverReferer,
@@ -81,26 +84,48 @@ export default function QuickOpen({
     const has = (s: string): boolean => !want || norm(s).includes(want)
     const out: Item[] = []
     for (const s of screens)
-      if (has(s.label)) out.push({ key: 's:' + s.id, icon: s.icon, label: s.label, sub: 'Screen', run: () => onScreen(s.id) })
+      if (has(s.label))
+        out.push({
+          key: 's:' + s.id,
+          icon: s.icon,
+          label: s.label,
+          sub: 'Screen',
+          run: () => onScreen(s.id)
+        })
     const seen = new Set<string>()
     for (const r of recent) {
       if (!has(r.title) || seen.has(r.seriesUrl)) continue
       seen.add(r.seriesUrl)
-      out.push({ key: 'r:' + r.seriesUrl, icon: 'play', label: r.title, sub: `Continue · ${r.chapterTitle || 'reading'} · ${siteName(r.sourceId)}`, run: () => onSeries(one(r)) })
+      out.push({
+        key: 'r:' + r.seriesUrl,
+        icon: 'play',
+        label: r.title,
+        sub: `Continue · ${r.chapterTitle || 'reading'} · ${siteName(r.sourceId)}`,
+        run: () => onSeries(one(r))
+      })
     }
     for (const f of follows) {
       if (!f.following || !has(f.title) || seen.has(f.seriesUrl)) continue
       seen.add(f.seriesUrl)
-      out.push({ key: 'f:' + f.seriesUrl, icon: 'bookmark', label: f.title, sub: `Following${f.unread ? ` · ${f.unread} new` : ''} · ${siteName(f.sourceId)}`, run: () => onSeries(one(f)) })
+      out.push({
+        key: 'f:' + f.seriesUrl,
+        icon: 'bookmark',
+        label: f.title,
+        sub: `Following${f.unread ? ` · ${f.unread} new` : ''} · ${siteName(f.sourceId)}`,
+        run: () => onSeries(one(f))
+      })
     }
-    if (want)
+    if (want.length >= 2)
       for (const h of hits) {
         if (h.entries.some((e) => seen.has(e.url))) continue
         out.push({
           key: 'h:' + h.key,
           icon: 'search',
           label: h.title,
-          sub: h.entries.length > 1 ? `On ${h.entries.length} sites` : h.entries[0]?.sourceName ?? '',
+          sub:
+            h.entries.length > 1
+              ? `On ${h.entries.length} sites`
+              : (h.entries[0]?.sourceName ?? ''),
           run: () => onSeries(h)
         })
       }
@@ -108,9 +133,10 @@ export default function QuickOpen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, screens, recent, follows, hits, sources])
 
-  useEffect(() => setSel(0), [q])
   useEffect(() => {
-    list.current?.querySelector<HTMLElement>(`[data-i="${sel}"]`)?.scrollIntoView({ block: 'nearest' })
+    list.current
+      ?.querySelector<HTMLElement>(`[data-i="${sel}"]`)
+      ?.scrollIntoView({ block: 'nearest' })
   }, [sel])
 
   const pick = (i: number): void => {
@@ -122,14 +148,22 @@ export default function QuickOpen({
 
   return (
     <div className="qo-back" onMouseDown={onClose}>
-      <div className="qo" role="dialog" aria-label="Quick open" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="qo"
+        role="dialog"
+        aria-label="Quick open"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <label className="qo-field">
           <Icon name="search" />
           <input
             ref={input}
             value={q}
             placeholder="Go to a screen, a series you read, or any title…"
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value)
+              setSel(0)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') onClose()
               else if (e.key === 'ArrowDown') {
@@ -147,7 +181,11 @@ export default function QuickOpen({
           <kbd>Esc</kbd>
         </label>
         <div className="qo-list" ref={list}>
-          {items.length === 0 && <div className="qo-empty">{q.trim().length < 2 ? 'Type to search' : 'Nothing found'}</div>}
+          {items.length === 0 && (
+            <div className="qo-empty">
+              {q.trim().length < 2 ? 'Type to search' : 'Nothing found'}
+            </div>
+          )}
           {items.map((it, i) => (
             <button
               key={it.key}

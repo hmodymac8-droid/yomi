@@ -86,7 +86,10 @@ async function askAniList(vars: { id?: number; search?: string }): Promise<RecTi
       .map((n) => {
         const m = n.mediaRecommendation!
         const titles = [m.title.english, m.title.romaji, ...(m.synonyms ?? []).slice(0, 4)]
-        return { id: m.id, titles: [...new Set(titles.filter((x): x is string => !!x && x.trim().length > 0))] }
+        return {
+          id: m.id,
+          titles: [...new Set(titles.filter((x): x is string => !!x && x.trim().length > 0))]
+        }
       })
   } finally {
     clearTimeout(t)

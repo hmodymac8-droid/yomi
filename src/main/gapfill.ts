@@ -14,7 +14,9 @@ const recent = new Map<string, { at: number; fills: FilledChap[] }>()
 const KEEP_MS = 10 * 60 * 1000
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
-  return Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]).catch(() => null)
+  return Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), ms))]).catch(
+    () => null
+  )
 }
 
 export async function fillGaps(
@@ -38,7 +40,8 @@ export async function fillGaps(
       fetched++
       d = await withTimeout(openSeries(o.sourceId, o.url, 'auto'), FETCH_LIMIT_MS)
     }
-    if (d && d.chapters.length > 0) lists.push({ sourceId: o.sourceId, name: o.sourceName, chapters: d.chapters })
+    if (d && d.chapters.length > 0)
+      lists.push({ sourceId: o.sourceId, name: o.sourceName, chapters: d.chapters })
   }
   const fills = pickFills(chapters, lists)
   recent.set(key, { at: Date.now(), fills })

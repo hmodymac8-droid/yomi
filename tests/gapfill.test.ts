@@ -43,3 +43,10 @@ test('mergeFilled slots filled chapters in by number, newest first', () => {
   const merged = mergeFilled(own, fills)
   assert.deepEqual(merged.map((c) => numberOf(c.title)), [10, 9, 8, 7, 6])
 })
+
+test('parts of a chapter the site already has are not added; .5 extras are', () => {
+  const own = [116, 115, 114, 83, 82].map((n) => ch(n))
+  const b = { sourceId: 'b', name: 'B', chapters: ['Chapter 115.1', 'Chapter 115.2', 'Chapter 83.5'].map((t) => ({ title: t, url: 'https://b.test/' + t })) }
+  const fills = pickFills(own, [b]).map((f) => f.title)
+  assert.deepEqual(fills, ['Chapter 83.5'])
+})
