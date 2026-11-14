@@ -1,7 +1,8 @@
-import { getSource, openSeries, search, sourceDefs, sourceForHost, updateSource } from './catalog'
+import { getSource, openSeries, search, seriesLinks, sourceDefs, sourceForHost, updateSource } from './catalog'
 import { grabChapterFast } from './fastgrab'
-import { peekOutage, recordSpeed, speedOf, writeOutage } from './health'
+import { openSpeedOf, peekOutage, recordSpeed, speedOf, writeOutage } from './health'
 import { pinnedSite } from './pins'
+import type { SeriesStart, SiteSpeed } from '../preload/index.d'
 import { getProgress } from './progress'
 import {
   applyFailure,
@@ -151,6 +152,66 @@ export function listFallbackSites(title: string, excludeIds: string[]): Fallback
       }
     })
   return rankAlternatives(cands, 5)
+}
+
+/** How a site is doing for the "Read from" buttons: a speed dot and its typical chapter-open time. */
+export function siteSpeed(id: string): SiteSpeed {
+  const ms = openSpeedOf(id)
+  const src = getSource(id)
+  const label: SiteSpeed['label'] = isOut(src?.availability)
+    ? 'trouble'
+    : ms === undefined
+      ? 'new'
+      : ms < 2000
+        ? 'fast'
+        : ms < 5000
+          ? 'ok'
+          : 'slow'
+  return { label, ms }
+}
+
+/**
+ * Which site a series page opens from: the site you picked for it, else the one you last read it on, else the
+ * fastest healthy one (the same order a fallback uses). A series that comes in with one site (from Following or
+ * Continue reading) first picks up the same title on your other sites; with no pick and nothing read it stays on
+ * the site it came from.
+ */
+export function seriesStart(
+  title: string,
+  given: { sourceId: string; sourceName: string; url: string }[]
+): SeriesStart {
+  let entries = given
+  const single = given.length === 1
+  if (single) {
+    const links = seriesLinks(given[0].url)
+    if (links.length > 1) entries = links
+  }
+  const speeds: Record<string, SiteSpeed> = {}
+  for (const e of entries) speeds[e.sourceId] ??= siteSpeed(e.sourceId)
+  const pin = pinnedSite(title)
+  const pinned = entries.find((e) => e.sourceId === pin)
+  if (entries.length < 2) return { entries, start: entries[0]?.url ?? '', pinned: pinned?.sourceId, speeds }
+  const cands = entries.map((e) => {
+    const src = getSource(e.sourceId)
+    return {
+      sourceId: e.sourceId,
+      sourceName: e.sourceName,
+      url: e.url,
+      pinned: e.sourceId === pin,
+      lastReadAt: getProgress(e.url)?.updatedAt ?? 0,
+      speedMs: speedOf(e.sourceId),
+      availability: src?.availability,
+      blocked: isBlockedSource(e.sourceId, src?.baseUrl ?? e.url)
+    }
+  })
+  const ranked = rankAlternatives(cands, cands.length)
+  const readAny = cands.some((c) => c.lastReadAt > 0)
+  let start = pinned?.url ?? ranked[0]?.url ?? entries[0].url
+  if (single && !pinned && !readAny) start = given[0].url
+  // the sites are listed best first; ones left out of the ranking (down, Comix) go last
+  const order = [...ranked.map((r) => r.url), ...entries.map((e) => e.url)]
+  const sorted = [...entries].sort((a, b) => order.indexOf(a.url) - order.indexOf(b.url))
+  return { entries: sorted, start, pinned: pinned?.sourceId, speeds }
 }
 
 /**

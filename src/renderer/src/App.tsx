@@ -85,6 +85,9 @@ function TitleBar(): React.JSX.Element {
 
 function MiniTitleBar({ onReturn }: { onReturn: () => void }): React.JSX.Element {
   const [pinned, setPinned] = useState(true)
+  useEffect(() => {
+    void window.api.miniPinned().then(setPinned) // (the pin is remembered between launches)
+  }, [])
   return (
     <div className="minibar">
       <span className="minititle">

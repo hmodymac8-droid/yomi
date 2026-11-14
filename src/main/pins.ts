@@ -26,6 +26,18 @@ export function pinnedSite(title: string): string | undefined {
   return id || undefined
 }
 
+export function unpinSite(title: string): void {
+  const key = normalizeTitle(title)
+  const all = load()
+  if (!key || !(key in all)) return
+  delete all[key]
+  try {
+    writeAtomic(file(), JSON.stringify(all))
+  } catch {
+    /* forgotten until the app closes */
+  }
+}
+
 export function pinSite(title: string, sourceId: string): void {
   const key = normalizeTitle(title)
   if (!key || !sourceId) return
