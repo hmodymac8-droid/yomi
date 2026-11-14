@@ -327,7 +327,8 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
 
   // "Continue" resumes the last chapter you opened. If you had finished it, go to the next one.
   // The list is stored newest-first, so "next" is the previous index.
-  const list = detail?.chapters ?? []
+  // (filled-in chapters count too: Continue, Start and "Download unread / all" walk the merged list)
+  const list = merged
   const lastIdx = progress ? list.findIndex((c) => c.url === progress.chapterUrl) : -1
   let resume: Ch | undefined
   let resumeNote = ''

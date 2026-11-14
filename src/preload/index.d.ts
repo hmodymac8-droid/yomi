@@ -178,6 +178,8 @@ export interface AppSettings {
   anilistClientId?: string
   /** Optional extension repo index URLs. Empty until you add one in Settings. */
   extensionRepos?: string[]
+  /** Ask AniList for recommendations (sends titles you read to AniList; no account). Missing means on. */
+  recommendations?: boolean
 }
 
 export interface InstalledExtension {

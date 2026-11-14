@@ -807,3 +807,9 @@ select { cursor: pointer; }
 .meters .mbar { height: 8px; background: color-mix(in oklab, var(--border) 60%, transparent); border-radius: 4px; overflow: hidden; }
 .meters .mbar span { display: block; height: 100%; background: var(--chart-mark); border-radius: 0 4px 4px 0; }
 .meters .mnum { color: var(--muted-foreground); font-variant-numeric: tabular-nums; min-width: 2.5em; text-align: right; }
+
+/* Top bar: tab labels stay on one line; the search box gives up width first, then the gaps narrow */
+.navitem span { white-space: nowrap; }
+.searchfield { min-width: 140px; flex: 1 1 200px; }
+@media (max-width: 1500px) { .nav { gap: 16px; } }
+@media (max-width: 1300px) { .nav { gap: 10px; } }

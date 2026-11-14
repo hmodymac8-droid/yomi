@@ -6,6 +6,7 @@ import { getAniListLink } from './anilist'
 import { recentProgress } from './progress'
 import { normalizeTitle } from './repair'
 import { readJson, writeAtomic } from './safefile'
+import { getSettings } from './settings'
 
 /*
  * Recommendations: AniList's community "if you liked this, read…" list for a title (public data, no sign-in), kept
@@ -131,6 +132,7 @@ function onYourSites(recs: RecTitle[], exclude: string, limit: number): SearchHi
 
 /** "Similar" on a series page. */
 export async function similarTo(title: string, seriesUrl?: string): Promise<SearchHit[]> {
+  if (getSettings().recommendations === false) return [] // turned off in Settings: nothing is sent
   const recs = await recsFor(title, seriesUrl)
   return onYourSites(recs, normalizeTitle(title), 18)
 }

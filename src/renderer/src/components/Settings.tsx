@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import type { AniListImportResult, AniListStatus, AppSettings, AppUpdateState, ExtensionsOverview, SourceInfo } from '../../../preload/index.d'
+import type {
+  AniListImportResult,
+  AniListStatus,
+  AppSettings,
+  AppUpdateState,
+  ExtensionsOverview,
+  SourceInfo
+} from '../../../preload/index.d'
 
 /** The Settings screen. For now: the Yomi Library (ready-made sites from your Yomi account), shown or hidden. */
 export default function Settings(): React.JSX.Element {
@@ -58,6 +65,30 @@ export default function Settings(): React.JSX.Element {
       </section>
 
       <AutoDownloadSetting />
+
+      <section className="setting">
+        <div className="settext">
+          <h2>Recommendations</h2>
+          <p>
+            &ldquo;Similar on your sites&rdquo; on a series page and &ldquo;Because you read&rdquo;
+            on Discover come from AniList&apos;s community recommendations. To get them, Yomi sends
+            AniList the title of the series you open or read recently (no account, nothing else).
+            Answers are kept for a week.
+          </p>
+        </div>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={settings?.recommendations !== false}
+            disabled={!settings}
+            onChange={(e) =>
+              void window.api.setSettings({ recommendations: e.target.checked }).then(setSettings)
+            }
+          />
+          <span className="track" aria-hidden="true" />
+          <span>Show recommendations</span>
+        </label>
+      </section>
       <TrackingSetting />
       <MihonImportSetting />
       <ExtensionsSetting />
@@ -81,7 +112,11 @@ function MihonImportSetting(): React.JSX.Element {
     try {
       setResult(await window.api.mihonImport())
     } catch (e) {
-      setError(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e))
+      setError(
+        e instanceof Error
+          ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+          : String(e)
+      )
     } finally {
       setBusy(false)
       setProg(null)
@@ -93,9 +128,9 @@ function MihonImportSetting(): React.JSX.Element {
       <div className="settext">
         <h2>Import from Mihon or Tachiyomi</h2>
         <p>
-          Choose a backup file (.tachibk) made in Mihon, Tachiyomi or a fork of them. Every series in its library is
-          found on your sites, followed on the matching shelf, and the chapters you read there are marked read here.
-          Nothing in Yomi is removed or moved back.
+          Choose a backup file (.tachibk) made in Mihon, Tachiyomi or a fork of them. Every series
+          in its library is found on your sites, followed on the matching shelf, and the chapters
+          you read there are marked read here. Nothing in Yomi is removed or moved back.
         </p>
         {busy && prog && (
           <>
@@ -107,12 +142,17 @@ function MihonImportSetting(): React.JSX.Element {
             </div>
           </>
         )}
-        {error && <p className="sub" role="alert">Couldn&apos;t import: {error}</p>}
+        {error && (
+          <p className="sub" role="alert">
+            Couldn&apos;t import: {error}
+          </p>
+        )}
         {result && (
           <p className="sub" role="status">
             {result.total} series in the backup · {result.followed} now followed
-            {result.alreadyFollowed ? ` · ${result.alreadyFollowed} already followed` : ''} · read chapters added for{' '}
-            {result.withProgress} ({result.chaptersMarked.toLocaleString()} chapters)
+            {result.alreadyFollowed ? ` · ${result.alreadyFollowed} already followed` : ''} · read
+            chapters added for {result.withProgress} ({result.chaptersMarked.toLocaleString()}{' '}
+            chapters)
             {result.notFound.length > 0 && (
               <>
                 {' '}
@@ -154,9 +194,9 @@ function AppUpdateSetting(): React.JSX.Element {
     : null
   let line = 'Yomi looks for updates when it starts and every few hours.'
   if (s?.state === 'checking') line = 'Looking for a newer version…'
-  else if (s?.state === 'none') line = `You have the newest version.${when ? ` Last checked ${when}.` : ''}`
-  else if (s?.state === 'downloading')
-    line = `Downloading Yomi ${s.version}… ${s.percent}%`
+  else if (s?.state === 'none')
+    line = `You have the newest version.${when ? ` Last checked ${when}.` : ''}`
+  else if (s?.state === 'downloading') line = `Downloading Yomi ${s.version}… ${s.percent}%`
   else if (s?.state === 'ready') line = `Yomi ${s.version} is downloaded and ready to install.`
   else if (s?.state === 'error') line = `Couldn't check for updates: ${s.error}`
   else if (s?.state === 'dev') line = 'Updates are only checked in the installed app.'
@@ -341,7 +381,11 @@ function TrackingSetting(): React.JSX.Element {
             Disconnect
           </button>
         ) : (
-          <button className="primary" disabled={busy || !clientId.trim()} onClick={() => void connect()}>
+          <button
+            className="primary"
+            disabled={busy || !clientId.trim()}
+            onClick={() => void connect()}
+          >
             {busy ? 'Connecting…' : 'Connect AniList'}
           </button>
         )}
@@ -441,16 +485,18 @@ function ExtensionsSetting(): React.JSX.Element {
             {data.repos.map((url) => (
               <li key={url}>
                 <span>{url}</span>
-                <button className="mini" disabled={busy} onClick={() => void run(() => window.api.extensionsRemoveRepo(url))}>
+                <button
+                  className="mini"
+                  disabled={busy}
+                  onClick={() => void run(() => window.api.extensionsRemoveRepo(url))}
+                >
                   Remove
                 </button>
               </li>
             ))}
           </ul>
         )}
-        {data && data.errors.length > 0 && (
-          <p className="sub">{data.errors.join(' ')}</p>
-        )}
+        {data && data.errors.length > 0 && <p className="sub">{data.errors.join(' ')}</p>}
         {data && data.available.length > 0 && (
           <>
             <h3 className="extsub">Available</h3>
@@ -459,7 +505,11 @@ function ExtensionsSetting(): React.JSX.Element {
                 <li key={`${e.repoUrl}:${e.id}`}>
                   <span>
                     {e.name} · {e.version} · {e.lang}
-                    {e.updateAvailable ? ` · update (you have ${e.installedVersion})` : e.installedVersion ? ' · installed' : ''}
+                    {e.updateAvailable
+                      ? ` · update (you have ${e.installedVersion})`
+                      : e.installedVersion
+                        ? ' · installed'
+                        : ''}
                   </span>
                   <button
                     className="mini"
@@ -486,7 +536,9 @@ function ExtensionsSetting(): React.JSX.Element {
                   <button
                     className="mini"
                     disabled={busy || !!e.error}
-                    onClick={() => void run(() => window.api.extensionsSetEnabled(e.id, !e.enabled))}
+                    onClick={() =>
+                      void run(() => window.api.extensionsSetEnabled(e.id, !e.enabled))
+                    }
                   >
                     {e.enabled ? 'Disable' : 'Enable'}
                   </button>
@@ -494,7 +546,11 @@ function ExtensionsSetting(): React.JSX.Element {
                     className="mini"
                     disabled={busy}
                     onClick={() => {
-                      if (confirm(`Remove ${e.name}? Saved titles from this extension will be deleted.`)) {
+                      if (
+                        confirm(
+                          `Remove ${e.name}? Saved titles from this extension will be deleted.`
+                        )
+                      ) {
                         void run(() => window.api.extensionsRemove(e.id))
                       }
                     }}
