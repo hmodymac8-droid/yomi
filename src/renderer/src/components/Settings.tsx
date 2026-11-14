@@ -59,9 +59,85 @@ export default function Settings(): React.JSX.Element {
 
       <AutoDownloadSetting />
       <TrackingSetting />
+      <MihonImportSetting />
       <ExtensionsSetting />
       <AppUpdateSetting />
     </div>
+  )
+}
+
+/** Bring a Mihon / Tachiyomi library over: follows, shelves and read chapters. */
+function MihonImportSetting(): React.JSX.Element {
+  const [busy, setBusy] = useState(false)
+  const [prog, setProg] = useState<{ done: number; total: number; title: string } | null>(null)
+  const [result, setResult] = useState<Awaited<ReturnType<typeof window.api.mihonImport>>>(null)
+  const [error, setError] = useState('')
+  const [showMissing, setShowMissing] = useState(false)
+  useEffect(() => window.api.onMihonProgress(setProg), [])
+  const run = async (): Promise<void> => {
+    setError('')
+    setResult(null)
+    setBusy(true)
+    try {
+      setResult(await window.api.mihonImport())
+    } catch (e) {
+      setError(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : String(e))
+    } finally {
+      setBusy(false)
+      setProg(null)
+    }
+  }
+  const pct = prog && prog.total > 0 ? Math.round((prog.done / prog.total) * 100) : 0
+  return (
+    <section className="setting">
+      <div className="settext">
+        <h2>Import from Mihon or Tachiyomi</h2>
+        <p>
+          Choose a backup file (.tachibk) made in Mihon, Tachiyomi or a fork of them. Every series in its library is
+          found on your sites, followed on the matching shelf, and the chapters you read there are marked read here.
+          Nothing in Yomi is removed or moved back.
+        </p>
+        {busy && prog && (
+          <>
+            <p className="sub">
+              {pct}% · {prog.title ? `Looking at “${prog.title}”` : 'Finishing…'}
+            </p>
+            <div className="progbar" aria-hidden="true">
+              <span style={{ width: `${pct}%` }} />
+            </div>
+          </>
+        )}
+        {error && <p className="sub" role="alert">Couldn&apos;t import: {error}</p>}
+        {result && (
+          <p className="sub" role="status">
+            {result.total} series in the backup · {result.followed} now followed
+            {result.alreadyFollowed ? ` · ${result.alreadyFollowed} already followed` : ''} · read chapters added for{' '}
+            {result.withProgress} ({result.chaptersMarked.toLocaleString()} chapters)
+            {result.notFound.length > 0 && (
+              <>
+                {' '}
+                ·{' '}
+                <button className="linkbtn" onClick={() => setShowMissing((v) => !v)}>
+                  {result.notFound.length} not on your sites
+                </button>
+              </>
+            )}
+          </p>
+        )}
+        {result && showMissing && (
+          <ul className="missinglist">
+            {result.notFound.map((t) => (
+              <li key={t} dir="auto">
+                {t}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <button className="primary" disabled={busy} onClick={() => void run()}>
+        {busy ? 'Importing…' : 'Choose backup…'}
+      </button>
+    </section>
   )
 }
 
@@ -100,7 +176,7 @@ function AppUpdateSetting(): React.JSX.Element {
           {line}
         </p>
         {s?.state === 'downloading' && (
-          <div className="updbar" aria-hidden="true">
+          <div className="progbar" aria-hidden="true">
             <span style={{ width: `${s.percent}%` }} />
           </div>
         )}

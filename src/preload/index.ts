@@ -87,6 +87,12 @@ const api = {
   sourceFailed: (id: string, message: string) => ipcRenderer.invoke('source-failed', id, message),
   fallbackSites: (title: string, excludeIds: string[]) =>
     ipcRenderer.invoke('fallback-sites', title, excludeIds),
+  mihonImport: () => ipcRenderer.invoke('mihon-import'),
+  onMihonProgress: (cb: (p: unknown) => void) => {
+    const h = (_e: unknown, p: unknown): void => cb(p)
+    ipcRenderer.on('mihon-progress', h)
+    return () => ipcRenderer.removeListener('mihon-progress', h)
+  },
   recsSimilar: (title: string, seriesUrl?: string) => ipcRenderer.invoke('recs-similar', title, seriesUrl),
   recsBecause: () => ipcRenderer.invoke('recs-because'),
   fillGaps: (title: string, sourceId: string, chapters: unknown[]) =>

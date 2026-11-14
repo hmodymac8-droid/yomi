@@ -7,6 +7,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { fetchHtml } from './http'
 import { startAutoUpdates } from './updater'
 import { fillGaps } from './gapfill'
+import { importMihonBackup } from './mihon'
 import { becauseYouRead, similarTo } from './recs'
 import type { SeriesDetail } from '../preload/index.d'
 import {
@@ -642,6 +643,26 @@ app.whenReady().then(async () => {
   ipcMain.handle('fallback-sites', (_e, title: string, excludeIds: string[]) =>
     listFallbackSites(String(title ?? ''), Array.isArray(excludeIds) ? excludeIds.map(String) : [])
   )
+  // Import a Mihon / Tachiyomi backup (asks for the file; progress goes to the window that asked)
+  let mihonRunning = false
+  ipcMain.handle('mihon-import', async (e) => {
+    if (mihonRunning) throw new Error('An import is already running')
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined
+    const pick = await dialog.showOpenDialog(win as BrowserWindow, {
+      title: 'Choose a Mihon or Tachiyomi backup',
+      filters: [{ name: 'Mihon / Tachiyomi backup', extensions: ['tachibk', 'gz', 'proto'] }, { name: 'All files', extensions: ['*'] }],
+      properties: ['openFile']
+    })
+    if (pick.canceled || pick.filePaths.length === 0) return null
+    mihonRunning = true
+    try {
+      return await importMihonBackup(pick.filePaths[0], (p) => {
+        if (!e.sender.isDestroyed()) e.sender.send('mihon-progress', p)
+      })
+    } finally {
+      mihonRunning = false
+    }
+  })
   ipcMain.handle('recs-similar', (_e, title: string, seriesUrl?: string) =>
     similarTo(String(title ?? ''), seriesUrl ? String(seriesUrl) : undefined).catch(() => [])
   )

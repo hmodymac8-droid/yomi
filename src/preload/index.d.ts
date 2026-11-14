@@ -487,6 +487,16 @@ export interface MangaApi {
     title: string,
     excludeIds: string[]
   ) => Promise<{ sourceId: string; sourceName: string; url: string }[]>
+  /** Asks for a Mihon / Tachiyomi backup file and imports its library (null when no file was chosen). */
+  mihonImport: () => Promise<{
+    total: number
+    followed: number
+    alreadyFollowed: number
+    withProgress: number
+    chaptersMarked: number
+    notFound: string[]
+  } | null>
+  onMihonProgress: (cb: (p: { done: number; total: number; title: string }) => void) => () => void
   /** AniList's recommendations for a title, kept to the titles on your sites. */
   recsSimilar: (title: string, seriesUrl?: string) => Promise<SearchHit[]>
   /** "Because you read X" rows, from the series you read most recently. */
