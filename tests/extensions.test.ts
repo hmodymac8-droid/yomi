@@ -12,7 +12,10 @@ import {
   validateManifest,
   verifySha256
 } from '../src/main/extensionLogic.ts'
-import { runExtensionScript } from '../src/main/extensionSandbox.ts'
+import { prepareSandbox, runExtensionScript } from '../src/main/extensionSandbox.ts'
+
+// the QuickJS engine starts once, before any script runs
+await prepareSandbox()
 
 const examplePath = join(import.meta.dirname, '../examples/extensions/mangafreak.json')
 const exampleText = readFileSync(examplePath, 'utf8')
@@ -180,4 +183,39 @@ test('the sandbox does not evaluate a script in the main context', () => {
 test('the sandbox times out a runaway script', () => {
   const r = runExtensionScript('while (true) {}', 50)
   assert.equal(r.ok, false)
+})
+
+test('the sandbox shares nothing with the app: module and exports cannot reach process', () => {
+  // (module.constructor.constructor reached the app's process under the old node:vm sandbox)
+  // each probe exports a valid manifest only when nothing leaked, so `ok` really says whether the escape worked
+  const viaModule = runExtensionScript(
+    "var p = 'undefined'; try { p = module.constructor.constructor('return typeof process')() } catch (e) {} if (p !== 'undefined') throw new Error('leak ' + p); module.exports = " +
+      JSON.stringify(valid)
+  )
+  assert.equal(viaModule.ok, true, viaModule.ok ? '' : viaModule.error)
+  const viaThis = runExtensionScript(
+    "var q = 'undefined'; try { q = (function(){ return this.constructor.constructor('return typeof process')() })() } catch (e) {} if (q !== 'undefined') throw new Error('leak ' + q); module.exports = " +
+      JSON.stringify(valid)
+  )
+  assert.equal(viaThis.ok, true, viaThis.ok ? '' : viaThis.error)
+  const viaExports = runExtensionScript(
+    "var p = exports.constructor.constructor('return typeof process')(); if (p !== 'undefined') throw new Error('leak ' + p); module.exports = " +
+      JSON.stringify(valid)
+  )
+  assert.equal(viaExports.ok, true)
+  const viaGlobal = runExtensionScript(
+    "if (typeof require !== 'undefined' || typeof globalThis.process !== 'undefined') throw new Error('leak'); module.exports = " +
+      JSON.stringify(valid)
+  )
+  assert.equal(viaGlobal.ok, true)
+})
+
+test('the sandbox stops a script that eats memory', () => {
+  const r = runExtensionScript('var a = []; while (true) a.push(new Array(100000).fill(1));', 5000)
+  assert.equal(r.ok, false)
+})
+
+test('extensions can still call console (a silent one made inside the sandbox)', () => {
+  const r = runExtensionScript("console.log('hi'); console.warn('w'); module.exports = " + JSON.stringify(valid))
+  assert.equal(r.ok, true, r.ok ? '' : r.error)
 })

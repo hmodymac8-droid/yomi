@@ -87,6 +87,7 @@ import {
   removeExtensionRepo,
   setExtensionEnabled
 } from './extensions'
+import { prepareSandbox, runExtensionScript } from './extensionSandbox'
 import {
   anilistStatus,
   connectAniList,
@@ -562,7 +563,10 @@ app.whenReady().then(async () => {
   startGenreScheduler()
   startAutoUpdates()
   startAniListWorker()
-  loadInstalledExtensions()
+  // (JS extensions run in the QuickJS sandbox, which starts in a few milliseconds)
+  void prepareSandbox()
+    .catch((e) => console.error('[extensions] sandbox did not start', e))
+    .then(() => loadInstalledExtensions())
   // A site that "Needs a look" is often fine (a series that opened short once, a site that cuts chapters into a few
   // long strips): a minute and a half after start, each site not marked fine is re-checked quietly, at most once a
   // day, so the Sites screen shows how it really is without you pressing Re-check.
@@ -1473,6 +1477,26 @@ app.whenReady().then(async () => {
         )
       }
     })().finally(() => app.quit())
+    return
+  }
+
+  // Dev helper: MR_EXTTEST=1 runs known sandbox escapes through the JS extension sandbox and reports what they reached.
+  if (process.env['MR_EXTTEST']) {
+    ;(async () => {
+      await prepareSandbox()
+      const probes = {
+        moduleCtor: "module.exports = { leak: typeof module.constructor.constructor('return process')() }",
+        thisCtor: "module.exports = { leak: typeof (function(){ return this.constructor.constructor('return process')() })() }",
+        require: "module.exports = { leak: typeof require }",
+        globalProcess: "module.exports = { leak: typeof globalThis.process }"
+      }
+      for (const [name, code] of Object.entries(probes)) {
+        const r = runExtensionScript(code)
+        console.log('EXT ' + name + ' ' + JSON.stringify(r.ok ? 'manifest?' : (r.error ?? r.issues.map((i) => i.path + ' ' + i.message).join('; '))))
+      }
+    })()
+      .catch((e) => console.log('EXT_ERROR ' + (e instanceof Error ? e.stack : String(e))))
+      .finally(() => app.quit())
     return
   }
 
