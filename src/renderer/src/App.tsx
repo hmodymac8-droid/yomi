@@ -10,7 +10,7 @@ import NewChapters from './components/NewChapters'
 import QuickOpen from './components/QuickOpen'
 import Stats from './components/Stats'
 import type { OpenChapter, OpenSeries } from './lib'
-import type { SiteHealth, SourceInfo, UpdateStatus } from '../../preload/index.d'
+import type { MiniSession, SiteHealth, SourceInfo, UpdateStatus } from '../../preload/index.d'
 import logo from './assets/yomi-logo.png'
 import { Icon } from './components/Icon'
 import { ThemeToggle } from './components/ThemeToggle'
@@ -50,10 +50,10 @@ class Boundary extends Component<{ children: ReactNode }, { error: Error | null 
   }
 }
 
-export default function App(): React.JSX.Element {
+export default function App({ mini = false }: { mini?: boolean } = {}): React.JSX.Element {
   return (
     <Boundary>
-      <AppInner />
+      <AppInner mini={mini} />
     </Boundary>
   )
 }
@@ -71,7 +71,11 @@ function TitleBar(): React.JSX.Element {
         <button aria-label="Maximize" onClick={() => window.api.windowControl('maximize')}>
           <Icon name="square" />
         </button>
-        <button className="close" aria-label="Close" onClick={() => window.api.windowControl('close')}>
+        <button
+          className="close"
+          aria-label="Close"
+          onClick={() => window.api.windowControl('close')}
+        >
           <Icon name="x" />
         </button>
       </div>
@@ -79,8 +83,73 @@ function TitleBar(): React.JSX.Element {
   )
 }
 
-function AppInner(): React.JSX.Element {
+function MiniTitleBar({ onReturn }: { onReturn: () => void }): React.JSX.Element {
+  const [pinned, setPinned] = useState(true)
+  return (
+    <div className="minibar">
+      <span className="minititle">
+        Yomi <span className="slash">/</span> mini
+      </span>
+      <div className="winctl">
+        <button
+          className={pinned ? 'on' : ''}
+          aria-label={pinned ? 'Unpin from top' : 'Pin on top'}
+          title={pinned ? 'Stays above other windows' : 'Pin above other windows'}
+          onClick={() => void window.api.miniSetPinned(!pinned).then(setPinned)}
+        >
+          <Icon name="pin" />
+        </button>
+        <button aria-label="Open in Yomi" title="Continue in the main window" onClick={onReturn}>
+          <Icon name="expand" />
+        </button>
+        <button aria-label="Minimize" onClick={() => window.api.windowControl('minimize')}>
+          <Icon name="minus" />
+        </button>
+        <button
+          className="close"
+          aria-label="Close mini reader"
+          title="Close the mini reader"
+          onClick={() => window.api.windowControl('close')}
+        >
+          <Icon name="x" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
   const [view, setView] = useState<View>({ name: 'browse' })
+  const lastSession = useRef<MiniSession | null>(null)
+  // In the mini window, start on the chapter the main window handed over, and follow later hand-overs.
+  useEffect(() => {
+    if (!mini) return
+    let cancelled = false
+    void window.api.miniGet().then((s) => {
+      if (cancelled || !s) return
+      lastSession.current = s
+      setView({ name: 'reader', series: s.series, chapter: s.chapter, from: 'browse' })
+    })
+    const off = window.api.onMiniSession((s) => {
+      lastSession.current = s
+      setView({ name: 'reader', series: s.series, chapter: s.chapter, from: 'browse' })
+    })
+    return () => {
+      cancelled = true
+      off()
+    }
+  }, [mini])
+  // Keep the main window's copy of the session in step with the chapter being read here.
+  useEffect(() => {
+    if (!mini || view.name !== 'reader') return
+    const s = { series: view.series, chapter: view.chapter } as MiniSession
+    lastSession.current = s
+    void window.api.miniUpdate(s)
+  }, [mini, view])
+  const returnToMain = async (): Promise<void> => {
+    if (lastSession.current) await window.api.miniUpdate(lastSession.current)
+    await window.api.miniReturn()
+  }
   // the top-bar screen we are on, or the one the open series / chapter was opened from
   const here: Tab = view.name === 'series' || view.name === 'reader' ? view.from : view.name
   // The search box lives in the top bar; Discover (always mounted) does the searching.
@@ -110,10 +179,26 @@ function AppInner(): React.JSX.Element {
   const [sources, setSources] = useState<SourceInfo[]>([])
   // a newer Yomi has been downloaded in the background: offer to restart into it
   const [update, setUpdate] = useState<{ version: string } | null>(null)
+  const [miniOn, setMiniOn] = useState(false)
   useEffect(() => {
     window.api.updateStatus().then(setUpdate)
     return window.api.onUpdateReady(setUpdate)
   }, [])
+  useEffect(() => {
+    if (mini) return
+    void window.api.miniIs().then(setMiniOn)
+    const offOpen = window.api.onMiniOpened(() => setMiniOn(true))
+    const offClosed = window.api.onMiniClosed(() => setMiniOn(false))
+    const offReturn = window.api.onMiniReturn((s) => {
+      setMiniOn(false)
+      setView({ name: 'reader', series: s.series, chapter: s.chapter, from: 'browse' })
+    })
+    return () => {
+      offOpen()
+      offClosed()
+      offReturn()
+    }
+  }, [mini])
   const [health, setHealth] = useState<Record<string, SiteHealth>>({})
 
   // If the library could not be read from disk (a busy file, a slow start), say so instead of showing an empty app, and
@@ -151,10 +236,13 @@ function AppInner(): React.JSX.Element {
       setTrouble(t)
       if (t && !wasTrouble) {
         window.api.clientLog('library not readable at start')
-        void window.api.catalogDiagnose().then((d) => {
-          setReport(d)
-          window.api.clientLog('report: ' + d)
-        }, () => undefined)
+        void window.api.catalogDiagnose().then(
+          (d) => {
+            setReport(d)
+            window.api.clientLog('report: ' + d)
+          },
+          () => undefined
+        )
       }
       if (wasTrouble && !t) {
         window.api.clientLog('library readable again: reloading the screen')
@@ -175,7 +263,8 @@ function AppInner(): React.JSX.Element {
   // unread new chapters of the series you follow (the badge on New)
   const [newCount, setNewCount] = useState(0)
   useEffect(() => {
-    const countNew = (): void => void window.api.followList().then((l) => setNewCount(l.reduce((n, f) => n + f.unread, 0)))
+    const countNew = (): void =>
+      void window.api.followList().then((l) => setNewCount(l.reduce((n, f) => n + f.unread, 0)))
     window.api.updatesStatus().then(setUpd)
     countNew()
     return window.api.onUpdates((s) => {
@@ -189,7 +278,11 @@ function AppInner(): React.JSX.Element {
   }, [view.name])
   useEffect(() => {
     const countQueue = (): void =>
-      void window.api.downloadList().then((l) => setQueued(l.filter((i) => i.status === 'queued' || i.status === 'downloading').length))
+      void window.api
+        .downloadList()
+        .then((l) =>
+          setQueued(l.filter((i) => i.status === 'queued' || i.status === 'downloading').length)
+        )
     countQueue()
     let t: number | undefined
     const off = window.api.onDownload(() => {
@@ -206,7 +299,9 @@ function AppInner(): React.JSX.Element {
     window.api.titleList().then((l) => setAddedCount(l.length))
     // Yomi Library sites hidden in Settings are left out of the bars
     window.api.listSources().then((l) => setSources(l.filter((s) => !s.hidden)))
-    window.api.siteHealth().then((l) => setHealth(Object.fromEntries(l.map((h) => [h.sourceId, h]))))
+    window.api
+      .siteHealth()
+      .then((l) => setHealth(Object.fromEntries(l.map((h) => [h.sourceId, h]))))
   }, [view.name])
 
   const reading = view.name === 'reader'
@@ -224,36 +319,50 @@ function AppInner(): React.JSX.Element {
   const totalTitles = sources.reduce((n, s) => n + s.count, 0)
 
   return (
-    <div className="app">
-      <TitleBar />
+    <div className={mini ? 'miniapp' : 'app'}>
+      {mini ? <MiniTitleBar onReturn={() => void returnToMain()} /> : <TitleBar />}
       {trouble && (
         <div className="datatrouble" role="alert">
-          <strong>Your library is still loading from disk.</strong> Your sites and progress are safe — Yomi can&apos;t read the file this very second and is trying again. Nothing is being overwritten.
+          <strong>Your library is still loading from disk.</strong> Your sites and progress are safe
+          — Yomi can&apos;t read the file this very second and is trying again. Nothing is being
+          overwritten.
           {why && <em> ({why})</em>}
           {report && <small className="datareport">{report}</small>}
-          <button className="mini" onClick={() => void window.api.catalogTrouble().then(setTrouble, (e) => setWhy(String(e)))}>
+          <button
+            className="mini"
+            onClick={() =>
+              void window.api.catalogTrouble().then(setTrouble, (e) => setWhy(String(e)))
+            }
+          >
             Try again now
           </button>
         </div>
       )}
       {!reading && (
         <header className="topbar">
-          <button className="iconbtn" style={{ width: 'auto', padding: 0 }} onClick={() => setView({ name: 'browse' })} aria-label="Yomi home">
+          <button
+            className="iconbtn"
+            style={{ width: 'auto', padding: 0 }}
+            onClick={() => setView({ name: 'browse' })}
+            aria-label="Yomi home"
+          >
             <img className="logo" src={logo} alt="Yomi" width={90} height={36} />
           </button>
-          <nav className="nav" aria-label="Main navigation">
-            {nav.map((item) => (
-              <button
-                key={item.id}
-                className={`navitem${view.name === item.id ? ' on' : ''}`}
-                onClick={() => setView({ name: item.id } as View)}
-              >
-                <Icon name={item.icon} />
-                <span>{item.label}</span>
-                {item.n ? <span className="n">{item.n}</span> : null}
-              </button>
-            ))}
-          </nav>
+          {!mini && (
+            <nav className="nav" aria-label="Main navigation">
+              {nav.map((item) => (
+                <button
+                  key={item.id}
+                  className={`navitem${view.name === item.id ? ' on' : ''}`}
+                  onClick={() => setView({ name: item.id } as View)}
+                >
+                  <Icon name={item.icon} />
+                  <span>{item.label}</span>
+                  {item.n ? <span className="n">{item.n}</span> : null}
+                </button>
+              ))}
+            </nav>
+          )}
           <label className="searchfield">
             <Icon name="search" />
             <input
@@ -292,7 +401,9 @@ function AppInner(): React.JSX.Element {
             <Following
               onBack={() => setView({ name: 'browse' })}
               onOpen={(series) => setView({ name: 'series', series, from: 'following' })}
-              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'following' })}
+              onRead={(series, chapter) =>
+                setView({ name: 'reader', series, chapter, from: 'following' })
+              }
             />
           </div>
         )}
@@ -305,7 +416,9 @@ function AppInner(): React.JSX.Element {
           <div className="pane">
             <NewChapters
               onOpen={(series) => setView({ name: 'series', series, from: 'new' })}
-              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'new' })}
+              onRead={(series, chapter) =>
+                setView({ name: 'reader', series, chapter, from: 'new' })
+              }
             />
           </div>
         )}
@@ -318,7 +431,9 @@ function AppInner(): React.JSX.Element {
           <div className="pane">
             <Downloads
               onBack={() => setView({ name: 'browse' })}
-              onRead={(series, chapter) => setView({ name: 'reader', series, chapter, from: 'downloads' })}
+              onRead={(series, chapter) =>
+                setView({ name: 'reader', series, chapter, from: 'downloads' })
+              }
               onOpen={(series) => setView({ name: 'series', series, from: 'downloads' })}
             />
           </div>
@@ -345,8 +460,11 @@ function AppInner(): React.JSX.Element {
             <Reader
               chapter={view.chapter}
               series={view.series}
+              compact={mini}
               onBack={() => setView({ name: 'series', series: view.series, from: view.from })}
-              onNavigate={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
+              onNavigate={(chapter) =>
+                setView({ name: 'reader', series: view.series, chapter, from: view.from })
+              }
             />
           </div>
         )}
@@ -362,7 +480,7 @@ function AppInner(): React.JSX.Element {
           }
         />
       )}
-      {update && !reading && (
+      {update && !reading && !mini && (
         <div className="updatebar" role="status">
           <span>
             <b>Yomi {update.version}</b> is ready. It installs when you close Yomi, or now:
@@ -375,12 +493,21 @@ function AppInner(): React.JSX.Element {
           </button>
         </div>
       )}
-      {!reading && (
+      {!reading && !mini && (
         <footer className="statusbar">
           <span>
             <b>{totalTitles.toLocaleString()}</b> titles
           </span>
           <span>{sources.length} sites</span>
+          {miniOn && (
+            <button
+              className="more"
+              onClick={() => void window.api.miniFocus()}
+              title="The mini reader is open"
+            >
+              Mini reader
+            </button>
+          )}
           <span>
             {sources.slice(0, 5).map((s) => {
               const lvl = levelOf(health[s.id])
@@ -397,7 +524,9 @@ function AppInner(): React.JSX.Element {
               </button>
             )}
           </span>
-          <span className="right">{upd?.lastChecked ? `Checked for new chapters ${ago(upd.lastChecked)}` : ''}</span>
+          <span className="right">
+            {upd?.lastChecked ? `Checked for new chapters ${ago(upd.lastChecked)}` : ''}
+          </span>
         </footer>
       )}
     </div>

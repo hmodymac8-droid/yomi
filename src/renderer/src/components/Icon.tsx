@@ -17,6 +17,8 @@ const PATHS: Record<string, string> = {
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
   plus: 'M12 5v14M5 12h14',
   expand: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  pip: 'M4 5h16v14H4zM12 12h6v5h-6z',
+  pin: 'M9 3h6v7l3 3v2h-5l-1 6-1-6H6v-2l3-3z',
   settings: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5',
   play: 'M7 4l13 8-13 8z',

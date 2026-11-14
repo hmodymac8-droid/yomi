@@ -304,6 +304,26 @@ export interface ProgressRecord {
 
 export type ProgressPatch = Omit<ProgressRecord, 'read' | 'updatedAt'> & { markRead?: string }
 
+/** What the always-on-top mini reader is showing. */
+export interface MiniSession {
+  series: {
+    title: string
+    cover: string
+    coverFallback?: string
+    coverReferer: string
+    type?: 'manga' | 'manhwa' | 'manhua'
+    entries: { sourceId: string; sourceName: string; url: string }[]
+  }
+  chapter: {
+    url: string
+    title: string
+    chapters: { title: string; url: string; alts?: string[] }[]
+    referer: string
+    seriesUrl: string
+    sourceId: string
+  }
+}
+
 export interface DownloadRequest {
   chapterUrl: string
   alts?: string[]
@@ -580,6 +600,23 @@ export interface MangaApi {
   extensionsInstall: (url: string, sha256: string) => Promise<{ ok: true; id: string } | { ok: false; error: string }>
   extensionsRemove: (id: string) => Promise<void>
   extensionsSetEnabled: (id: string, enabled: boolean) => Promise<void>
+  /** True inside the small always-on-top reader window. */
+  isMini: boolean
+  /** Opens (or updates) the always-on-top mini reader. */
+  miniOpen: (session: MiniSession) => Promise<void>
+  /** Remembers the chapter the mini reader moved to, without reopening the window. */
+  miniUpdate: (session: MiniSession) => Promise<void>
+  miniClose: () => Promise<void>
+  miniGet: () => Promise<MiniSession | null>
+  miniIs: () => Promise<boolean>
+  miniFocus: () => Promise<void>
+  /** Brings this chapter back into the main window and closes the mini reader. */
+  miniReturn: () => Promise<void>
+  miniSetPinned: (on: boolean) => Promise<boolean>
+  onMiniSession: (cb: (s: MiniSession) => void) => () => void
+  onMiniOpened: (cb: () => void) => () => void
+  onMiniClosed: (cb: () => void) => () => void
+  onMiniReturn: (cb: (s: MiniSession) => void) => () => void
 }
 
 declare global {
