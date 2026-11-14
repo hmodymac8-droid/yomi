@@ -78,6 +78,19 @@ import { grabChapterFast, prefetchChapter, setSourceSignal, settleVerifications 
 import { flushModes } from './hostmode'
 import { detectSource } from './sources'
 import { flushProgress, getProgress, hideProgress, recentProgress, saveProgress } from './progress'
+import {
+  anilistStatus,
+  connectAniList,
+  disconnectAniList,
+  flushAniList,
+  getAniListLink,
+  importProgressFromAniList,
+  linkAniList,
+  onChapterFinished,
+  searchAniList,
+  startAniListWorker,
+  unlinkAniList
+} from './anilist'
 import type {
   CrawlProgress,
   DownloadRequest,
@@ -513,6 +526,13 @@ app.whenReady().then(async () => {
       cover: p.cover,
       coverReferer: p.coverReferer
     })
+    if (p.markRead) {
+      onChapterFinished({
+        seriesUrl: p.seriesUrl,
+        chapterUrl: p.markRead,
+        chapterTitle: p.chapterTitle
+      })
+    }
   })
   ipcMain.handle('follow-list', () => listFollows())
   ipcMain.handle('follow-get', (_e, url: string) => getFollow(url))
@@ -532,6 +552,7 @@ app.whenReady().then(async () => {
   startUpdateScheduler()
   startGenreScheduler()
   startAutoUpdates()
+  startAniListWorker()
   // A site that "Needs a look" is often fine (a series that opened short once, a site that cuts chapters into a few
   // long strips): a minute and a half after start, each site not marked fine is re-checked quietly, at most once a
   // day, so the Sites screen shows how it really is without you pressing Re-check.
@@ -571,6 +592,20 @@ app.whenReady().then(async () => {
   })
   ipcMain.handle('settings-get', () => getSettings())
   ipcMain.handle('settings-set', (_e, patch: Partial<AppSettings>) => setSettings(patch))
+  ipcMain.handle('anilist-status', () => anilistStatus())
+  ipcMain.handle('anilist-set-client-id', (_e, id: string) => {
+    setSettings({ anilistClientId: String(id ?? '').trim() })
+    return anilistStatus()
+  })
+  ipcMain.handle('anilist-connect', (e) => connectAniList(BrowserWindow.fromWebContents(e.sender)))
+  ipcMain.handle('anilist-disconnect', () => disconnectAniList())
+  ipcMain.handle('anilist-search', (_e, title: string) => searchAniList(String(title ?? '')))
+  ipcMain.handle('anilist-link', (_e, seriesUrl: string, media) =>
+    linkAniList(String(seriesUrl ?? ''), media)
+  )
+  ipcMain.handle('anilist-unlink', (_e, seriesUrl: string) => unlinkAniList(String(seriesUrl ?? '')))
+  ipcMain.handle('anilist-link-for', (_e, seriesUrl: string) => getAniListLink(String(seriesUrl ?? '')))
+  ipcMain.handle('anilist-import', () => importProgressFromAniList())
   ipcMain.handle('page-bytes', (_e, src: string) => pageBytes(src))
   setSourceSignal(onSourceSignal)
   ipcMain.handle('source-state', (_e, id: string) => sourceState(id))
@@ -2487,6 +2522,7 @@ function saveEverything(): void {
   flushModes()
   flushHealth()
   flushUpdates()
+  flushAniList()
 }
 app.on('before-quit', () => {
   if (!leaving) log('before-quit')

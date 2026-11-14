@@ -726,3 +726,17 @@ select { cursor: pointer; }
 .readerview .bar .rmenupop .rmini.on { background: var(--accent); color: var(--accent-foreground); border-color: transparent; }
 .readerview .bar .rmenupop .rreset { display: inline-flex; justify-content: center; align-items: center; gap: 6px; align-self: flex-start; padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--muted-foreground); font-size: 11px; }
 .readerview .bar .rmenupop .rreset:hover { background: var(--muted); color: var(--foreground); }
+
+.settingcol { display: flex; flex-direction: column; gap: 8px; align-items: stretch; flex-shrink: 0; }
+.setfieldwrap { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 0; font-size: 12px; color: var(--muted-foreground); max-width: 280px; }
+.setfield { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--background); color: var(--foreground); font-size: 13px; }
+.anilistrow { flex-wrap: wrap; align-items: center; gap: 8px; }
+.anilistlabel { font-size: 13px; font-weight: 600; margin-right: 4px; }
+.anilistpicker { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.anilistsearch { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.anilistsearch .setfield { max-width: 280px; }
+.anilistSuggest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground); }
+.anilistHits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-width: 420px; }
+.anilistHits button { display: block; width: 100%; text-align: left; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--foreground); font-size: 13px; }
+.anilistHits button:hover:not(:disabled) { background: var(--muted); }
+.anilistHits small { color: var(--muted-foreground); }

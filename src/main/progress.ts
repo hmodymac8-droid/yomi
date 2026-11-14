@@ -50,6 +50,60 @@ export function hideProgress(seriesUrl: string): void {
   timer = setTimeout(flushProgress, 300)
 }
 
+
+/**
+ * Apply an AniList import: add read marks and optionally move the bookmark forward.
+ * Never removes an existing read url, and never creates a record without seed or an existing row.
+ */
+export function applyForwardProgress(
+  seriesUrl: string,
+  addedRead: string[],
+  current?: { chapterUrl: string; chapterTitle: string; pos: number },
+  seed?: { sourceId: string; title: string; cover: string; coverReferer: string }
+): boolean {
+  const all = load()
+  let rec = all[seriesUrl]
+  if (!rec) {
+    if (!seed) return false
+    rec = {
+      seriesUrl,
+      sourceId: seed.sourceId,
+      title: seed.title,
+      cover: seed.cover,
+      coverReferer: seed.coverReferer,
+      chapterUrl: current?.chapterUrl ?? '',
+      chapterTitle: current?.chapterTitle ?? '',
+      pos: current?.pos ?? 0,
+      read: [],
+      updatedAt: Date.now(),
+      hidden: false
+    }
+    all[seriesUrl] = rec
+  }
+  const read = new Set(rec.read)
+  let changed = false
+  for (const url of addedRead) {
+    if (read.has(url)) continue
+    read.add(url)
+    changed = true
+  }
+  rec.read = [...read]
+  if (current && current.chapterUrl) {
+    if (rec.chapterUrl !== current.chapterUrl || rec.chapterTitle !== current.chapterTitle || rec.pos !== current.pos) {
+      rec.chapterUrl = current.chapterUrl
+      rec.chapterTitle = current.chapterTitle
+      rec.pos = current.pos
+      changed = true
+    }
+  }
+  if (!changed) return false
+  rec.updatedAt = Date.now()
+  rec.hidden = false
+  if (timer) clearTimeout(timer)
+  timer = setTimeout(flushProgress, 300)
+  return true
+}
+
 /** Follow a source onto a new host so Continue reading still finds the series. */
 export function rewriteProgressHost(oldHost: string, newOrigin: string): number {
   const all = load()

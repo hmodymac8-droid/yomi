@@ -116,7 +116,16 @@ const api = {
     const h = (_e: unknown, p: unknown): void => cb(p)
     ipcRenderer.on('crawl-progress', h)
     return () => ipcRenderer.removeListener('crawl-progress', h)
-  }
+  },
+  anilistStatus: () => ipcRenderer.invoke('anilist-status'),
+  anilistSetClientId: (id: string) => ipcRenderer.invoke('anilist-set-client-id', id),
+  anilistConnect: () => ipcRenderer.invoke('anilist-connect'),
+  anilistDisconnect: () => ipcRenderer.invoke('anilist-disconnect'),
+  anilistSearch: (title: string) => ipcRenderer.invoke('anilist-search', title),
+  anilistLink: (seriesUrl: string, media: unknown) => ipcRenderer.invoke('anilist-link', seriesUrl, media),
+  anilistUnlink: (seriesUrl: string) => ipcRenderer.invoke('anilist-unlink', seriesUrl),
+  anilistLinkFor: (seriesUrl: string) => ipcRenderer.invoke('anilist-link-for', seriesUrl),
+  anilistImport: () => ipcRenderer.invoke('anilist-import')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
