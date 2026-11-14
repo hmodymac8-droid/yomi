@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fallbackCover, pageSrc, coverSrc } from '../lib'
 import AniListLinkPanel from './AniListLink'
+import { SimilarRow } from './Similar'
 
 interface Props {
   series: OpenSeries
@@ -11,6 +12,8 @@ interface Props {
   /** Name of the screen Back returns to ("Following", "Discover"…). */
   backLabel: string
   onRead: (c: OpenChapter) => void
+  /** Opens another series (from "Similar on your sites"). */
+  onOpen?: (s: OpenSeries) => void
 }
 
 type Ch = SeriesDetail['chapters'][number]
@@ -22,7 +25,7 @@ const chapterNumber = (t: string): number => {
 /** Like chapterNumber, but a chapter with no number sorts last instead of as chapter 0. */
 const numberOrNone = (t: string): number => numberInTitle(t) ?? -Infinity
 
-export default function Series({ series, onBack, onRead, backLabel }: Props): React.JSX.Element {
+export default function Series({ series, onBack, onRead, onOpen, backLabel }: Props): React.JSX.Element {
   const [entryIdx, setEntryIdx] = useState(0)
   const [entries, setEntries] = useState(series.entries)
   const [switchNote, setSwitchNote] = useState('')
@@ -459,6 +462,7 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
             </div>
           )}
           {detail && <AniListLinkPanel seriesUrl={entry.url} title={detail.title || series.title} />}
+          {onOpen && <SimilarRow title={series.title} seriesUrl={entry.url} onOpen={onOpen} />}
           {detail && !offline && list.length > 0 && (
             <div className="resume">
               <button className="mini big" onClick={() => downloadMany(unread, 'unread')}>

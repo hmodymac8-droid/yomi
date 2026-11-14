@@ -748,3 +748,9 @@ select { cursor: pointer; }
 
 /* a chapter filled in from another of your sites */
 .chapter .filltag { margin-left: 8px; padding: 1px 6px; border-radius: 4px; font-size: 11px; color: var(--muted-foreground); border: 1px dashed var(--border); white-space: nowrap; }
+
+/* "Similar on your sites" and "Because you read" rows */
+.similar > .meta em { font-style: italic; color: var(--muted-foreground); }
+.series .similar { margin-top: 18px; padding-top: 18px; }
+.series .similar > .meta { font-size: 18px; margin-bottom: 12px; }
+.series .similar .card.small { width: 120px; }

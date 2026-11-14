@@ -12,6 +12,7 @@ import { OpenChapter, OpenSeries, fallbackCover, coverSrc, timeAgo } from '../li
 import Featured from './Featured'
 import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
+import { BecauseYouRead } from './Similar'
 
 const PAGE = 60
 
@@ -868,6 +869,7 @@ export default function Browse({
                   </div>
                 </section>
               )}
+              {!topQ.trim() && !q.trim() && <BecauseYouRead onOpen={onOpen} />}
               <div className="sechead gridtop" ref={gridTop}>
                 <div>
                   <div className="eyebrow">

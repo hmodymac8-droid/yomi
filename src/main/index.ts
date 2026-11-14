@@ -7,6 +7,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { fetchHtml } from './http'
 import { startAutoUpdates } from './updater'
 import { fillGaps } from './gapfill'
+import { becauseYouRead, similarTo } from './recs'
 import type { SeriesDetail } from '../preload/index.d'
 import {
   cancelGenreScan,
@@ -641,6 +642,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('fallback-sites', (_e, title: string, excludeIds: string[]) =>
     listFallbackSites(String(title ?? ''), Array.isArray(excludeIds) ? excludeIds.map(String) : [])
   )
+  ipcMain.handle('recs-similar', (_e, title: string, seriesUrl?: string) =>
+    similarTo(String(title ?? ''), seriesUrl ? String(seriesUrl) : undefined).catch(() => [])
+  )
+  ipcMain.handle('recs-because', () => becauseYouRead(2).catch(() => []))
   ipcMain.handle('fill-gaps', (_e, title: string, sourceId: string, chapters: SeriesDetail['chapters']) =>
     fillGaps(String(title ?? ''), String(sourceId ?? ''), Array.isArray(chapters) ? chapters : []).catch(
       () => []

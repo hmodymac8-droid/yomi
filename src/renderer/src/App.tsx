@@ -312,10 +312,12 @@ function AppInner(): React.JSX.Element {
         {view.name === 'series' && (
           <div className="pane">
             <Series
+              key={view.series.entries[0]?.url ?? view.series.title}
               series={view.series}
               backLabel={TAB_LABEL[view.from]}
               onBack={() => setView({ name: view.from } as View)}
               onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
+              onOpen={(series) => setView({ name: 'series', series, from: view.from })}
             />
           </div>
         )}

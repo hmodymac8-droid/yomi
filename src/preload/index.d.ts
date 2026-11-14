@@ -487,6 +487,10 @@ export interface MangaApi {
     title: string,
     excludeIds: string[]
   ) => Promise<{ sourceId: string; sourceName: string; url: string }[]>
+  /** AniList's recommendations for a title, kept to the titles on your sites. */
+  recsSimilar: (title: string, seriesUrl?: string) => Promise<SearchHit[]>
+  /** "Because you read X" rows, from the series you read most recently. */
+  recsBecause: () => Promise<{ title: string; hits: SearchHit[] }[]>
   /** Chapters this list lacks (holes, or newer ones) that your other sites have for the same title. */
   fillGaps: (
     title: string,
