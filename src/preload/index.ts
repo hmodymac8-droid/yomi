@@ -103,6 +103,8 @@ const api = {
     ipcRenderer.invoke('fill-gaps', title, sourceId, chapters),
   pinSite: (title: string, sourceId: string) => ipcRenderer.invoke('pin-site', title, sourceId),
   pinnedSite: (title: string) => ipcRenderer.invoke('pinned-site', title),
+  unpinSite: (title: string) => ipcRenderer.invoke('unpin-site', title),
+  seriesStart: (title: string, entries: unknown) => ipcRenderer.invoke('series-start', title, entries),
   listSources: () => ipcRenderer.invoke('list-sources'),
   clientLog: (m: string) => ipcRenderer.send('client-log', m),
   catalogDiagnose: () => ipcRenderer.invoke('catalog-diagnose') as Promise<string>,
@@ -157,6 +159,7 @@ const api = {
   miniFocus: () => ipcRenderer.invoke('mini-focus'),
   miniReturn: () => ipcRenderer.invoke('mini-return'),
   miniSetPinned: (on: boolean) => ipcRenderer.invoke('mini-pin', on),
+  miniPinned: () => ipcRenderer.invoke('mini-pinned'),
   onMiniSession: (cb: (s: unknown) => void) => {
     const h = (_e: unknown, s: unknown): void => cb(s)
     ipcRenderer.on('mini-session', h)

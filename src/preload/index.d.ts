@@ -285,6 +285,24 @@ export interface SiteHealth {
   speedMs?: number
 }
 
+/** How a site is doing for you, shown as a dot on the series page. */
+export interface SiteSpeed {
+  label: 'fast' | 'ok' | 'slow' | 'trouble' | 'new'
+  /** Typical chapter-open time (ms); missing until a chapter was opened there. */
+  ms?: number
+}
+
+/** Which of a series' sites to open first, and how each one is doing. */
+export interface SeriesStart {
+  /** All the series' sites, best first (a series from Following gains the same title on your other sites). */
+  entries: { sourceId: string; sourceName: string; url: string }[]
+  /** The entry URL to open. */
+  start: string
+  /** The site you picked for this title, if it is one of these. */
+  pinned?: string
+  speeds: Record<string, SiteSpeed>
+}
+
 export interface ProgressRecord {
   seriesUrl: string
   sourceId: string
@@ -548,6 +566,13 @@ export interface MangaApi {
   ) => Promise<SeriesDetail['chapters']>
   /** Remember which site you chose with "Read from". A repair does not change this. */
   pinSite: (title: string, sourceId: string) => Promise<void>
+  /** Forgets the site you picked for this title, so Yomi chooses again (last read, then fastest). */
+  unpinSite: (title: string) => Promise<void>
+  /** Which site a series page opens from, and a speed dot for each site. */
+  seriesStart: (
+    title: string,
+    entries: { sourceId: string; sourceName: string; url: string }[]
+  ) => Promise<SeriesStart>
   pinnedSite: (title: string) => Promise<string | null>
   listSources: () => Promise<SourceInfo[]>
   /** True while the library could not be read from disk (it is tried again by itself). */
@@ -613,6 +638,8 @@ export interface MangaApi {
   /** Brings this chapter back into the main window and closes the mini reader. */
   miniReturn: () => Promise<void>
   miniSetPinned: (on: boolean) => Promise<boolean>
+  /** Whether the mini reader stays above other windows (remembered between launches). */
+  miniPinned: () => Promise<boolean>
   onMiniSession: (cb: (s: MiniSession) => void) => () => void
   onMiniOpened: (cb: () => void) => () => void
   onMiniClosed: (cb: () => void) => () => void

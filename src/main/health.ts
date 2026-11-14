@@ -22,6 +22,8 @@ interface Entry {
   nextProbeAt?: number
   candidateOrigin?: string
   speedMs?: number
+  /** How long your last chapter opens on this site took (ms, newest last). */
+  opens?: number[]
 }
 
 let data: Record<string, Entry> | null = null
@@ -153,6 +155,22 @@ export function recordSpeed(id: string, ms: number): void {
   saveSoon()
 }
 
+/** A chapter opened on this site in `ms` (a failed open is passed in as a very slow one). */
+export function recordOpenSpeed(id: string, ms: number): void {
+  const e = entry(id)
+  e.opens = [...(e.opens ?? []), Math.round(ms)].slice(-12)
+  saveSoon()
+}
+
+/** The middle of the last chapter-open times (one slow open doesn't make a site slow). */
+export function openSpeedOf(id: string): number | undefined {
+  const list = load()[id]?.opens
+  if (!list || list.length === 0) return undefined
+  const s = [...list].sort((a, b) => a - b)
+  return s[Math.floor(s.length / 2)]
+}
+
+/** How fast a site is for you: its typical chapter open, else how long its last full re-check took. */
 export function speedOf(id: string): number | undefined {
-  return load()[id]?.speedMs
+  return openSpeedOf(id) ?? load()[id]?.speedMs
 }

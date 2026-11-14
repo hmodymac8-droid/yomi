@@ -54,6 +54,7 @@ import {
   getSource,
   catalogUrls,
   getSeriesCached,
+  sourceForHost,
   listSources,
   catalogTrouble,
   catalogDiagnose,
@@ -68,7 +69,7 @@ import {
   search,
   sourcesWithChapterTitles
 } from './catalog'
-import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen } from './health'
+import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen, recordOpenSpeed } from './health'
 import { classifyFailure } from './repair'
 import {
   commitFailure,
@@ -76,9 +77,11 @@ import {
   recordCheckOutcome,
   reportFailure,
   sourceState,
-  listFallbackSites
+  listFallbackSites,
+  seriesStart
 } from './fallback'
-import { pinSite, pinnedSite } from './pins'
+import { pinSite, pinnedSite, unpinSite } from './pins'
+import { loadMiniPlace, saveMiniPlace } from './miniPlace'
 import { startSourceProber } from './prober'
 import type { HealthStep } from '../preload/index.d'
 import { grabChapterFast, prefetchChapter, setSourceSignal, settleVerifications } from './fastgrab'
@@ -294,6 +297,8 @@ interface MiniSession {
 let miniWin: BrowserWindow | null = null
 let miniSession: MiniSession | null = null
 let miniPinned = true
+/** Saves the mini window's place now (set while it is open). */
+let miniSave: (() => void) | null = null
 
 function isMiniSession(v: unknown): v is MiniSession {
   if (!v || typeof v !== 'object') return false
@@ -329,9 +334,12 @@ function openMini(session: MiniSession): void {
     tellMain('mini-opened')
     return
   }
+  const place = loadMiniPlace()
+  miniPinned = place.onTop
   const win = new BrowserWindow({
-    width: 420,
-    height: 760,
+    width: place.width,
+    height: place.height,
+    ...(place.x !== undefined && place.y !== undefined ? { x: place.x, y: place.y } : {}),
     minWidth: 280,
     minHeight: 420,
     show: false,
@@ -349,11 +357,32 @@ function openMini(session: MiniSession): void {
   })
   miniWin = win
   win.setAlwaysOnTop(miniPinned, 'floating')
+  // Windows gives a frameless window a few pixels more than asked for; that extra is taken off again when saving,
+  // or the window would grow a little every time it opens
+  const [gotW, gotH] = win.getSize()
+  const extraW = Math.max(0, Math.min(40, gotW - place.width))
+  const extraH = Math.max(0, Math.min(40, gotH - place.height))
+  const placeNow = (): { x: number; y: number; width: number; height: number } => {
+    const b = win.getBounds()
+    return { ...b, width: b.width - extraW, height: b.height - extraH }
+  }
   win.on('ready-to-show', () => {
     if (!win.isDestroyed()) win.show()
   })
+  // its size, place and pin are remembered (mini-window.json)
+  let placeTimer: NodeJS.Timeout | undefined
+  const placeSoon = (): void => {
+    if (placeTimer) clearTimeout(placeTimer)
+    placeTimer = setTimeout(() => !win.isDestroyed() && saveMiniPlace(placeNow(), miniPinned), 600)
+  }
+  win.on('resize', placeSoon)
+  win.on('move', placeSoon)
+  miniSave = () => !win.isDestroyed() && saveMiniPlace(placeNow(), miniPinned)
+  win.on('close', () => saveMiniPlace(placeNow(), miniPinned))
   win.on('closed', () => {
+    if (placeTimer) clearTimeout(placeTimer)
     if (miniWin === win) miniWin = null
+    if (miniWin === null) miniSave = null
     tellMain('mini-closed')
   })
   loadMini(win)
@@ -758,6 +787,16 @@ app.whenReady().then(async () => {
     pinSite(String(title ?? ''), String(sourceId ?? ''))
   )
   ipcMain.handle('pinned-site', (_e, title: string) => pinnedSite(String(title ?? '')) ?? null)
+  ipcMain.handle('unpin-site', (_e, title: string) => unpinSite(String(title ?? '')))
+  ipcMain.handle('series-start', (_e, title: string, entries: unknown) => {
+    const list = Array.isArray(entries)
+      ? entries.filter(
+          (e): e is { sourceId: string; sourceName: string; url: string } =>
+            !!e && typeof e.sourceId === 'string' && typeof e.url === 'string'
+        )
+      : []
+    return seriesStart(String(title ?? ''), list)
+  })
   ipcMain.handle('site-health', () => allHealth())
   ipcMain.handle('site-check', async (_e, id: string) => {
     // one check per site at a time: a second click joins the first
@@ -874,9 +913,13 @@ app.whenReady().then(async () => {
     }
     if (miniWin && !miniWin.isDestroyed()) miniWin.close()
   })
+  ipcMain.handle('mini-pinned', () => miniPinned)
   ipcMain.handle('mini-pin', (_e, on: boolean) => {
     miniPinned = !!on
-    if (miniWin && !miniWin.isDestroyed()) miniWin.setAlwaysOnTop(miniPinned, 'floating')
+    if (miniWin && !miniWin.isDestroyed()) {
+      miniWin.setAlwaysOnTop(miniPinned, 'floating')
+      miniSave?.()
+    }
     return miniPinned
   })
   ipcMain.handle('title-add', (_e, url: string) => wrap(() => addTitleByUrl(url)))
@@ -903,12 +946,16 @@ app.whenReady().then(async () => {
   ipcMain.handle('prefetch-chapter', (_e, url: string) => prefetchChapter(url))
 
   ipcMain.handle('grab-chapter', async (_e, url: string) => {
+    // chapter opens are timed per site, for the speed dots and for picking the fastest site
+    const t = Date.now()
+    const site = /^https?:/i.test(url) && !isOffline() ? sourceForHost(url)?.id : undefined
     try {
-      return {
-        ok: true as const,
-        data: await withTimeout(grabChapterFast(url), 60000, 'Opening the chapter')
-      }
+      const data = await withTimeout(grabChapterFast(url), 60000, 'Opening the chapter')
+      // (an answer in under 150 ms came from the cache, not the site: it says nothing about the site's speed)
+      if (site && Date.now() - t > 150) recordOpenSpeed(site, Date.now() - t)
+      return { ok: true as const, data }
     } catch (err) {
+      if (site) recordOpenSpeed(site, Math.max(15000, Date.now() - t)) // a failed open counts as a very slow one
       return { ok: false as const, error: err instanceof Error ? err.message : String(err) }
     }
   })

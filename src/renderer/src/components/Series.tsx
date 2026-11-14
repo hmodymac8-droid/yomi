@@ -1,7 +1,7 @@
 import { Tags } from './Tags'
 import { Icon } from './Icon'
 import { useEffect, useRef, useState } from 'react'
-import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
+import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail, SiteSpeed } from '../../../preload/index.d'
 import { OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fallbackCover, pageSrc, coverSrc } from '../lib'
 import AniListLinkPanel from './AniListLink'
 import { SimilarRow } from './Similar'
@@ -22,6 +22,16 @@ const chapterNumber = (t: string): number => {
   const m = t.match(/(\d+(?:\.\d+)?)/)
   return m ? Number(m[1]) : 0
 }
+const SPEED_TEXT: Record<SiteSpeed['label'], string> = {
+  fast: 'Fast',
+  ok: 'OK',
+  slow: 'Slow',
+  trouble: 'Having trouble',
+  new: 'Not timed yet'
+}
+const speedTitle = (s: SiteSpeed | undefined): string =>
+  s ? SPEED_TEXT[s.label] + (s.ms !== undefined ? ` · chapters open in about ${(s.ms / 1000).toFixed(1)} s` : '') : ''
+
 /** Like chapterNumber, but a chapter with no number sorts last instead of as chapter 0. */
 const numberOrNone = (t: string): number => numberInTitle(t) ?? -Infinity
 
@@ -30,6 +40,9 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
   const [entries, setEntries] = useState(series.entries)
   const [switchNote, setSwitchNote] = useState('')
   const [pinReady, setPinReady] = useState(false)
+  // how each site is doing (speed dots), and the site you picked for this title
+  const [speeds, setSpeeds] = useState<Record<string, SiteSpeed>>({})
+  const [pinnedId, setPinnedId] = useState<string | undefined>(undefined)
   const forced = useRef(false)
   const switched = useRef(false)
   const [seenTitle, setSeenTitle] = useState(series.title)
@@ -132,14 +145,24 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
     forced.current = false
     switched.current = false
     let cancel = false
-    window.api.pinnedSite(series.title).then((id) => {
-      if (cancel) return
-      if (id) {
-        const idx = series.entries.findIndex((e) => e.sourceId === id)
-        if (idx >= 0) setEntryIdx(idx)
-      }
-      setPinReady(true)
-    })
+    // open from the site you picked, else the one you last read it on, else the fastest healthy one; a series from
+    // Following / Continue reading also gets the same title on your other sites
+    window.api
+      .seriesStart(
+        series.title,
+        series.entries.map((e) => ({ sourceId: e.sourceId, sourceName: e.sourceName, url: e.url }))
+      )
+      .then((r) => {
+        if (cancel) return
+        if (r.entries.length > 0) {
+          setEntries(r.entries)
+          setEntryIdx(Math.max(0, r.entries.findIndex((e) => e.url === r.start)))
+        }
+        setSpeeds(r.speeds)
+        setPinnedId(r.pinned)
+      })
+      .catch(() => undefined)
+      .finally(() => !cancel && setPinReady(true))
     return () => {
       cancel = true
     }
@@ -413,21 +436,41 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
           {entries.length > 1 && (
             <div className="srcs">
               Read from:{' '}
-              {entries.map((e, i) => (
+              {entries.map((e, i) => {
+                const sp = speeds[e.sourceId]
+                return (
+                  <button
+                    key={e.url}
+                    className={i === entryIdx ? 'on' : ''}
+                    title={speedTitle(sp) + (pinnedId === e.sourceId ? ' · opens from here first (your pick)' : '')}
+                    onClick={() => {
+                      forced.current = true
+                      switched.current = false
+                      setSwitchNote('')
+                      setEntryIdx(i)
+                      setPinnedId(e.sourceId)
+                      void window.api.pinSite(series.title, e.sourceId)
+                    }}
+                  >
+                    {sp && <span className={`rdot ${sp.label}`} aria-hidden="true" />}
+                    {e.sourceName}
+                    {sp?.ms !== undefined && <small className="rspeed">{(sp.ms / 1000).toFixed(1)} s</small>}
+                    {pinnedId === e.sourceId && <small className="rstar"> ★</small>}
+                  </button>
+                )
+              })}
+              {pinnedId && (
                 <button
-                  key={e.url}
-                  className={i === entryIdx ? 'on' : ''}
+                  className="prefbtn"
+                  title="Forget your pick: Yomi opens it from where you last read, else the fastest site"
                   onClick={() => {
-                    forced.current = true
-                    switched.current = false
-                    setSwitchNote('')
-                    setEntryIdx(i)
-                    void window.api.pinSite(series.title, e.sourceId)
+                    setPinnedId(undefined)
+                    void window.api.unpinSite(series.title)
                   }}
                 >
-                  {e.sourceName}
+                  Let Yomi choose
                 </button>
-              ))}
+              )}
             </div>
           )}
           {switchNote && <div className="sub">{switchNote}</div>}

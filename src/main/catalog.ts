@@ -1502,6 +1502,32 @@ function entryKey(e: SeriesEntry): string {
   }
   return k
 }
+/**
+ * The same series on your other sites (matched by title, as search does), starting with `url` itself. Used when a
+ * series is opened from Following / Continue reading, which only know the one site it was followed or read on.
+ */
+export function seriesLinks(url: string): { sourceId: string; sourceName: string; url: string }[] {
+  const s = load()
+  let key = ''
+  let own: { sourceId: string; sourceName: string; url: string } | null = null
+  for (const src of s.sources) {
+    const e = (s.series[src.id] ?? []).find((x) => x.url === url)
+    if (e) {
+      key = titleKey(e)
+      own = { sourceId: src.id, sourceName: src.name, url }
+      break
+    }
+  }
+  if (!own || !key) return []
+  const out = [own]
+  for (const src of s.sources) {
+    if (src.titlesOnly || isHiddenSite(src) || src.id === own.sourceId) continue
+    const e = (s.series[src.id] ?? []).find((x) => titleKey(x) === key)
+    if (e) out.push({ sourceId: src.id, sourceName: src.name, url: e.url })
+  }
+  return out
+}
+
 export function seriesMeta(url: string): SeriesMeta | undefined {
   return loadMeta()[url]
 }

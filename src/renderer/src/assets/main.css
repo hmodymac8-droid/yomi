@@ -855,3 +855,16 @@ select { cursor: pointer; }
 .miniapp .flist { display: none; }
 
 
+
+/* Series page: a speed dot per site, and the site you picked (★)
+
+/* Series page "Read from": a speed dot per site, its typical chapter-open time, and your pick (★) */
+.srcs button .rdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--muted-foreground); }
+.srcs button .rdot.fast { background: #3fb950; }
+.srcs button .rdot.ok { background: #d29922; }
+.srcs button .rdot.slow { background: #db6d28; }
+.srcs button .rdot.trouble { background: #f85149; }
+.srcs button .rspeed { margin-left: 6px; opacity: 0.65; font-size: 11px; }
+.srcs button .rstar { color: var(--primary); }
+.srcs .prefbtn { background: transparent; border-style: dashed; opacity: 0.85; }
+.srcs .prefbtn:hover { opacity: 1; }
