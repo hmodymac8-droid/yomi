@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AniListImportResult, AniListStatus, AppSettings, AppUpdateState, SourceInfo } from '../../../preload/index.d'
+import type { AniListImportResult, AniListStatus, AppSettings, AppUpdateState, ExtensionsOverview, SourceInfo } from '../../../preload/index.d'
 
 /** The Settings screen. For now: the Yomi Library (ready-made sites from your Yomi account), shown or hidden. */
 export default function Settings(): React.JSX.Element {
@@ -59,6 +59,7 @@ export default function Settings(): React.JSX.Element {
 
       <AutoDownloadSetting />
       <TrackingSetting />
+      <ExtensionsSetting />
       <AppUpdateSetting />
     </div>
   )
@@ -273,6 +274,163 @@ function TrackingSetting(): React.JSX.Element {
             Import progress from AniList
           </button>
         )}
+      </div>
+    </section>
+  )
+}
+
+/** Opt-in source extensions: nothing is installed until you add a repo or a file. */
+function ExtensionsSetting(): React.JSX.Element {
+  const [data, setData] = useState<ExtensionsOverview | null>(null)
+  const [repoUrl, setRepoUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const refresh = async (): Promise<void> => {
+    setData(await window.api.extensionsOverview())
+  }
+
+  useEffect(() => {
+    void refresh()
+  }, [])
+
+  const addRepo = async (): Promise<void> => {
+    setBusy(true)
+    setError('')
+    try {
+      const r = await window.api.extensionsAddRepo(repoUrl.trim())
+      if (r.ok) {
+        setRepoUrl('')
+        await refresh()
+      } else setError(r.error)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const run = async (fn: () => Promise<unknown>): Promise<void> => {
+    setBusy(true)
+    setError('')
+    try {
+      const r = await fn()
+      if (r && typeof r === 'object' && 'ok' in r && (r as { ok: boolean }).ok === false) {
+        setError((r as { error?: string }).error || 'Something went wrong')
+      }
+      await refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="setting extsetting">
+      <div className="settext">
+        <h2>Extensions</h2>
+        <p>
+          Add an extension repo to install extra sites. Built-in sources keep working as they are;
+          nothing is added until you install it. Files also go in the extensions folder. See
+          EXTENSIONS.md for the format.
+        </p>
+        <p className="sub">
+          {data
+            ? `${data.installed.length} installed · ${data.repos.length} ${data.repos.length === 1 ? 'repo' : 'repos'}. Folder: ${data.dir}`
+            : 'Loading…'}
+        </p>
+        <form
+          className="anilistsearch"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void addRepo()
+          }}
+        >
+          <input
+            className="setfield"
+            type="url"
+            value={repoUrl}
+            disabled={busy}
+            placeholder="https://example.com/index.json"
+            aria-label="Extension repo URL"
+            onChange={(e) => setRepoUrl(e.target.value)}
+          />
+          <button className="mini" type="submit" disabled={busy || !repoUrl.trim()}>
+            Add repo
+          </button>
+        </form>
+        {data && data.repos.length > 0 && (
+          <ul className="extlist">
+            {data.repos.map((url) => (
+              <li key={url}>
+                <span>{url}</span>
+                <button className="mini" disabled={busy} onClick={() => void run(() => window.api.extensionsRemoveRepo(url))}>
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {data && data.errors.length > 0 && (
+          <p className="sub">{data.errors.join(' ')}</p>
+        )}
+        {data && data.available.length > 0 && (
+          <>
+            <h3 className="extsub">Available</h3>
+            <ul className="extlist">
+              {data.available.map((e) => (
+                <li key={`${e.repoUrl}:${e.id}`}>
+                  <span>
+                    {e.name} · {e.version} · {e.lang}
+                    {e.updateAvailable ? ` · update (you have ${e.installedVersion})` : e.installedVersion ? ' · installed' : ''}
+                  </span>
+                  <button
+                    className="mini"
+                    disabled={busy || (!e.updateAvailable && !!e.installedVersion)}
+                    onClick={() => void run(() => window.api.extensionsInstall(e.url, e.sha256))}
+                  >
+                    {e.updateAvailable ? 'Update' : 'Install'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {data && data.installed.length > 0 && (
+          <>
+            <h3 className="extsub">Installed</h3>
+            <ul className="extlist">
+              {data.installed.map((e) => (
+                <li key={e.id}>
+                  <span>
+                    {e.name} · {e.version}
+                    {e.error ? ` · ${e.error}` : e.enabled ? '' : ' · disabled'}
+                  </span>
+                  <button
+                    className="mini"
+                    disabled={busy || !!e.error}
+                    onClick={() => void run(() => window.api.extensionsSetEnabled(e.id, !e.enabled))}
+                  >
+                    {e.enabled ? 'Disable' : 'Enable'}
+                  </button>
+                  <button
+                    className="mini"
+                    disabled={busy}
+                    onClick={() => {
+                      if (confirm(`Remove ${e.name}? Saved titles from this extension will be deleted.`)) {
+                        void run(() => window.api.extensionsRemove(e.id))
+                      }
+                    }}
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {error && <p className="sub">{error}</p>}
       </div>
     </section>
   )

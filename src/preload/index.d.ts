@@ -66,6 +66,11 @@ export interface SourceDef {
   availabilityReason?: string
   /** The address this source used before the last automatic move. */
   previousBaseUrl?: string
+  /** Set when this site came from an installed extension, not from Add a site or the built-in list. */
+  extensionId?: string
+  extensionVersion?: string
+  /** Missing or true: the extension is in use. False: installed but turned off (catalog is kept). */
+  extensionEnabled?: boolean
 }
 
 export interface SeriesEntry {
@@ -156,7 +161,46 @@ export interface AppSettings {
   showLibrary: boolean
   /** Public AniList OAuth client id (not a secret). Empty until you paste one in Settings. */
   anilistClientId?: string
+  /** Optional extension repo index URLs. Empty until you add one in Settings. */
+  extensionRepos?: string[]
 }
+
+export interface InstalledExtension {
+  id: string
+  name: string
+  version: string
+  lang: 'ar' | 'en' | 'other'
+  description?: string
+  file: string
+  kind: 'json' | 'js'
+  sha256: string
+  enabled: boolean
+  sourceId: string
+  baseUrl: string
+  error?: string
+}
+
+export interface AvailableExtension {
+  id: string
+  name: string
+  version: string
+  lang: string
+  url: string
+  sha256: string
+  repoUrl: string
+  repoName?: string
+  installedVersion?: string
+  updateAvailable: boolean
+}
+
+export interface ExtensionsOverview {
+  dir: string
+  repos: string[]
+  installed: InstalledExtension[]
+  available: AvailableExtension[]
+  errors: string[]
+}
+
 
 export interface AniListStatus {
   connected: boolean
@@ -490,6 +534,12 @@ export interface MangaApi {
   anilistUnlink: (seriesUrl: string) => Promise<void>
   anilistLinkFor: (seriesUrl: string) => Promise<AniListLink | null>
   anilistImport: () => Promise<AniListImportResult>
+  extensionsOverview: () => Promise<ExtensionsOverview>
+  extensionsAddRepo: (url: string) => Promise<{ ok: true; repos: string[] } | { ok: false; error: string }>
+  extensionsRemoveRepo: (url: string) => Promise<string[]>
+  extensionsInstall: (url: string, sha256: string) => Promise<{ ok: true; id: string } | { ok: false; error: string }>
+  extensionsRemove: (id: string) => Promise<void>
+  extensionsSetEnabled: (id: string, enabled: boolean) => Promise<void>
 }
 
 declare global {
