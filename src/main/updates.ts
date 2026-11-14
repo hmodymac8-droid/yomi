@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Notification } from 'electron'
+import { app, BrowserWindow, Notification, nativeImage, type NativeImage } from 'electron'
 import { join } from 'path'
 import type {
   DownloadRequest,
@@ -14,6 +14,46 @@ import { enqueueDownloads } from './downloads'
 import { getProgress, recentProgress } from './progress'
 import { isUnreadable, readJson, writeAtomic } from './safefile'
 import { mapHost } from './repair'
+import { coverBytes } from './imageProxy'
+
+const ICON_W = 192
+
+/**
+ * The series cover, small, for its new-chapter notice. JPEG and PNG are read directly; other kinds (WebP, AVIF) are
+ * turned into a PNG by one of Yomi's windows, whose browser engine reads them. Null means the notice shows no picture.
+ */
+async function noticeIcon(cover: string, referer: string): Promise<NativeImage | null> {
+  try {
+    const got = await coverBytes(cover, referer || undefined)
+    if (!got) return null
+    let img = nativeImage.createFromBuffer(got.buf)
+    if (img.isEmpty()) {
+      const w = BrowserWindow.getAllWindows().find((x) => !x.isDestroyed())
+      if (!w) return null
+      const png = await w.webContents.executeJavaScript(
+        `(async () => {
+          const raw = atob(${JSON.stringify(got.buf.toString('base64'))})
+          const bytes = new Uint8Array(raw.length)
+          for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i)
+          const bm = await createImageBitmap(new Blob([bytes], { type: ${JSON.stringify(got.type)} }))
+          const w = Math.min(${ICON_W}, bm.width), h = Math.max(1, Math.round((bm.height * w) / bm.width))
+          const c = new OffscreenCanvas(w, h)
+          c.getContext('2d').drawImage(bm, 0, 0, w, h)
+          const out = new Uint8Array(await (await c.convertToBlob({ type: 'image/png' })).arrayBuffer())
+          let s = ''
+          for (let i = 0; i < out.length; i += 8192) s += String.fromCharCode(...out.subarray(i, i + 8192))
+          return btoa(s)
+        })()`
+      )
+      if (typeof png !== 'string') return null
+      img = nativeImage.createFromBuffer(Buffer.from(png, 'base64'))
+    }
+    if (img.isEmpty()) return null
+    return img.getSize().width > ICON_W ? img.resize({ width: ICON_W, quality: 'good' }) : img
+  } catch {
+    return null
+  }
+}
 
 interface State {
   follows: Record<string, FollowRecord>
@@ -182,10 +222,10 @@ export function setSeriesAutoDownload(seriesUrl: string, on: boolean | undefined
   emit()
 }
 
-function notify(found: { rec: FollowRecord; fresh: NewChapter[] }[]): void {
+async function notify(found: { rec: FollowRecord; fresh: NewChapter[] }[]): Promise<void> {
   if (found.length === 0 || !Notification.isSupported()) return
-  const show = (title: string, body: string): void => {
-    const n = new Notification({ title, body })
+  const show = (title: string, body: string, icon?: NativeImage | null): void => {
+    const n = new Notification(icon ? { title, body, icon } : { title, body })
     n.on('click', () => {
       const w =
         BrowserWindow.getAllWindows().find((x) => !x.isDestroyed() && x.isVisible()) ??
@@ -199,11 +239,15 @@ function notify(found: { rec: FollowRecord; fresh: NewChapter[] }[]): void {
     n.show()
   }
   if (found.length <= 4) {
-    for (const { rec, fresh } of found)
+    // each notice shows the series' cover (fetched side by side; a cover that can't be had just isn't shown)
+    const icons = await Promise.all(found.map(({ rec }) => noticeIcon(rec.cover, rec.coverReferer)))
+    found.forEach(({ rec, fresh }, i) =>
       show(
         rec.title,
-        fresh.length === 1 ? `${fresh[0].title} is out` : `${fresh.length} new chapters are out`
+        fresh.length === 1 ? `${fresh[0].title} is out` : `${fresh.length} new chapters are out`,
+        icons[i]
       )
+    )
   } else {
     show('New chapters', `${found.length} series you follow have new chapters`)
   }
@@ -273,7 +317,7 @@ export async function checkAll(manual: boolean): Promise<void> {
     saveSoon()
     emit()
   }
-  if (!manual) notify(found)
+  if (!manual) void notify(found)
 }
 
 let preloading = false
