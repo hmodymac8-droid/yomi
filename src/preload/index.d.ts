@@ -20,6 +20,20 @@ export type AppUpdateState =
   | { state: 'ready'; current: string; version: string; checkedAt?: number }
   | { state: 'error'; current: string; error: string; checkedAt?: number }
 
+/** Your reading, counted on this computer: chapters finished and time in the reader. */
+export interface ReadingStats {
+  totalChapters: number
+  totalMs: number
+  weekChapters: number
+  weekMs: number
+  streak: number
+  longestStreak: number
+  /** The last 30 days, oldest first (day is YYYY-MM-DD). */
+  daily: { day: string; chapters: number; ms: number }[]
+  topGenres: { name: string; chapters: number }[]
+  topSeries: { title: string; seriesUrl: string; chapters: number }[]
+}
+
 export interface FeedApiDef {
   kind: 'series-feed'
   /** The feed's address, ending in a slash (for example https://appswat.com/v2/api/v2/). */
@@ -115,7 +129,8 @@ export interface SeriesDetail {
   genres?: string[]
   status?: 'ongoing' | 'completed' | 'hiatus' | 'cancelled'
   /** `alts` are other links to the same chapter (other providers), tried if the main one fails. */
-  chapters: { title: string; url: string; alts?: string[] }[]
+  /** `fill` / `fillName`: a chapter this site lacks, read from another of your sites. */
+  chapters: { title: string; url: string; alts?: string[]; fill?: string; fillName?: string }[]
   /** The list looks too short for the newest chapter number (e.g. 2 chapters but the latest is Chapter 66). */
   incomplete?: boolean
   /** While a long list is still loading (partial updates only): how many chapters the page says it has. */
@@ -163,6 +178,8 @@ export interface AppSettings {
   anilistClientId?: string
   /** Optional extension repo index URLs. Empty until you add one in Settings. */
   extensionRepos?: string[]
+  /** Ask AniList for recommendations (sends titles you read to AniList; no account). Missing means on. */
+  recommendations?: boolean
 }
 
 export interface InstalledExtension {
@@ -486,6 +503,29 @@ export interface MangaApi {
     title: string,
     excludeIds: string[]
   ) => Promise<{ sourceId: string; sourceName: string; url: string }[]>
+  /** Time spent in the reader (ms since the last report), for your reading stats. */
+  statsTime: (ms: number) => Promise<void>
+  statsGet: () => Promise<ReadingStats>
+  /** Asks for a Mihon / Tachiyomi backup file and imports its library (null when no file was chosen). */
+  mihonImport: () => Promise<{
+    total: number
+    followed: number
+    alreadyFollowed: number
+    withProgress: number
+    chaptersMarked: number
+    notFound: string[]
+  } | null>
+  onMihonProgress: (cb: (p: { done: number; total: number; title: string }) => void) => () => void
+  /** AniList's recommendations for a title, kept to the titles on your sites. */
+  recsSimilar: (title: string, seriesUrl?: string) => Promise<SearchHit[]>
+  /** "Because you read X" rows, from the series you read most recently. */
+  recsBecause: () => Promise<{ title: string; hits: SearchHit[] }[]>
+  /** Chapters this list lacks (holes, or newer ones) that your other sites have for the same title. */
+  fillGaps: (
+    title: string,
+    sourceId: string,
+    chapters: SeriesDetail['chapters']
+  ) => Promise<SeriesDetail['chapters']>
   /** Remember which site you chose with "Read from". A repair does not change this. */
   pinSite: (title: string, sourceId: string) => Promise<void>
   pinnedSite: (title: string) => Promise<string | null>

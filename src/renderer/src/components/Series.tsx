@@ -2,8 +2,9 @@ import { Tags } from './Tags'
 import { Icon } from './Icon'
 import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail } from '../../../preload/index.d'
-import { OpenChapter, OpenSeries, chapterKey, fallbackCover, pageSrc, coverSrc } from '../lib'
+import { OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fallbackCover, pageSrc, coverSrc } from '../lib'
 import AniListLinkPanel from './AniListLink'
+import { SimilarRow } from './Similar'
 
 interface Props {
   series: OpenSeries
@@ -11,6 +12,8 @@ interface Props {
   /** Name of the screen Back returns to ("Following", "Discover"…). */
   backLabel: string
   onRead: (c: OpenChapter) => void
+  /** Opens another series (from "Similar on your sites"). */
+  onOpen?: (s: OpenSeries) => void
 }
 
 type Ch = SeriesDetail['chapters'][number]
@@ -19,8 +22,10 @@ const chapterNumber = (t: string): number => {
   const m = t.match(/(\d+(?:\.\d+)?)/)
   return m ? Number(m[1]) : 0
 }
+/** Like chapterNumber, but a chapter with no number sorts last instead of as chapter 0. */
+const numberOrNone = (t: string): number => numberInTitle(t) ?? -Infinity
 
-export default function Series({ series, onBack, onRead, backLabel }: Props): React.JSX.Element {
+export default function Series({ series, onBack, onRead, onOpen, backLabel }: Props): React.JSX.Element {
   const [entryIdx, setEntryIdx] = useState(0)
   const [entries, setEntries] = useState(series.entries)
   const [switchNote, setSwitchNote] = useState('')
@@ -44,6 +49,8 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
   const [loadStart, setLoadStart] = useState(0)
   const [expected, setExpected] = useState<number | undefined>(undefined)
   const [partial, setPartial] = useState(false)
+  // chapters this site lacks, filled in from your other sites (holes in the list, or newer chapters)
+  const [fills, setFills] = useState<Ch[]>([])
   // chapters this load has collected so far (the screen may still show a longer saved list meanwhile)
   const [found, setFound] = useState(0)
   // why the latest refresh failed while an older saved list is being shown (empty when it worked)
@@ -235,8 +242,32 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.sourceId, entry.url, series.title, series.cover, attempt, pinReady])
 
+  // Once the list is complete, ask your other sites for the chapters it lacks.
+  useEffect(() => {
+    setFills([])
+    if (!detail || refreshing || partial || offline || detail.chapters.length < 2) return
+    let cancelled = false
+    void window.api
+      .fillGaps(series.title, entry.sourceId, detail.chapters)
+      .then((f) => !cancelled && setFills(f))
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail, refreshing, partial, offline, entry.sourceId, series.title])
+
   const referer = new URL(entry.url).origin + '/'
-  const chapters = detail ? (newestFirst ? detail.chapters : [...detail.chapters].reverse()) : []
+  // the site's own chapters with the filled ones slotted in by number, newest first
+  const merged: Ch[] = (() => {
+    if (!detail) return []
+    if (fills.length === 0) return detail.chapters
+    const all = [...detail.chapters, ...fills].map((c, i) => ({ c, n: numberOrNone(c.title), i }))
+    all.sort((a, b) => b.n - a.n || a.i - b.i)
+    return all.map((x) => x.c)
+  })()
+  const chapters = newestFirst ? merged : [...merged].reverse()
+  const refererOf = (c: Ch): string => (c.fill ? new URL(c.url).origin + '/' : referer)
   const readSet = new Set(progress?.read ?? [])
 
   const open = (c: Ch): void => {
@@ -244,8 +275,8 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
     onRead({
       url: c.url,
       title: c.title,
-      chapters: detail.chapters,
-      referer,
+      chapters: merged,
+      referer: refererOf(c),
       seriesUrl: entry.url,
       sourceId: entry.sourceId
     })
@@ -257,8 +288,8 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
     chapterTitle: c.title,
     seriesUrl: entry.url,
     seriesTitle: series.title,
-    sourceId: entry.sourceId,
-    referer
+    sourceId: c.fill ?? entry.sourceId,
+    referer: refererOf(c)
   })
 
   // Oldest first, so the queue fills in reading order.
@@ -296,7 +327,8 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
 
   // "Continue" resumes the last chapter you opened. If you had finished it, go to the next one.
   // The list is stored newest-first, so "next" is the previous index.
-  const list = detail?.chapters ?? []
+  // (filled-in chapters count too: Continue, Start and "Download unread / all" walk the merged list)
+  const list = merged
   const lastIdx = progress ? list.findIndex((c) => c.url === progress.chapterUrl) : -1
   let resume: Ch | undefined
   let resumeNote = ''
@@ -431,6 +463,7 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
             </div>
           )}
           {detail && <AniListLinkPanel seriesUrl={entry.url} title={detail.title || series.title} />}
+          {onOpen && <SimilarRow title={series.title} seriesUrl={entry.url} onOpen={onOpen} />}
           {detail && !offline && list.length > 0 && (
             <div className="resume">
               <button className="mini big" onClick={() => downloadMany(unread, 'unread')}>
@@ -512,6 +545,11 @@ export default function Series({ series, onBack, onRead, backLabel }: Props): Re
                   {readSet.has(c.url) ? '✓ ' : ''}
                   {c.title}
                   {newKeys.has(chapterKey(c.title)) && !readSet.has(c.url) && <span className="newtag">NEW</span>}
+                  {c.fill && (
+                    <span className="filltag" title={`${entry.sourceName} doesn't have this chapter. It is read from ${c.fillName}.`}>
+                      from {c.fillName}
+                    </span>
+                  )}
                 </button>
                 {dlButton(c)}
               </div>

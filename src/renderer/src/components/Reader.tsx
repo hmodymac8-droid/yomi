@@ -264,6 +264,32 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
       if (!barHover.current) setBarVisible(false)
     }, 2200)
   }
+  // Reading time for your stats: counted while the reader is on screen and you used it in the last 90 s
+  // (scrolling, the mouse, a key) or auto-scroll is running. Reported every 30 s.
+  const autoRunRef = useRef(false)
+  autoRunRef.current = autoRun
+  useEffect(() => {
+    let lastUse = Date.now()
+    let lastTick = Date.now()
+    const used = (): void => {
+      lastUse = Date.now()
+    }
+    const evs = ['wheel', 'keydown', 'mousemove', 'mousedown', 'touchstart', 'scroll'] as const
+    for (const ev of evs) window.addEventListener(ev, used, { passive: true, capture: true })
+    const report = (): void => {
+      const now = Date.now()
+      const active =
+        document.visibilityState === 'visible' && (autoRunRef.current || now - lastUse < 90000)
+      if (active) void window.api.statsTime(now - lastTick)
+      lastTick = now
+    }
+    const t = window.setInterval(report, 30000)
+    return () => {
+      report()
+      window.clearInterval(t)
+      for (const ev of evs) window.removeEventListener(ev, used, { capture: true })
+    }
+  }, [])
   const restoring = useRef(true) // true while we jump back to the saved position: don't overwrite it
   const lastSave = useRef(0)
   const finished = useRef(false)
@@ -335,11 +361,24 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
 
   // chapters are listed newest-first on most sites; "next" = the one before it in the list.
   const pos = chapter.chapters.findIndex((c) => c.url === chapter.url)
+  // The site this chapter is read from: the series' own site, or the other site a filled-in chapter comes from.
+  // Failures, the site name and downloads go to that site; progress stays under the series' own site.
+  const chapterSite = chapter.chapters[pos]?.fill ?? chapter.sourceId
+  const chapterSiteName = chapter.chapters[pos]?.fillName
   const nextCh = pos > 0 ? chapter.chapters[pos - 1] : undefined
   const prevCh =
     pos >= 0 && pos < chapter.chapters.length - 1 ? chapter.chapters[pos + 1] : undefined
-  const go = (c?: { title: string; url: string }): void => {
-    if (c) onNavigate({ ...chapter, url: c.url, title: c.title })
+  const go = (c?: { title: string; url: string; fill?: string }): void => {
+    if (!c) return
+    // a chapter filled in from another site loads its pages with that site's address; back on the series' own
+    // chapters, the series' site is used again
+    const here = chapter.chapters.find((x) => x.url === chapter.url)
+    const referer = c.fill
+      ? new URL(c.url).origin + '/'
+      : here?.fill
+        ? new URL(chapter.seriesUrl).origin + '/'
+        : chapter.referer
+    onNavigate({ ...chapter, url: c.url, title: c.title, referer })
   }
 
   useEffect(() => {
@@ -425,7 +464,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
 
       let lastError = 'No manga pages found on that chapter page.'
       // A source already out of rotation is not waited on: another copy of the chapter is opened at once.
-      const state = await window.api.sourceState(chapter.sourceId)
+      const state = await window.api.sourceState(chapterSite)
       let deadHost =
         state.availability === 'down' || state.availability === 'degraded'
           ? bare(state.baseUrl)
@@ -441,13 +480,13 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
         }
         if (!res.ok) {
           lastError = res.error
-          const rep = await window.api.sourceFailed(chapter.sourceId, res.error)
+          const rep = await window.api.sourceFailed(chapterSite, res.error)
           if (rep.outOfRotation) deadHost = bare(state.baseUrl) || bare(u)
         }
       }
       // This site didn't give the chapter: look for the same chapter (by its number) on your other sites that have
       // this series, and read it from there.
-      const here = state.name || chapter.sourceId
+      const here = state.name || chapterSiteName || chapterSite
       setStage(`${here} didn't open this chapter. Looking for it on your other sites…`)
       const other = await fromOtherSites(() => cancelled)
       if (cancelled) return
@@ -473,9 +512,10 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
     const num = chapterNumber(chapter.title)
     if (num === null) return null
     // Pin, then last read, then the fastest healthy site. Comix and sites already down are left out.
-    let entries = await window.api.fallbackSites(series.title, [chapter.sourceId])
+    const skip = [...new Set([chapterSite, chapter.sourceId])]
+    let entries = await window.api.fallbackSites(series.title, skip)
     if (entries.length === 0) {
-      entries = series.entries.filter((e) => e.sourceId !== chapter.sourceId).slice(0, 5)
+      entries = series.entries.filter((e) => !skip.includes(e.sourceId)).slice(0, 5)
     }
     for (const e of entries) {
       if (stop()) return null
@@ -825,8 +865,9 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
           <b>{series.title}</b>
           <span>
             {chapter.title} ·{' '}
-            {series.entries.find((e) => e.sourceId === chapter.sourceId)?.sourceName ??
-              chapter.sourceId}
+            {chapterSiteName ??
+              series.entries.find((e) => e.sourceId === chapterSite)?.sourceName ??
+              chapterSite}
           </span>
         </div>
         <span className="grow" />
@@ -885,7 +926,7 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
                 chapterTitle: chapter.title,
                 seriesUrl: chapter.seriesUrl,
                 seriesTitle: series.title,
-                sourceId: chapter.sourceId,
+                sourceId: chapterSite,
                 referer: chapter.referer
               }
             ])

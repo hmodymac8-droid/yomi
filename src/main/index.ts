@@ -6,6 +6,13 @@ import { dataLog } from './safefile'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { fetchHtml } from './http'
 import { startAutoUpdates } from './updater'
+import { fillGaps } from './gapfill'
+import { importMihonBackup } from './mihon'
+import { numberOf as numberOfTitle } from './gapfillLogic'
+import { gzipSync } from 'zlib'
+import { flushStats, readingStats, statChapter, statTime } from './stats'
+import { becauseYouRead, similarTo } from './recs'
+import type { SeriesDetail } from '../preload/index.d'
 import {
   cancelGenreScan,
   runGenreJob,
@@ -527,6 +534,9 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('progress-get', (_e, seriesUrl: string) => getProgress(seriesUrl))
   ipcMain.handle('progress-save', (_e, p: ProgressPatch) => {
+    // a chapter counts for your stats the first time it is finished
+    if (p.markRead && !(getProgress(p.seriesUrl)?.read ?? []).includes(p.markRead))
+      statChapter({ seriesUrl: p.seriesUrl, title: p.title, chapterTitle: p.chapterTitle })
     saveProgress(p)
     // reading a series follows it (so you hear about its new chapters)
     autoFollow({
@@ -638,6 +648,37 @@ app.whenReady().then(async () => {
   )
   ipcMain.handle('fallback-sites', (_e, title: string, excludeIds: string[]) =>
     listFallbackSites(String(title ?? ''), Array.isArray(excludeIds) ? excludeIds.map(String) : [])
+  )
+  // Import a Mihon / Tachiyomi backup (asks for the file; progress goes to the window that asked)
+  let mihonRunning = false
+  ipcMain.handle('mihon-import', async (e) => {
+    if (mihonRunning) throw new Error('An import is already running')
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined
+    const pick = await dialog.showOpenDialog(win as BrowserWindow, {
+      title: 'Choose a Mihon or Tachiyomi backup',
+      filters: [{ name: 'Mihon / Tachiyomi backup', extensions: ['tachibk', 'gz', 'proto'] }, { name: 'All files', extensions: ['*'] }],
+      properties: ['openFile']
+    })
+    if (pick.canceled || pick.filePaths.length === 0) return null
+    mihonRunning = true
+    try {
+      return await importMihonBackup(pick.filePaths[0], (p) => {
+        if (!e.sender.isDestroyed()) e.sender.send('mihon-progress', p)
+      })
+    } finally {
+      mihonRunning = false
+    }
+  })
+  ipcMain.handle('stats-time', (_e, ms: number) => statTime(Number(ms)))
+  ipcMain.handle('stats-get', () => readingStats())
+  ipcMain.handle('recs-similar', (_e, title: string, seriesUrl?: string) =>
+    similarTo(String(title ?? ''), seriesUrl ? String(seriesUrl) : undefined).catch(() => [])
+  )
+  ipcMain.handle('recs-because', () => becauseYouRead(2).catch(() => []))
+  ipcMain.handle('fill-gaps', (_e, title: string, sourceId: string, chapters: SeriesDetail['chapters']) =>
+    fillGaps(String(title ?? ''), String(sourceId ?? ''), Array.isArray(chapters) ? chapters : []).catch(
+      () => []
+    )
   )
   ipcMain.handle('pin-site', (_e, title: string, sourceId: string) =>
     pinSite(String(title ?? ''), String(sourceId ?? ''))
@@ -1477,6 +1518,196 @@ app.whenReady().then(async () => {
         )
       }
     })().finally(() => app.quit())
+    return
+  }
+
+  // Dev helper: MR_UITEST=<folder for pictures> tries the newer features on the data folder's library (fill missing
+  // chapters, recommendations, stats) and takes pictures of their screens in a hidden window.
+  if (process.env['MR_UITEST']) {
+    ;(async () => {
+      process.env['MR_NOHUMAN'] = '1'
+      const out = process.env['MR_UITEST']!
+      const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+      // 1. fill missing chapters on your followed / read series
+      const cands = [...listFollows().map((f) => ({ url: f.seriesUrl, id: f.sourceId, title: f.title })), ...recentProgress(30).map((p) => ({ url: p.seriesUrl, id: p.sourceId, title: p.title }))]
+      let tried = 0
+      for (const c of cands) {
+        const d = getSeriesCached(c.url)
+        if (!d || d.chapters.length < 2) continue
+        const others = listFallbackSites(c.title, [c.id])
+        if (others.length === 0) continue
+        tried++
+        const t0 = Date.now()
+        const fills = await fillGaps(c.title, c.id, d.chapters)
+        console.log('UT fill ' + JSON.stringify({ title: c.title, site: c.id, own: d.chapters.length, others: others.map((o) => o.sourceId), fills: fills.length, sample: fills.slice(0, 4).map((f) => f.title + ' <- ' + f.fillName), ms: Date.now() - t0 }))
+        if (tried >= 8) break
+      }
+      console.log('UT fill tried ' + tried + ' of ' + cands.length)
+      // 2. recommendations
+      const t1 = Date.now()
+      const rows = await becauseYouRead(2)
+      console.log('UT because ' + JSON.stringify({ ms: Date.now() - t1, rows: rows.map((r) => ({ from: r.title, n: r.hits.length, first: r.hits.slice(0, 5).map((h) => h.title) })) }))
+      // 3. stats (test folder only)
+      statChapter({ seriesUrl: cands[0]?.url ?? 'x', title: cands[0]?.title ?? 'Test', chapterTitle: 'Chapter 1' })
+      statTime(25 * 60000)
+      console.log('UT stats ' + JSON.stringify(readingStats()).slice(0, 300))
+      // 4. pictures of the screens, in a window that is never shown
+      const w = new BrowserWindow({ width: 1280, height: 860, show: false, webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false } })
+      if (is.dev && process.env['ELECTRON_RENDERER_URL']) await w.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      else await w.loadFile(join(__dirname, '../renderer/index.html'))
+      await wait(6000)
+      const js = (code: string): Promise<unknown> => w.webContents.executeJavaScript(code).catch((e) => 'ERR ' + e)
+      const shot = async (name: string): Promise<void> => {
+        await wait(1500)
+        const img = await w.webContents.capturePage()
+        writeFileSync(join(out, name + '.png'), img.toPNG())
+        console.log('UT shot ' + name)
+      }
+      await shot('1-discover')
+      await js(`[...document.querySelectorAll('.navitem')].find(b => b.textContent.includes('Stats')).click()`)
+      await wait(2500)
+      await shot('2-stats')
+      await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true }))`)
+      await wait(400)
+      await js(`(() => { const i = document.querySelector('.qo-field input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'solo'); i.dispatchEvent(new Event('input', { bubbles: true })); return 1 })()`)
+      await shot('3-quickopen')
+      console.log('UT quickopen ' + (await js(`JSON.stringify([...document.querySelectorAll('.qo-item')].slice(0, 8).map(b => b.innerText.replace(/\\n/g, ' | ')))`)))
+      await js(`document.querySelector('.qo-item.on')?.click()`)
+      await wait(5000)
+      await js(`document.querySelector('.similar')?.scrollIntoView()`)
+      await shot('4-series')
+      console.log('UT series ' + (await js(`JSON.stringify({ title: document.querySelector('.series h2')?.textContent, similar: [...document.querySelectorAll('.similar .name')].map(n => n.textContent).slice(0, 8), filled: document.querySelectorAll('.filltag').length, chapters: document.querySelectorAll('.chapter').length })`)))
+      await js(`[...document.querySelectorAll('.navitem')].find(b => b.textContent.includes('Settings')).click()`)
+      await wait(800)
+      await js(`[...document.querySelectorAll('.setting h2')].find(h => h.textContent.includes('Mihon'))?.scrollIntoView()`)
+      await shot('5-settings-import')
+      w.destroy()
+    })()
+      .catch((e) => console.log('UT_ERROR ' + (e instanceof Error ? e.stack : String(e))))
+      .finally(() => app.quit())
+    return
+  }
+
+  // Dev helper: MR_E2E=<folder> runs a Mihon import of a small made-up backup (real titles from the data folder plus
+  // one that doesn't exist), then opens a series with a filled-in chapter in a hidden window and reads that chapter.
+  if (process.env['MR_E2E']) {
+    ;(async () => {
+      process.env['MR_NOHUMAN'] = '1'
+      const out = process.env['MR_E2E']!
+      const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+      // --- Mihon import ---
+      const vi = (n: bigint): number[] => {
+        const o: number[] = []
+        let v = BigInt.asUintN(64, n)
+        do {
+          let b = Number(v & 0x7fn)
+          v >>= 7n
+          if (v) b |= 0x80
+          o.push(b)
+        } while (v)
+        return o
+      }
+      const k = (no: number, w: number): number[] => vi(BigInt((no << 3) | w))
+      const I = (no: number, n: number): number[] => [...k(no, 0), ...vi(BigInt(n))]
+      const S = (no: number, s: string): number[] => {
+        const b = [...Buffer.from(s, 'utf8')]
+        return [...k(no, 2), ...vi(BigInt(b.length)), ...b]
+      }
+      const M = (no: number, body: number[]): number[] => [...k(no, 2), ...vi(BigInt(body.length)), ...body]
+      const F = (no: number, f: number): number[] => {
+        const b = Buffer.alloc(4)
+        b.writeFloatLE(f)
+        return [...k(no, 5), ...b]
+      }
+      const follows = listFollows().filter((f) => f.following)
+      const withProgress = recentProgress(50).find((p) => (numberOfTitle(p.chapterTitle) ?? 0) > 5)
+      const pickA = follows.filter((f) => f.seriesUrl !== withProgress?.seriesUrl).slice(0, 2)
+      const books = [
+        ...pickA.map((f, i) => ({ title: f.title, cat: i === 0 ? 1 : 0 })),
+        ...(withProgress ? [{ title: withProgress.title, cat: 0 }] : []),
+        { title: 'Totally Made Up Series 12345', cat: 0 }
+      ]
+      // a series nobody follows yet (to see a new follow on the right shelf)
+      const fresh = search('', [], 'sites', 0, 40).hits.find((h) => !getFollow(h.entries[0].url) && !getProgress(h.entries[0].url))
+      if (fresh) books.push({ title: fresh.title, cat: 1 })
+      const before = Object.fromEntries(books.map((b) => [b.title, null as unknown]))
+      if (withProgress) before[withProgress.title] = { chapter: withProgress.chapterTitle, read: withProgress.read.length }
+      for (const f of pickA) before[f.title] = { ...(before[f.title] as object), shelf: f.category ?? 'reading' }
+      const chapters = [1, 2, 3].map((n) => M(16, [...S(1, '/c/' + n), ...S(2, 'Chapter ' + n), ...I(4, 1), ...F(9, n)]))
+      const backup = [
+        ...books.flatMap((b) => M(1, [...I(1, 7), ...S(2, '/m/' + b.title), ...S(3, b.title), ...chapters.flat(), ...I(17, b.cat), ...I(100, 1)])),
+        ...M(2, [...S(1, 'Reading'), ...I(2, 0)]),
+        ...M(2, [...S(1, 'Plan to read'), ...I(2, 1)]),
+        ...M(101, [...S(1, 'Some Source'), ...I(2, 7)])
+      ]
+      const file = join(out, 'test.tachibk')
+      writeFileSync(file, gzipSync(Buffer.from(backup)))
+      let broadcasts = 0
+      const probe = new BrowserWindow({ show: false, webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false } })
+      await probe.loadURL('about:blank')
+      const origSend = probe.webContents.send.bind(probe.webContents)
+      probe.webContents.send = (ch: string, ...a: unknown[]) => {
+        if (ch === 'updates-changed') broadcasts++
+        origSend(ch, ...a)
+      }
+      const t0 = Date.now()
+      const res = process.env['MR_E2E_SKIPIMPORT'] ? null : await importMihonBackup(file, () => undefined)
+      console.log('E2E import ' + JSON.stringify({ ms: Date.now() - t0, res, broadcasts }))
+      for (const b of books) {
+        const hit = search(b.title, [], 'az', 0, 5).hits.find((h) => h.title === b.title)
+        const url = hit?.entries.map((e) => e.url).find((u) => getFollow(u)) ?? hit?.entries[0]?.url
+        const f = url ? getFollow(url) : null
+        const p = url ? getProgress(url) : null
+        console.log('E2E book ' + JSON.stringify({ title: b.title, cat: b.cat, following: f?.following, shelf: f?.category ?? 'reading', progress: p ? { chapter: p.chapterTitle, read: p.read.length } : null, before: before[b.title] }))
+      }
+      // (the probe window stays open until the end: closing the last window would quit the app)
+      // --- a filled-in chapter, end to end in the screen ---
+      const w = new BrowserWindow({ width: 1366, height: 860, show: false, webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false } })
+      if (is.dev && process.env['ELECTRON_RENDERER_URL']) await w.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      else
+        for (let tries = 0; tries < 3; tries++) {
+          const ok = await w.loadFile(join(__dirname, '../renderer/index.html')).then(() => true, (e) => (console.log('E2E load retry ' + String(e)), false))
+          if (ok) break
+          await wait(1500)
+        }
+      await wait(6000)
+      const js = (code: string): Promise<unknown> => w.webContents.executeJavaScript(code).catch((e) => 'ERR ' + String(e))
+      const shot = async (name: string): Promise<void> => {
+        await wait(1200)
+        writeFileSync(join(out, name + '.png'), (await w.capturePage()).toPNG())
+      }
+      await shot('e2e-0-nav')
+      const target = process.env['MR_E2E_SERIES'] ?? 'Overgeared'
+      const site = process.env['MR_E2E_SITE'] ?? 'Azora'
+      await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true }))`)
+      await wait(300)
+      await js(`(() => { const i = document.querySelector('.qo-field input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(target)}); i.dispatchEvent(new Event('input', { bubbles: true })); return 1 })()`)
+      await wait(1500)
+      await js(`[...document.querySelectorAll('.qo-item')].find(b => b.querySelector('.qo-label').textContent.trim() === ${JSON.stringify(target)})?.click()`)
+      await wait(4000)
+      await js(`[...document.querySelectorAll('.srcs button')].find(b => b.textContent.includes(${JSON.stringify(site)}))?.click()`)
+      let tags = 0
+      for (let i = 0; i < 45 && tags === 0; i++) {
+        await wait(1000)
+        tags = Number(await js(`document.querySelectorAll('.filltag').length`)) || 0
+      }
+      console.log('E2E series ' + (await js(`JSON.stringify({ title: document.querySelector('.series h2')?.textContent, site: document.querySelector('.srcs button.on')?.textContent, chapters: document.querySelectorAll('.chapter').length, filled: [...document.querySelectorAll('.filltag')].map(t => t.closest('.chapter').textContent.trim()), resume: document.querySelector('.resume .primary')?.textContent })`)))
+      await js(`document.querySelector('.filltag')?.scrollIntoView({ block: 'center' })`)
+      await shot('e2e-1-series')
+      await js(`document.querySelector('.filltag')?.closest('.chapter')?.click()`)
+      let loaded = 0
+      for (let i = 0; i < 40 && loaded === 0; i++) {
+        await wait(1000)
+        loaded = Number(await js(`[...document.querySelectorAll('img.page')].filter(i => i.naturalWidth > 0).length`)) || 0
+      }
+      await wait(2000)
+      console.log('E2E reader ' + (await js(`JSON.stringify({ header: document.querySelector('.rtitle span')?.textContent, pages: document.querySelectorAll('img.page').length, loaded: [...document.querySelectorAll('img.page')].filter(i => i.naturalWidth > 0).length, error: document.querySelector('.readerview .error')?.textContent ?? null })`)))
+      await shot('e2e-2-reader')
+      w.destroy()
+      probe.destroy()
+    })()
+      .catch((e) => console.log('E2E_ERROR ' + (e instanceof Error ? e.stack : String(e))))
+      .finally(() => app.quit())
     return
   }
 
@@ -2561,6 +2792,7 @@ app.whenReady().then(async () => {
 function saveEverything(): void {
   flushCatalog()
   flushProgress()
+  flushStats()
   flushDownloads()
   flushSeriesCache()
   flushModes()

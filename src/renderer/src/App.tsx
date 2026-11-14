@@ -7,6 +7,8 @@ import Following from './components/Following'
 import Sites, { levelOf } from './components/Sites'
 import Settings from './components/Settings'
 import NewChapters from './components/NewChapters'
+import QuickOpen from './components/QuickOpen'
+import Stats from './components/Stats'
 import type { OpenChapter, OpenSeries } from './lib'
 import type { SiteHealth, SourceInfo, UpdateStatus } from '../../preload/index.d'
 import logo from './assets/yomi-logo.png'
@@ -21,12 +23,13 @@ type View =
   | { name: 'sites' }
   | { name: 'settings' }
   | { name: 'new' }
+  | { name: 'stats' }
   | { name: 'series'; series: OpenSeries; from: Tab }
   | { name: 'reader'; series: OpenSeries; chapter: OpenChapter; from: Tab }
 
 /** The screens in the top bar. A series remembers which one it was opened from, and Back returns there. */
-type Tab = 'browse' | 'new' | 'added' | 'following' | 'downloads' | 'sites' | 'settings'
-const TAB_LABEL: Record<Tab, string> = { browse: 'Discover', new: 'New', added: 'Added by me', following: 'Following', downloads: 'Downloads', sites: 'Sites', settings: 'Settings' }
+type Tab = 'browse' | 'new' | 'added' | 'following' | 'downloads' | 'sites' | 'settings' | 'stats'
+const TAB_LABEL: Record<Tab, string> = { browse: 'Discover', new: 'New', added: 'Added by me', following: 'Following', downloads: 'Downloads', sites: 'Sites', settings: 'Settings', stats: 'Stats' }
 
 /** If a screen ever crashes while drawing, show a message and a way back instead of a blank window. */
 class Boundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -83,8 +86,15 @@ function AppInner(): React.JSX.Element {
   // The search box lives in the top bar; Discover (always mounted) does the searching.
   const [q, setQ] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+  const [quick, setQuick] = useState(false)
   useEffect(() => {
     const h = (e: KeyboardEvent): void => {
+      // Ctrl+P: Quick Open (jump to a screen or any series)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        setQuick((v) => !v)
+        return
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         searchRef.current?.focus()
@@ -208,6 +218,7 @@ function AppInner(): React.JSX.Element {
     { id: 'added', label: 'Added by me', icon: 'library', n: addedCount },
     { id: 'downloads', label: 'Downloads', icon: 'download', n: queued || undefined },
     { id: 'sites', label: 'Sites', icon: 'globe' },
+    { id: 'stats', label: 'Stats', icon: 'chart' },
     { id: 'settings', label: 'Settings', icon: 'settings' }
   ]
   const totalTitles = sources.reduce((n, s) => n + s.count, 0)
@@ -259,6 +270,9 @@ function AppInner(): React.JSX.Element {
             />
             <kbd>Ctrl K</kbd>
           </label>
+          <button className="qobtn" onClick={() => setQuick(true)} title="Quick Open: jump to any screen or series (Ctrl+P)">
+            <kbd>Ctrl P</kbd>
+          </button>
           <ThemeToggle />
         </header>
       )}
@@ -309,13 +323,20 @@ function AppInner(): React.JSX.Element {
             />
           </div>
         )}
+        {view.name === 'stats' && (
+          <div className="pane">
+            <Stats />
+          </div>
+        )}
         {view.name === 'series' && (
           <div className="pane">
             <Series
+              key={view.series.entries[0]?.url ?? view.series.title}
               series={view.series}
               backLabel={TAB_LABEL[view.from]}
               onBack={() => setView({ name: view.from } as View)}
               onRead={(chapter) => setView({ name: 'reader', series: view.series, chapter, from: view.from })}
+              onOpen={(series) => setView({ name: 'series', series, from: view.from })}
             />
           </div>
         )}
@@ -330,6 +351,17 @@ function AppInner(): React.JSX.Element {
           </div>
         )}
       </div>
+      {quick && (
+        <QuickOpen
+          screens={nav.map((n) => ({ id: n.id, label: n.label, icon: n.icon }))}
+          sources={sources}
+          onClose={() => setQuick(false)}
+          onScreen={(id) => setView({ name: id } as View)}
+          onSeries={(series) =>
+            setView({ name: 'series', series, from: view.name === 'series' || view.name === 'reader' ? view.from : (view.name as Tab) })
+          }
+        />
+      )}
       {update && !reading && (
         <div className="updatebar" role="status">
           <span>
