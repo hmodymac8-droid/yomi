@@ -754,3 +754,18 @@ select { cursor: pointer; }
 .series .similar { margin-top: 18px; padding-top: 18px; }
 .series .similar > .meta { font-size: 18px; margin-bottom: 12px; }
 .series .similar .card.small { width: 120px; }
+
+/* Quick Open (Ctrl+P) */
+.qo-back { position: fixed; inset: 0; z-index: 200; background: color-mix(in oklab, #000 45%, transparent); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+.qo { width: min(640px, 92vw); max-height: 70vh; display: flex; flex-direction: column; background: var(--card, var(--background)); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.45); overflow: hidden; }
+.qo-field { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.qo-field svg { width: 18px; height: 18px; stroke: var(--muted-foreground); fill: none; stroke-width: 2; }
+.qo-field input { flex: 1; background: transparent; border: 0; outline: none; color: var(--foreground); font-size: 16px; }
+.qo-list { overflow-y: auto; padding: 6px; }
+.qo-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--foreground); text-align: left; cursor: pointer; }
+.qo-item.on { background: color-mix(in oklab, var(--primary) 18%, transparent); }
+.qo-item svg { width: 16px; height: 16px; flex: none; stroke: var(--muted-foreground); fill: none; stroke-width: 2; }
+.qo-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qo-sub { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted-foreground); }
+.qo-empty { padding: 18px; text-align: center; color: var(--muted-foreground); font-size: 13px; }
+.qobtn { background: transparent; border: 0; padding: 0 4px; cursor: pointer; }

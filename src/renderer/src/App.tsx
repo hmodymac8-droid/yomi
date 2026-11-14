@@ -7,6 +7,7 @@ import Following from './components/Following'
 import Sites, { levelOf } from './components/Sites'
 import Settings from './components/Settings'
 import NewChapters from './components/NewChapters'
+import QuickOpen from './components/QuickOpen'
 import type { OpenChapter, OpenSeries } from './lib'
 import type { SiteHealth, SourceInfo, UpdateStatus } from '../../preload/index.d'
 import logo from './assets/yomi-logo.png'
@@ -83,8 +84,15 @@ function AppInner(): React.JSX.Element {
   // The search box lives in the top bar; Discover (always mounted) does the searching.
   const [q, setQ] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+  const [quick, setQuick] = useState(false)
   useEffect(() => {
     const h = (e: KeyboardEvent): void => {
+      // Ctrl+P: Quick Open (jump to a screen or any series)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        setQuick((v) => !v)
+        return
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         searchRef.current?.focus()
@@ -259,6 +267,9 @@ function AppInner(): React.JSX.Element {
             />
             <kbd>Ctrl K</kbd>
           </label>
+          <button className="qobtn" onClick={() => setQuick(true)} title="Quick Open: jump to any screen or series (Ctrl+P)">
+            <kbd>Ctrl P</kbd>
+          </button>
           <ThemeToggle />
         </header>
       )}
@@ -332,6 +343,17 @@ function AppInner(): React.JSX.Element {
           </div>
         )}
       </div>
+      {quick && (
+        <QuickOpen
+          screens={nav.map((n) => ({ id: n.id, label: n.label, icon: n.icon }))}
+          sources={sources}
+          onClose={() => setQuick(false)}
+          onScreen={(id) => setView({ name: id } as View)}
+          onSeries={(series) =>
+            setView({ name: 'series', series, from: view.name === 'series' || view.name === 'reader' ? view.from : (view.name as Tab) })
+          }
+        />
+      )}
       {update && !reading && (
         <div className="updatebar" role="status">
           <span>
