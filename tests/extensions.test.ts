@@ -187,10 +187,17 @@ test('the sandbox times out a runaway script', () => {
 
 test('the sandbox shares nothing with the app: module and exports cannot reach process', () => {
   // (module.constructor.constructor reached the app's process under the old node:vm sandbox)
+  // each probe exports a valid manifest only when nothing leaked, so `ok` really says whether the escape worked
   const viaModule = runExtensionScript(
-    "module.exports = { manifestVersion: 1, id: 'x', leak: typeof module.constructor.constructor('return process')() }"
+    "var p = 'undefined'; try { p = module.constructor.constructor('return typeof process')() } catch (e) {} if (p !== 'undefined') throw new Error('leak ' + p); module.exports = " +
+      JSON.stringify(valid)
   )
-  assert.equal(viaModule.ok, false)
+  assert.equal(viaModule.ok, true, viaModule.ok ? '' : viaModule.error)
+  const viaThis = runExtensionScript(
+    "var q = 'undefined'; try { q = (function(){ return this.constructor.constructor('return typeof process')() })() } catch (e) {} if (q !== 'undefined') throw new Error('leak ' + q); module.exports = " +
+      JSON.stringify(valid)
+  )
+  assert.equal(viaThis.ok, true, viaThis.ok ? '' : viaThis.error)
   const viaExports = runExtensionScript(
     "var p = exports.constructor.constructor('return typeof process')(); if (p !== 'undefined') throw new Error('leak ' + p); module.exports = " +
       JSON.stringify(valid)
@@ -206,4 +213,9 @@ test('the sandbox shares nothing with the app: module and exports cannot reach p
 test('the sandbox stops a script that eats memory', () => {
   const r = runExtensionScript('var a = []; while (true) a.push(new Array(100000).fill(1));', 5000)
   assert.equal(r.ok, false)
+})
+
+test('extensions can still call console (a silent one made inside the sandbox)', () => {
+  const r = runExtensionScript("console.log('hi'); console.warn('w'); module.exports = " + JSON.stringify(valid))
+  assert.equal(r.ok, true, r.ok ? '' : r.error)
 })

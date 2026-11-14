@@ -68,6 +68,7 @@ export function runExtensionScript(code: string, timeoutMs = 1000): Result {
     // module / exports are created inside the sandbox; the script's result leaves it only as JSON text
     const wrapped =
       'var module = { exports: {} }; var exports = module.exports;\n' +
+      'var console = { log: function () {}, info: function () {}, warn: function () {}, error: function () {}, debug: function () {} };\n' +
       '(function (module, exports) {\n' +
       code +
       '\n})(module, exports);\n' +

@@ -50,7 +50,7 @@ A worked example (a port of the built-in MangaFreak definition) is in [`examples
 
 ## JavaScript format
 
-A `.js` extension is run in a sandbox (Node `vm`: no `require`, no `process`, no Node bindings, no `eval` / `Function`, with a time limit). **The script is never evaluated in the main process context.** It must assign a manifest object to `module.exports`:
+A `.js` extension is run in a sandbox: [QuickJS](https://bellard.org/quickjs/), a separate JavaScript engine compiled to WebAssembly. Nothing from Yomi is shared with it (no `require`, no `process`, no Node or Electron APIs, no host objects), it has a time limit and a 32 MB memory limit, and the only thing that comes back out is the exported manifest, as plain JSON. `console` is there but prints nothing. **The script never runs in Yomi's own JavaScript engine.** It must assign a manifest object to `module.exports`:
 
 ```js
 module.exports = {
