@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
+const isMini = process.argv.includes('--yomi-mini')
+
 // Custom APIs for renderer
 const api = {
   prefetchSeries: (sourceId: string, url: string) =>
@@ -145,7 +147,36 @@ const api = {
     ipcRenderer.invoke('extensions-install', url, sha256),
   extensionsRemove: (id: string) => ipcRenderer.invoke('extensions-remove', id),
   extensionsSetEnabled: (id: string, enabled: boolean) =>
-    ipcRenderer.invoke('extensions-set-enabled', id, enabled)
+    ipcRenderer.invoke('extensions-set-enabled', id, enabled),
+  isMini,
+  miniOpen: (session: unknown) => ipcRenderer.invoke('mini-open', session),
+  miniUpdate: (session: unknown) => ipcRenderer.invoke('mini-update', session),
+  miniClose: () => ipcRenderer.invoke('mini-close'),
+  miniGet: () => ipcRenderer.invoke('mini-get'),
+  miniIs: () => ipcRenderer.invoke('mini-is'),
+  miniFocus: () => ipcRenderer.invoke('mini-focus'),
+  miniReturn: () => ipcRenderer.invoke('mini-return'),
+  miniSetPinned: (on: boolean) => ipcRenderer.invoke('mini-pin', on),
+  onMiniSession: (cb: (s: unknown) => void) => {
+    const h = (_e: unknown, s: unknown): void => cb(s)
+    ipcRenderer.on('mini-session', h)
+    return () => ipcRenderer.removeListener('mini-session', h)
+  },
+  onMiniOpened: (cb: () => void) => {
+    const h = (): void => cb()
+    ipcRenderer.on('mini-opened', h)
+    return () => ipcRenderer.removeListener('mini-opened', h)
+  },
+  onMiniClosed: (cb: () => void) => {
+    const h = (): void => cb()
+    ipcRenderer.on('mini-closed', h)
+    return () => ipcRenderer.removeListener('mini-closed', h)
+  },
+  onMiniReturn: (cb: (s: unknown) => void) => {
+    const h = (_e: unknown, s: unknown): void => cb(s)
+    ipcRenderer.on('mini-return', h)
+    return () => ipcRenderer.removeListener('mini-return', h)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
