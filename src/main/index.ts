@@ -6,6 +6,8 @@ import { dataLog } from './safefile'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { fetchHtml } from './http'
 import { startAutoUpdates } from './updater'
+import { fillGaps } from './gapfill'
+import type { SeriesDetail } from '../preload/index.d'
 import {
   cancelGenreScan,
   runGenreJob,
@@ -638,6 +640,11 @@ app.whenReady().then(async () => {
   )
   ipcMain.handle('fallback-sites', (_e, title: string, excludeIds: string[]) =>
     listFallbackSites(String(title ?? ''), Array.isArray(excludeIds) ? excludeIds.map(String) : [])
+  )
+  ipcMain.handle('fill-gaps', (_e, title: string, sourceId: string, chapters: SeriesDetail['chapters']) =>
+    fillGaps(String(title ?? ''), String(sourceId ?? ''), Array.isArray(chapters) ? chapters : []).catch(
+      () => []
+    )
   )
   ipcMain.handle('pin-site', (_e, title: string, sourceId: string) =>
     pinSite(String(title ?? ''), String(sourceId ?? ''))

@@ -115,7 +115,8 @@ export interface SeriesDetail {
   genres?: string[]
   status?: 'ongoing' | 'completed' | 'hiatus' | 'cancelled'
   /** `alts` are other links to the same chapter (other providers), tried if the main one fails. */
-  chapters: { title: string; url: string; alts?: string[] }[]
+  /** `fill` / `fillName`: a chapter this site lacks, read from another of your sites. */
+  chapters: { title: string; url: string; alts?: string[]; fill?: string; fillName?: string }[]
   /** The list looks too short for the newest chapter number (e.g. 2 chapters but the latest is Chapter 66). */
   incomplete?: boolean
   /** While a long list is still loading (partial updates only): how many chapters the page says it has. */
@@ -486,6 +487,12 @@ export interface MangaApi {
     title: string,
     excludeIds: string[]
   ) => Promise<{ sourceId: string; sourceName: string; url: string }[]>
+  /** Chapters this list lacks (holes, or newer ones) that your other sites have for the same title. */
+  fillGaps: (
+    title: string,
+    sourceId: string,
+    chapters: SeriesDetail['chapters']
+  ) => Promise<SeriesDetail['chapters']>
   /** Remember which site you chose with "Read from". A repair does not change this. */
   pinSite: (title: string, sourceId: string) => Promise<void>
   pinnedSite: (title: string) => Promise<string | null>

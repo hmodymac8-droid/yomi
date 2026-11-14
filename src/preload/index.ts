@@ -87,6 +87,8 @@ const api = {
   sourceFailed: (id: string, message: string) => ipcRenderer.invoke('source-failed', id, message),
   fallbackSites: (title: string, excludeIds: string[]) =>
     ipcRenderer.invoke('fallback-sites', title, excludeIds),
+  fillGaps: (title: string, sourceId: string, chapters: unknown[]) =>
+    ipcRenderer.invoke('fill-gaps', title, sourceId, chapters),
   pinSite: (title: string, sourceId: string) => ipcRenderer.invoke('pin-site', title, sourceId),
   pinnedSite: (title: string) => ipcRenderer.invoke('pinned-site', title),
   listSources: () => ipcRenderer.invoke('list-sources'),

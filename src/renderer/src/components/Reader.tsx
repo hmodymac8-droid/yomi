@@ -338,8 +338,17 @@ export default function Reader({ chapter, series, onBack, onNavigate }: Props): 
   const nextCh = pos > 0 ? chapter.chapters[pos - 1] : undefined
   const prevCh =
     pos >= 0 && pos < chapter.chapters.length - 1 ? chapter.chapters[pos + 1] : undefined
-  const go = (c?: { title: string; url: string }): void => {
-    if (c) onNavigate({ ...chapter, url: c.url, title: c.title })
+  const go = (c?: { title: string; url: string; fill?: string }): void => {
+    if (!c) return
+    // a chapter filled in from another site loads its pages with that site's address; back on the series' own
+    // chapters, the series' site is used again
+    const here = chapter.chapters.find((x) => x.url === chapter.url)
+    const referer = c.fill
+      ? new URL(c.url).origin + '/'
+      : here?.fill
+        ? new URL(chapter.seriesUrl).origin + '/'
+        : chapter.referer
+    onNavigate({ ...chapter, url: c.url, title: c.title, referer })
   }
 
   useEffect(() => {

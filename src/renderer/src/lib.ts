@@ -63,7 +63,8 @@ export interface OpenSeries {
 export interface OpenChapter {
   url: string
   title: string
-  chapters: { title: string; url: string; alts?: string[] }[]
+  /** `fill`: a chapter read from another of your sites (it fills a hole in this site's list). */
+  chapters: { title: string; url: string; alts?: string[]; fill?: string; fillName?: string }[]
   referer: string
   /** The series page this chapter belongs to (the key progress is saved under). */
   seriesUrl: string
