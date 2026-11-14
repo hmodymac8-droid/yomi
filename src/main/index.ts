@@ -79,6 +79,15 @@ import { flushModes } from './hostmode'
 import { detectSource } from './sources'
 import { flushProgress, getProgress, hideProgress, recentProgress, saveProgress } from './progress'
 import {
+  addExtensionRepo,
+  extensionsOverview,
+  installFromUrl,
+  loadInstalledExtensions,
+  removeExtension,
+  removeExtensionRepo,
+  setExtensionEnabled
+} from './extensions'
+import {
   anilistStatus,
   connectAniList,
   disconnectAniList,
@@ -553,6 +562,7 @@ app.whenReady().then(async () => {
   startGenreScheduler()
   startAutoUpdates()
   startAniListWorker()
+  loadInstalledExtensions()
   // A site that "Needs a look" is often fine (a series that opened short once, a site that cuts chapters into a few
   // long strips): a minute and a half after start, each site not marked fine is re-checked quietly, at most once a
   // day, so the Sites screen shows how it really is without you pressing Re-check.
@@ -606,6 +616,16 @@ app.whenReady().then(async () => {
   ipcMain.handle('anilist-unlink', (_e, seriesUrl: string) => unlinkAniList(String(seriesUrl ?? '')))
   ipcMain.handle('anilist-link-for', (_e, seriesUrl: string) => getAniListLink(String(seriesUrl ?? '')))
   ipcMain.handle('anilist-import', () => importProgressFromAniList())
+  ipcMain.handle('extensions-overview', () => extensionsOverview())
+  ipcMain.handle('extensions-add-repo', (_e, url: string) => addExtensionRepo(String(url ?? '')))
+  ipcMain.handle('extensions-remove-repo', (_e, url: string) => removeExtensionRepo(String(url ?? '')))
+  ipcMain.handle('extensions-install', (_e, url: string, sha256: string) =>
+    installFromUrl(String(url ?? ''), String(sha256 ?? ''))
+  )
+  ipcMain.handle('extensions-remove', (_e, id: string) => removeExtension(String(id ?? '')))
+  ipcMain.handle('extensions-set-enabled', (_e, id: string, enabled: boolean) =>
+    setExtensionEnabled(String(id ?? ''), !!enabled)
+  )
   ipcMain.handle('page-bytes', (_e, src: string) => pageBytes(src))
   setSourceSignal(onSourceSignal)
   ipcMain.handle('source-state', (_e, id: string) => sourceState(id))

@@ -58,6 +58,7 @@ Tested end to end (title list, chapters, pages and images). Copy an address, pas
 - **Download chapters** to read offline, or export them as CBZ.
 - Dark and light themes.
 - **Optional AniList tracking**: connect your account to sync progress when you finish a chapter.
+- **Optional source extensions**: add a repo in Settings to install extra sites. See [EXTENSIONS.md](EXTENSIONS.md).
 
 ## How to use
 
@@ -87,6 +88,11 @@ Yomi does not ship with an AniList client ID. You create your own (free) and pas
 6. In Yomi, open **Settings → Tracking**, paste the Client ID, and press **Connect AniList**. Sign in and approve access. Yomi captures the token from the redirect and stores it in the main process, encrypted with Electron `safeStorage` when the OS allows it.
 
 Then, on a series page, press **Link to AniList** and confirm the suggested match (or search and pick another). When you finish a chapter, Yomi updates AniList progress with status `CURRENT`, or `COMPLETED` if the series is finished and that was the last chapter. Updates made while offline are queued and retried. **Import progress from AniList** only moves your local progress forward; it never marks chapters unread or moves a bookmark backward.
+
+
+## Source extensions (optional)
+
+You can install extra sites from an extension repo or by dropping a JSON/JS file into Yomi's extensions folder. Built-in sources are unchanged. See [EXTENSIONS.md](EXTENSIONS.md) for the format, an example port of MangaFreak, and how to publish a repo with SHA-256 checks.
 
 ## Build from source
 

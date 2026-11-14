@@ -125,7 +125,15 @@ const api = {
   anilistLink: (seriesUrl: string, media: unknown) => ipcRenderer.invoke('anilist-link', seriesUrl, media),
   anilistUnlink: (seriesUrl: string) => ipcRenderer.invoke('anilist-unlink', seriesUrl),
   anilistLinkFor: (seriesUrl: string) => ipcRenderer.invoke('anilist-link-for', seriesUrl),
-  anilistImport: () => ipcRenderer.invoke('anilist-import')
+  anilistImport: () => ipcRenderer.invoke('anilist-import'),
+  extensionsOverview: () => ipcRenderer.invoke('extensions-overview'),
+  extensionsAddRepo: (url: string) => ipcRenderer.invoke('extensions-add-repo', url),
+  extensionsRemoveRepo: (url: string) => ipcRenderer.invoke('extensions-remove-repo', url),
+  extensionsInstall: (url: string, sha256: string) =>
+    ipcRenderer.invoke('extensions-install', url, sha256),
+  extensionsRemove: (id: string) => ipcRenderer.invoke('extensions-remove', id),
+  extensionsSetEnabled: (id: string, enabled: boolean) =>
+    ipcRenderer.invoke('extensions-set-enabled', id, enabled)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

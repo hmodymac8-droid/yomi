@@ -1,0 +1,13 @@
+{
+  "name": "Yomi example extensions",
+  "extensions": [
+    {
+      "id": "mangafreak-example",
+      "name": "MangaFreak (example extension)",
+      "version": "1.0.0",
+      "lang": "en",
+      "url": "https://example.invalid/yomi/extensions/mangafreak.json",
+      "sha256": "d41db80a1885ffcee228727b1c10172acda97696e62dc0cc72da9faeaa1d690a"
+    }
+  ]
+}

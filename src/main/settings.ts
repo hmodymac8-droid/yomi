@@ -13,6 +13,8 @@ export interface AppSettings {
   showLibrary: boolean
   /** Public AniList OAuth client id (not a secret). Empty means Tracking is not set up yet. */
   anilistClientId?: string
+  /** Optional extension repo index URLs. Empty until you add one in Settings. */
+  extensionRepos?: string[]
 }
 
 const DEFAULTS: AppSettings = { showLibrary: true }

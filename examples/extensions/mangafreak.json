@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 1,
+  "id": "mangafreak-example",
+  "name": "MangaFreak (example extension)",
+  "version": "1.0.0",
+  "lang": "en",
+  "description": "Example port of the built-in MangaFreak source. For developers; install only if you do not already have MangaFreak in your library.",
+  "source": {
+    "id": "ext-mangafreak-example",
+    "name": "MangaFreak (example)",
+    "baseUrl": "https://ww3.mangafreak.me/",
+    "listTemplate": "https://ww3.mangafreak.me/Mangalist/All/{n}",
+    "seriesRe": "^https://ww3\\.mangafreak\\.me/Manga/[^/?#]+$",
+    "chapterRe": "/Read1_",
+    "maxPages": 400,
+    "lang": "en"
+  }
+}

@@ -740,3 +740,8 @@ select { cursor: pointer; }
 .anilistHits button { display: block; width: 100%; text-align: left; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--foreground); font-size: 13px; }
 .anilistHits button:hover:not(:disabled) { background: var(--muted); }
 .anilistHits small { color: var(--muted-foreground); }
+.extsetting { flex-direction: column; }
+.extsub { margin: 14px 0 6px; font-size: 13px; font-weight: 600; }
+.extlist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.extlist li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+.extlist li span { flex: 1; min-width: 12rem; word-break: break-all; color: var(--muted-foreground); }
