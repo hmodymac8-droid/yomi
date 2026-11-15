@@ -45,6 +45,8 @@ Tested end to end (title list, chapters, pages and images). Copy an address, pas
 | **Olympustaff** | [olympustaff.com](https://olympustaff.com/) | مانجا · مانهوا · مانها |
 | **Mangadar** | [mangadar.com](https://mangadar.com/) | مانجا · مانهوا · مانها |
 | **Mangasid** | [mangasid.com](https://mangasid.com/) | مانجا · مانهوا · مانها |
+| **Mangatek** | [mangatek.com](https://mangatek.com/) | مانجا · مانهوا · مانها |
+| **Manhwaarab** | [manhwaarab.com](https://manhwaarab.com/) | مانهوا · مانها |
 
 <sub>Comix ([comix.to](https://comix.to/)) also works, but its chapter lists can take a minute to load. Any other manga site can be tried the same way.</sub>
 
@@ -127,7 +129,7 @@ npm run build:win  # make the installer in dist/
 
 انسخ الرابط والصقه في خانة **Add a site** وستظهر كل أعمال الموقع في يومي.
 
-**المواقع العربية:** [Azorafly](https://azorafly.com/) · [Olympustaff](https://olympustaff.com/) · [Mangadar](https://mangadar.com/) · [Mangasid](https://mangasid.com/)
+**المواقع العربية:** [Azorafly](https://azorafly.com/) · [Olympustaff](https://olympustaff.com/) · [Mangadar](https://mangadar.com/) · [Mangasid](https://mangasid.com/) · [Mangatek](https://mangatek.com/) · [Manhwaarab](https://manhwaarab.com/)
 
 **المواقع الإنجليزية:** [MangaFreak](https://ww3.mangafreak.me/) · [Manganato](https://www.manganato.gg/) · [Mangapill](https://mangapill.com/) · [Weebcentral](https://weebcentral.com/) · [Mangastash](https://mangastash.org/) · [Kuramanga](https://kuramanga.com/) · [ManhwaTop](https://manhwatop.com/) · [BaeToon](https://baetoon.com/) · [Webtoonclub](https://webtoonclub.com/) · [Manhuatop](https://manhuatop.org/) · [Projectsuki](https://projectsuki.com/)
 
