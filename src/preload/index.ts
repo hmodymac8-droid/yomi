@@ -116,6 +116,8 @@ const api = {
   removeSite: (id: string) => ipcRenderer.invoke('remove-site', id),
   getSettings: () => ipcRenderer.invoke('settings-get'),
   setSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke('settings-set', patch),
+  setPresence: (p: { screen: string; title?: string; chapter?: string; cover?: string }) =>
+    ipcRenderer.send('presence', p),
   pageBytes: (src: string) => ipcRenderer.invoke('page-bytes', src),
   crawl: (id: string) => ipcRenderer.invoke('crawl', id),
   cancelCrawl: (id: string) => ipcRenderer.invoke('cancel-crawl', id),

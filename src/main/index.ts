@@ -1,5 +1,7 @@
 import { app, dialog, shell, BrowserWindow, ipcMain, net, session } from 'electron'
 import { getSettings, setSettings, type AppSettings } from './settings'
+import { presenceSettingsChanged, setPresence, startPresence, stopPresence } from './discord'
+import type { PresenceInput } from './discordLogic'
 import { pageBytes } from './pagebytes'
 import { join } from 'path'
 import { dataLog } from './safefile'
@@ -706,7 +708,15 @@ app.whenReady().then(async () => {
     dropHealth(id)
   })
   ipcMain.handle('settings-get', () => getSettings())
-  ipcMain.handle('settings-set', (_e, patch: Partial<AppSettings>) => setSettings(patch))
+  ipcMain.handle('settings-set', (_e, patch: Partial<AppSettings>) => {
+    const out = setSettings(patch)
+    if ('discord' in patch || 'discordDetails' in patch) presenceSettingsChanged()
+    return out
+  })
+  ipcMain.on('presence', (_e, p: PresenceInput) => {
+    if (p && typeof p.screen === 'string') setPresence(p)
+  })
+  if (!smoke) startPresence()
   ipcMain.handle('anilist-status', () => anilistStatus())
   ipcMain.handle('anilist-set-client-id', (_e, id: string) => {
     setSettings({ anilistClientId: String(id ?? '').trim() })
@@ -2929,6 +2939,7 @@ function saveEverything(): void {
   flushAniList()
 }
 app.on('before-quit', () => {
+  stopPresence()
   if (!leaving) log('before-quit')
   saveEverything()
 })

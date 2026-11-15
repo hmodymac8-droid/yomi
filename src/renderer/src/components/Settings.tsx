@@ -88,6 +88,41 @@ export default function Settings(): React.JSX.Element {
           <span>Show recommendations</span>
         </label>
       </section>
+      <section className="setting">
+        <div className="settext">
+          <h2>Discord</h2>
+          <p>
+            Shows &ldquo;Playing Yomi&rdquo; on your Discord profile while the app is open, with the
+            series and chapter you are reading. It only talks to the Discord app on this computer.
+          </p>
+        </div>
+        <label className="switch">
+          <input
+            type="checkbox"
+            checked={settings?.discord !== false}
+            disabled={!settings}
+            onChange={(e) =>
+              void window.api.setSettings({ discord: e.target.checked }).then(setSettings)
+            }
+          />
+          <span className="track" aria-hidden="true" />
+          <span>Show on Discord</span>
+        </label>
+        {settings?.discord !== false && (
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={settings?.discordDetails !== false}
+              disabled={!settings}
+              onChange={(e) =>
+                void window.api.setSettings({ discordDetails: e.target.checked }).then(setSettings)
+              }
+            />
+            <span className="track" aria-hidden="true" />
+            <span>Show what I&apos;m reading</span>
+          </label>
+        )}
+      </section>
       <TrackingSetting />
       <MihonImportSetting />
       <AppUpdateSetting />
