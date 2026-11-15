@@ -42,6 +42,10 @@ const TONE_FILTER: Record<Tone, string> = {
 // 20 steps from slow (12 px/s) to fast (about 280 px/s), each about a fifth faster than the one before
 const SPEEDS = Array.from({ length: 20 }, (_, i) => Math.round(12 * Math.pow(1.18, i)))
 
+// Page brightness, in percent: the lowest it goes and how much one press of [ or ] changes it
+const BRIGHT_MIN = 15
+const BRIGHT_STEP = 5
+
 // Reader settings are remembered between chapters and launches (per viewer, so plain localStorage is enough).
 function saved<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   try {
@@ -236,6 +240,9 @@ export default function Reader({
   // ---- auto-scroll (vertical scroll only; off until you start it) ----
   const [autoRun, setAutoRun] = useState(false)
   const [speed, setSpeed] = useState(() => savedNum('speed20', 0, SPEEDS.length - 1, 8))
+  // How bright the pages are (percent): turned down for reading at night. Remembered like the other settings.
+  const [bright, setBright] = useState(() => savedNum('brightness', BRIGHT_MIN, 100, 100))
+  useEffect(() => remember('brightness', bright), [bright])
   // The auto-scroll control at the bottom: hides by itself (shows when the mouse goes to the bottom edge), always
   // shown, or never shown (the A key and Up / Down arrows still work).
   const [ctlMode, setCtlMode] = useState(() =>
@@ -761,6 +768,8 @@ export default function Reader({
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') return onBack()
       if (e.key === 'm') cycleMode()
+      if (e.key === '[') setBright((b) => Math.max(BRIGHT_MIN, b - BRIGHT_STEP))
+      if (e.key === ']') setBright((b) => Math.min(100, b + BRIGHT_STEP))
       if (e.key === 'f') setFit((f) => (f === 'width' ? 'height' : 'width'))
       if (e.key === 'd') cycleDir()
       if (e.key === '+' || e.key === '=') setZoom((z) => clampW(z + WSTEP))
@@ -869,6 +878,7 @@ export default function Reader({
     <div
       className={`readerview${compact ? ' compact' : ''}`}
       ref={root}
+      style={{ ['--page-bright' as string]: String(bright / 100) }}
       onMouseMove={(e) => {
         if (e.clientY < 60) showBar()
         if (autoRun && e.clientY > window.innerHeight - 110) showCtl()
@@ -1004,6 +1014,40 @@ export default function Reader({
           </button>
           {menu && (
             <div className="rmenupop">
+              <div className="rbright">
+                <div className="rlabel">
+                  Brightness <b>{bright}%</b>
+                </div>
+                <div className="rbrightrow">
+                  <button
+                    className="iconbtn"
+                    aria-label="Darker"
+                    title="Darker ( [ )"
+                    disabled={bright <= BRIGHT_MIN}
+                    onClick={() => setBright((b) => Math.max(BRIGHT_MIN, b - BRIGHT_STEP))}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="range"
+                    min={BRIGHT_MIN}
+                    max={100}
+                    step={BRIGHT_STEP}
+                    value={bright}
+                    aria-label="Page brightness"
+                    onChange={(e) => setBright(Number(e.target.value))}
+                  />
+                  <button
+                    className="iconbtn"
+                    aria-label="Brighter"
+                    title="Brighter ( ] )"
+                    disabled={bright >= 100}
+                    onClick={() => setBright((b) => Math.min(100, b + BRIGHT_STEP))}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
               <button
                 className="rfold"
                 onClick={() => setHowOpen((v) => !v)}
