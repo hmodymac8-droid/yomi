@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { OpenChapter, OpenSeries, chapterNumber, localPage, pageSrc } from '../lib'
 import { Icon } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
@@ -81,6 +81,19 @@ interface Props {
   compact?: boolean
 }
 
+/** How far down the scrolling area an element inside it starts. */
+function topIn(scroller: HTMLElement, el: HTMLElement): number {
+  return scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+}
+
+/** The next chapter's first pages, shown under the end of the one you read. */
+interface Preview {
+  url: string
+  title: string
+  pages: string[]
+  referer: string
+}
+
 export default function Reader({
   chapter,
   series,
@@ -131,6 +144,17 @@ export default function Reader({
   const pullAcc = useRef(0)
   const bottomSince = useRef(0)
   const pullTimer = useRef<number | undefined>(undefined)
+  /*
+   * The first pages of the next chapter, shown under the end of this one, so scrolling never hits a wall: once you
+   * scroll into them, the next chapter takes over right where you are (no blank screen, no stop). Kept as its own
+   * state (not worked out from the chapter) so it stays on screen through the moment the chapter changes.
+   */
+  const [preview, setPreview] = useState<Preview | null>(null)
+  const previewEl = useRef<HTMLDivElement>(null)
+  /** Set when the next chapter was opened by scrolling into its first pages. */
+  const handoff = useRef<Preview | null>(null)
+  /** Where to stand once the new chapter's pages are on screen (applied before it is drawn). */
+  const pendingTop = useRef<number | null>(null)
   // Which pages have arrived ('ok') or failed ('bad'), by page number. A page still on its way shows a loading frame,
   // so the end of the chapter never shows up before its pages do.
   const [pageState, setPageState] = useState<Record<number, 'ok' | 'bad'>>({})
@@ -382,19 +406,24 @@ export default function Reader({
   const chapterSite = chapter.chapters[pos]?.fill ?? chapter.sourceId
   const chapterSiteName = chapter.chapters[pos]?.fillName
   const nextCh = pos > 0 ? chapter.chapters[pos - 1] : undefined
+  // the next chapter's first pages show under this one, in vertical scroll with "keep scrolling" on
+  // (it is cleared as soon as a chapter opens, so it stays up through the moment the next one takes over)
+  const showPreview = mode === 'webtoon' && autoNext && !stillLoading && !!preview
   const prevCh =
     pos >= 0 && pos < chapter.chapters.length - 1 ? chapter.chapters[pos + 1] : undefined
-  const go = (c?: { title: string; url: string; fill?: string }): void => {
-    if (!c) return
-    // a chapter filled in from another site loads its pages with that site's address; back on the series' own
-    // chapters, the series' site is used again
+  // a chapter filled in from another site loads its pages with that site's address; back on the series' own
+  // chapters, the series' site is used again
+  const refererFor = (c: { url: string; fill?: string }): string => {
     const here = chapter.chapters.find((x) => x.url === chapter.url)
-    const referer = c.fill
+    return c.fill
       ? new URL(c.url).origin + '/'
       : here?.fill
         ? new URL(chapter.seriesUrl).origin + '/'
         : chapter.referer
-    onNavigate({ ...chapter, url: c.url, title: c.title, referer })
+  }
+  const go = (c?: { title: string; url: string; fill?: string }): void => {
+    if (!c) return
+    onNavigate({ ...chapter, url: c.url, title: c.title, referer: refererFor(c) })
   }
 
   // Save the spot you are on, then keep reading in the small window that stays above other apps.
@@ -422,22 +451,46 @@ export default function Reader({
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    const from = handoff.current?.url === chapter.url ? handoff.current : null
+    handoff.current = null
     setError('')
-    setPages([])
-    setPageState({})
+    if (from) {
+      // scrolled into the next chapter's first pages: they become this chapter, at the very spot you are on
+      const el = scroller.current
+      const pv = previewEl.current
+      pendingTop.current = el && pv ? Math.max(0, el.scrollTop - topIn(el, pv)) : 0
+      setLoading(false)
+      setTitle(from.title)
+      setPages(from.pages)
+    } else {
+      setLoading(true)
+      setPages([])
+    }
+    setPreview(null)
+    // pages already on screen (the next chapter's first pages you scrolled into) keep their size: a page still
+    // counted as loading would take a tall loading frame for a moment and push everything under it
+    const seenState: Record<number, 'ok'> = {}
+    const seenAspect: Record<number, number> = {}
+    if (from)
+      previewEl.current?.querySelectorAll('img').forEach((im, i) => {
+        if (im.complete && im.naturalWidth > 0) {
+          seenState[i] = 'ok'
+          seenAspect[i] = im.naturalHeight / im.naturalWidth
+        }
+      })
+    setPageState(seenState)
     setRetry({})
     setCrops({})
     cropAsked.current = new Set()
-    setAspect({})
+    setAspect(seenAspect)
     setIndex(0)
     setNote('')
     setStage('')
-    setPageRef(chapter.referer)
+    setPageRef(from?.referer ?? chapter.referer)
     pullAcc.current = 0
     bottomSince.current = 0
     setPull(0)
-    scroller.current?.scrollTo(0, 0)
+    if (!from) scroller.current?.scrollTo(0, 0)
     // Try the main link first, then any other providers that host the same chapter.
     const cur = chapter.chapters.find((c) => c.url === chapter.url)
     const urls = [chapter.url, ...(cur?.alts ?? [])]
@@ -455,7 +508,7 @@ export default function Reader({
       // Resume where you stopped if you are reopening the chapter you last read.
       const rec = await window.api.progressGet(chapter.seriesUrl)
       const startPos =
-        rec && rec.chapterUrl === chapter.url && !rec.read.includes(chapter.url) ? rec.pos : 0
+        !from && rec && rec.chapterUrl === chapter.url && !rec.read.includes(chapter.url) ? rec.pos : 0
       persist(startPos) // registers "last read" right away, before any scrolling
       const show = (list: string[], ttl: string, referer = chapter.referer): void => {
         const n = list.length
@@ -469,12 +522,15 @@ export default function Reader({
           if (cancelled) return
           for (const c of [nextCh, prevCh]) {
             if (!c) continue
-            window.api.prefetchChapter(c.url).then((first) =>
+            const ref = refererFor(c)
+            window.api.prefetchChapter(c.url).then((first) => {
               first.forEach((p) => {
                 const img = new Image() // warms the image cache for the first pages
-                img.src = pageSrc(p, chapter.referer)
+                img.src = pageSrc(p, ref)
               })
-            )
+              if (!cancelled && c === nextCh && first.length > 0)
+                setPreview({ url: c.url, title: c.title, pages: first, referer: ref })
+            })
           }
         }, 600)
         if (startPos > 0.02) {
@@ -578,6 +634,13 @@ export default function Reader({
     return null
   }
 
+  useLayoutEffect(() => {
+    if (pendingTop.current === null || !scroller.current) return
+    scroller.current.scrollTop = pendingTop.current
+    lastTop.current = pendingTop.current
+    pendingTop.current = null
+  }, [pages])
+
   // Mouse wheel past the end of a chapter: keep scrolling and the next chapter opens. A short pause after reaching the
   // end keeps the momentum of getting there from skipping a chapter by accident (like "next page" on Discover).
   const PULL_NEED = 180 // about two notches of a mouse wheel
@@ -623,7 +686,25 @@ export default function Reader({
       lastTop.current = el.scrollTop
     }
     if (!el || restoring.current || mode !== 'webtoon' || pages.length === 0) return
-    const max = el.scrollHeight - el.clientHeight
+    const pv = showPreview ? previewEl.current : null
+    // scrolled into the next chapter's first pages: it takes over from here
+    const pvTop = pv ? topIn(el, pv) : 0
+    // (also at the very bottom, in case its pictures have not arrived yet and it is too short to scroll into)
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+    if (pv && preview && preview.url !== chapter.url && (el.scrollTop >= pvTop || atBottom)) {
+      const c = chapter.chapters.find((x) => x.url === preview.url)
+      if (c) {
+        if (!finished.current) {
+          finished.current = true
+          persist(1, true)
+        }
+        handoff.current = preview
+        go(c)
+        return
+      }
+    }
+    // this chapter ends where the next one's first pages start
+    const max = (pv ? pvTop : el.scrollHeight) - el.clientHeight
     if (max <= 0) return
     const f = Math.min(1, el.scrollTop / max)
     root.current?.style.setProperty('--prog', String(f))
@@ -1349,7 +1430,7 @@ export default function Reader({
                     All chapters
                   </button>
                 </div>
-                {nextCh && autoNext && !stillLoading && (
+                {nextCh && autoNext && !stillLoading && !showPreview && (
                   <div className="hint2 pullhint">
                     or keep scrolling down
                     <span className="pullbar">
@@ -1358,6 +1439,30 @@ export default function Reader({
                   </div>
                 )}
               </div>
+              {showPreview && preview && (
+                <div className="nextpreview" ref={previewEl}>
+                  <div className="title">{preview.title}</div>
+                  {preview.pages.map((p) => (
+                    <div className="pagebox" key={p}>
+                      <div
+                        className={`pageinner${fit === 'width' ? ' sized' : ''}`}
+                        style={fit === 'width' ? { width: `min(100%, ${zoom}px)` } : {}}
+                      >
+                        <img
+                          className={`page fit-${fit}`}
+                          style={
+                            fit === 'width'
+                              ? { width: '100%' }
+                              : { height: `calc((100vh - ${compact ? 88 : 56}px) * ${zoom / 900})` }
+                          }
+                          src={pageSrc(p, preview.referer)}
+                          alt=""
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           ) : spread ? (
             view.size === 2 && view.left !== undefined && view.right !== undefined ? (

@@ -379,6 +379,8 @@ select { cursor: pointer; }
 .progline span { display: block; height: 100%; width: calc(var(--prog, 0) * 100%); background: var(--primary); }
 .bar.hidden + .progline { transform: translateY(-58px); opacity: 0; }
 .reader { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; background: var(--reader); }
+/* the next chapter's first pages under the end of this one: laid out exactly like the chapter's own pages */
+.nextpreview { display: flex; flex-direction: column; align-items: center; width: 100%; flex: none; }
 .reader.bg-dark { background: var(--reader); }
 .reader.bg-black { background: #000; }
 .reader.bg-sepia { background: #f1e4c8; }
