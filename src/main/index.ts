@@ -81,6 +81,7 @@ import {
   seriesStart
 } from './fallback'
 import { pinSite, pinnedSite, unpinSite } from './pins'
+import { storyFor } from './story'
 import { loadMiniPlace, saveMiniPlace } from './miniPlace'
 import { startSourceProber } from './prober'
 import type { HealthStep } from '../preload/index.d'
@@ -788,6 +789,22 @@ app.whenReady().then(async () => {
   )
   ipcMain.handle('pinned-site', (_e, title: string) => pinnedSite(String(title ?? '')) ?? null)
   ipcMain.handle('unpin-site', (_e, title: string) => unpinSite(String(title ?? '')))
+  ipcMain.handle(
+    'series-story',
+    (_e, title: string, url: string, sourceId: string, description: string, entries: unknown) =>
+      storyFor(
+        String(title ?? ''),
+        String(url ?? ''),
+        String(sourceId ?? ''),
+        String(description ?? ''),
+        Array.isArray(entries)
+          ? entries.filter(
+              (e): e is { sourceId: string; sourceName: string; url: string } =>
+                !!e && typeof e.url === 'string' && typeof e.sourceId === 'string'
+            )
+          : []
+      )
+  )
   ipcMain.handle('series-start', (_e, title: string, entries: unknown) => {
     const list = Array.isArray(entries)
       ? entries.filter(

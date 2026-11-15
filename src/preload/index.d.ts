@@ -570,6 +570,17 @@ export interface MangaApi {
   pinSite: (title: string, sourceId: string) => Promise<void>
   /** Forgets the site you picked for this title, so Yomi chooses again (last read, then fastest). */
   unpinSite: (title: string) => Promise<void>
+  /**
+   * The series' story without the site's advertising line; taken from another of your sites (or AniList) when this
+   * one has none. Empty text: no story found. `from` names where it came from when it isn't this site.
+   */
+  seriesStory: (
+    title: string,
+    url: string,
+    sourceId: string,
+    description: string,
+    entries: { sourceId: string; sourceName: string; url: string }[]
+  ) => Promise<{ text: string; from?: string }>
   /** Which site a series page opens from, and a speed dot for each site. */
   seriesStart: (
     title: string,
