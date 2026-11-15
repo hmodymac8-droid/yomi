@@ -173,6 +173,10 @@ export interface AppSettings {
   anilistClientId?: string
   /** Ask AniList for recommendations (sends titles you read to AniList; no account). Missing means on. */
   recommendations?: boolean
+  /** Show "Playing Yomi" on your Discord profile. Missing means on. */
+  discord?: boolean
+  /** On Discord, also show the series and chapter you are reading. Missing means on. */
+  discordDetails?: boolean
 }
 
 
@@ -558,6 +562,8 @@ export interface MangaApi {
   removeSite: (id: string) => Promise<void>
   getSettings: () => Promise<AppSettings>
   setSettings: (patch: Partial<AppSettings>) => Promise<AppSettings>
+  /** Tell Discord (Rich Presence) which screen is showing, and the series and chapter when reading. */
+  setPresence: (p: { screen: string; title?: string; chapter?: string; cover?: string }) => void
   /** The bytes of a page picture shown in the reader (for cutting off white borders). */
   pageBytes: (src: string) => Promise<{ type: string; data: Uint8Array } | null>
   crawl: (id: string) => Promise<void>

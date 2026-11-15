@@ -307,6 +307,15 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
       .then((l) => setHealth(Object.fromEntries(l.map((h) => [h.sourceId, h]))))
   }, [view.name])
 
+  // what Discord shows on your profile (Rich Presence); main decides how much of it to show
+  const presTitle = view.name === 'series' || view.name === 'reader' ? view.series.title : undefined
+  const presCover = view.name === 'series' || view.name === 'reader' ? view.series.cover : undefined
+  const presChapter = view.name === 'reader' ? view.chapter.title : undefined
+  useEffect(() => {
+    if (mini) return
+    window.api.setPresence({ screen: view.name, title: presTitle, chapter: presChapter, cover: presCover })
+  }, [mini, view.name, presTitle, presChapter, presCover])
+
   const reading = view.name === 'reader'
   const onBrowse = view.name === 'browse' || view.name === 'added'
   const nav: { id: View['name']; label: string; icon: string; n?: number }[] = [
