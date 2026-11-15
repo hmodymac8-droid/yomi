@@ -104,6 +104,8 @@ const api = {
   pinSite: (title: string, sourceId: string) => ipcRenderer.invoke('pin-site', title, sourceId),
   pinnedSite: (title: string) => ipcRenderer.invoke('pinned-site', title),
   unpinSite: (title: string) => ipcRenderer.invoke('unpin-site', title),
+  seriesStory: (title: string, url: string, sourceId: string, description: string, entries: unknown) =>
+    ipcRenderer.invoke('series-story', title, url, sourceId, description, entries),
   seriesStart: (title: string, entries: unknown) => ipcRenderer.invoke('series-start', title, entries),
   listSources: () => ipcRenderer.invoke('list-sources'),
   clientLog: (m: string) => ipcRenderer.send('client-log', m),

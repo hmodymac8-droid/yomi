@@ -43,6 +43,8 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
   // how each site is doing (speed dots), and the site you picked for this title
   const [speeds, setSpeeds] = useState<Record<string, SiteSpeed>>({})
   const [pinnedId, setPinnedId] = useState<string | undefined>(undefined)
+  // the story without the site's advertising, or another site's (or AniList's) when this one has none
+  const [story, setStory] = useState<{ key: string; text: string; from?: string } | null>(null)
   const forced = useRef(false)
   const switched = useRef(false)
   const [seenTitle, setSeenTitle] = useState(series.title)
@@ -78,6 +80,29 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
   const [newestFirst, setNewestFirst] = useState(true)
   const entry = entries[entryIdx] ?? entries[0]
   const [progress, setProgress] = useState<ProgressRecord | null>(null)
+  const description = detail?.description ?? ''
+  const storyKey = entry.url + '\n' + description
+  const hasDetail = !!detail
+  useEffect(() => {
+    if (!hasDetail) return
+    let cancelled = false
+    const key = storyKey
+    window.api
+      .seriesStory(
+        series.title,
+        entry.url,
+        entry.sourceId,
+        description,
+        entries.map((e) => ({ sourceId: e.sourceId, sourceName: e.sourceName, url: e.url }))
+      )
+      .then((r) => !cancelled && setStory({ key, ...r }))
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+    // (the other sites' list only matters when it first arrives; it doesn't ask again on every change)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storyKey, hasDetail, entries.length])
   const [dls, setDls] = useState<Record<string, DownloadItem>>({})
   const [follow, setFollowInfo] = useState<FollowInfo | null>(null)
 
@@ -480,7 +505,12 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
           )}
           {switchNote && <div className="sub">{switchNote}</div>}
           {offline && <p className="desc">Can&apos;t reach the site, so this shows only the chapters saved on this PC.</p>}
-          {detail?.description && <p className="desc" dir="auto">{detail.description}</p>}
+          {story && story.key === storyKey && story.text && (
+            <p className="desc" dir="auto">
+              {story.text}
+              {story.from && <small className="storyfrom"> · from {story.from}</small>}
+            </p>
+          )}
           {detail && (resume || first) && (
             <div className="resume">
               {resume ? (
