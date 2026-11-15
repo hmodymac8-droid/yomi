@@ -234,7 +234,7 @@ select { cursor: pointer; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 32px 16px; }
 .card {
   background: transparent; border: 0; padding: 0; text-align: left; color: var(--foreground); position: relative;
-  transition: transform 0.3s ease; content-visibility: auto; contain-intrinsic-size: auto 300px;
+  transition: transform 0.3s ease;
 }
 .card:hover { transform: translateY(-4px); }
 .cover { position: relative; aspect-ratio: 5 / 7; background: var(--muted); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; box-shadow: var(--shadow-cover); transition: border-color 0.3s; }
@@ -898,3 +898,6 @@ select { cursor: pointer; }
 .newchip .nplus { flex: none; color: var(--primary-text); font-weight: 600; }
 .newchip .x { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: var(--background); color: var(--muted-foreground); font-size: 9px; line-height: 1; display: none; cursor: pointer; }
 .newchip:hover .x { display: block; }
+
+/* while scrolling, nothing under the mouse reacts (see main.tsx) */
+.scrolling .card, .scrolling .nchip, .scrolling .chapter { pointer-events: none; }
