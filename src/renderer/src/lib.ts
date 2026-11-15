@@ -75,7 +75,8 @@ export interface OpenChapter {
 export function chapterNumber(title: string): number | null {
   const t = title.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
   const m =
-    t.match(/(?:chapter|chap|ch|episode|ep|الفصل|فصل|الحلقة)\s*\.?\s*#?\s*(\d+(?:\.\d+)?)/i) ?? t.match(/(\d+(?:\.\d+)?)(?!.*\d)/)
+    t.match(/(?:chapter|chap|ch|episode|ep|الفصل|فصل|الحلقة)\s*\.?\s*#?\s*(\d+(?:\.\d+)?)/i) ??
+    t.match(/(\d+(?:\.\d+)?)(?!.*\d)/)
   return m ? Number(m[1]) : null
 }
 
@@ -85,7 +86,10 @@ type ChapterRef = { title: string; url: string; alts?: string[] }
  * Where to carry on reading a series (chapters are listed newest first): the chapter you were in, or the next one if you
  * finished it, or the first chapter if you never read it.
  */
-export function continueChapter(chapters: ChapterRef[], rec: { chapterUrl: string; read: string[] } | null): ChapterRef | undefined {
+export function continueChapter(
+  chapters: ChapterRef[],
+  rec: { chapterUrl: string; read: string[] } | null
+): ChapterRef | undefined {
   if (chapters.length === 0) return undefined
   if (!rec) return chapters[chapters.length - 1]
   const i = chapters.findIndex((c) => c.url === rec.chapterUrl || c.alts?.includes(rec.chapterUrl))
@@ -107,5 +111,18 @@ export async function readerFor(
   if (!res.ok) return null
   const c = pick(res.data.chapters)
   if (!c) return null
-  return { url: c.url, title: c.title, chapters: res.data.chapters, referer: new URL(seriesUrl).origin + '/', seriesUrl, sourceId }
+  return {
+    url: c.url,
+    title: c.title,
+    chapters: res.data.chapters,
+    referer: new URL(seriesUrl).origin + '/',
+    seriesUrl,
+    sourceId
+  }
+}
+
+/** A title's sites in a card: the first few, then "+ N more" (the whole list is in the tooltip). */
+export function shortSites(names: string[], max = 4): string {
+  if (names.length <= max + 1) return names.join(' · ')
+  return `${names.slice(0, max).join(' · ')} + ${names.length - max} more`
 }

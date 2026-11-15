@@ -754,7 +754,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('recs-similar', (_e, title: string, seriesUrl?: string) =>
     similarTo(String(title ?? ''), seriesUrl ? String(seriesUrl) : undefined).catch(() => [])
   )
-  ipcMain.handle('recs-because', () => becauseYouRead(2).catch(() => []))
+  ipcMain.handle('recs-because', () => becauseYouRead(1).catch(() => []))
   ipcMain.handle('fill-gaps', (_e, title: string, sourceId: string, chapters: SeriesDetail['chapters']) =>
     fillGaps(String(title ?? ''), String(sourceId ?? ''), Array.isArray(chapters) ? chapters : []).catch(
       () => []
