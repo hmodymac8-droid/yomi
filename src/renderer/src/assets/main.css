@@ -298,7 +298,7 @@ select { cursor: pointer; }
 /* ---------- series page ---------- */
 .series { padding-top: 0; }
 .head { display: flex; gap: 32px; margin: 0 -32px 32px; padding: 28px 32px 32px; background: color-mix(in oklab, var(--secondary) 55%, transparent); border-bottom: 1px solid var(--border); max-width: none !important; }
-.cover.big { width: 200px; flex: none; }
+.cover.big { width: 200px; flex: none; align-self: flex-start; position: sticky; top: 16px; }
 .info { min-width: 0; }
 .info h2 { margin: 0 0 14px; font-family: var(--font-display); font-size: 44px; font-weight: 500; line-height: 1.07; letter-spacing: -0.02em; }
 .srcs { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; font-size: 12px; color: var(--muted-foreground); }
@@ -740,11 +740,6 @@ select { cursor: pointer; }
 .anilistHits button { display: block; width: 100%; text-align: left; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--foreground); font-size: 13px; }
 .anilistHits button:hover:not(:disabled) { background: var(--muted); }
 .anilistHits small { color: var(--muted-foreground); }
-.extsetting { flex-direction: column; }
-.extsub { margin: 14px 0 6px; font-size: 13px; font-weight: 600; }
-.extlist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.extlist li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
-.extlist li span { flex: 1; min-width: 12rem; word-break: break-all; color: var(--muted-foreground); }
 
 /* a chapter filled in from another of your sites */
 .chapter .filltag { margin-left: 8px; padding: 1px 6px; border-radius: 4px; font-size: 11px; color: var(--muted-foreground); border: 1px dashed var(--border); white-space: nowrap; }
@@ -754,6 +749,16 @@ select { cursor: pointer; }
 .series .similar { margin-top: 18px; padding-top: 18px; }
 .series .similar > .meta { font-size: 18px; margin-bottom: 12px; }
 .series .similar .card.small { width: 120px; }
+.similar.fold { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.similar .foldhead { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 0; padding: 0; font-family: var(--font-display); font-size: 18px; color: var(--foreground); cursor: pointer; }
+.similar .foldhead:hover { background: transparent; color: var(--primary-text); }
+.similar .foldhead small { font-family: var(--font-sans, inherit); font-size: 12px; color: var(--muted-foreground); }
+.similar .foldhead .chev { display: inline-block; font-size: 13px; transition: transform 0.2s; }
+.similar .foldhead .chev.on { transform: rotate(90deg); }
+.similar .simrow, .similar .simgrid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; align-items: flex-start; }
+.similar .simrow { flex-wrap: nowrap; overflow: hidden; }
+.similar .simmore { align-self: center; padding: 8px 14px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--foreground); font-size: 13px; white-space: nowrap; }
+.similar .simmore:hover { background: var(--muted); }
 
 /* Quick Open (Ctrl+P) */
 .qo-back { position: fixed; inset: 0; z-index: 200; background: color-mix(in oklab, #000 45%, transparent); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }

@@ -2,6 +2,38 @@ import { useEffect, useState } from 'react'
 import type { SearchHit } from '../../../preload/index.d'
 import { coverSrc, fallbackCover, type OpenSeries } from '../lib'
 
+/** One title card (the same card as Discover). */
+function HitCard({
+  h,
+  onOpen
+}: {
+  h: SearchHit
+  onOpen: (s: OpenSeries) => void
+}): React.JSX.Element {
+  return (
+    <button className="card small" onClick={() => onOpen(h)}>
+      <div className="cover" data-letter={h.title.trim().slice(0, 1).toUpperCase()}>
+        {h.cover ? (
+          <img
+            loading="lazy"
+            decoding="async"
+            src={coverSrc(h.cover, h.coverReferer)}
+            onError={(e) => fallbackCover(e, h.coverFallback, h.coverReferer)}
+          />
+        ) : (
+          <div className="ph">{h.title.trim().slice(0, 1).toUpperCase()}</div>
+        )}
+      </div>
+      <div className="name" title={h.title}>
+        {h.title}
+      </div>
+      <div className="from">
+        {h.entries.length > 1 ? `${h.entries.length} sites` : h.entries[0]?.sourceName}
+      </div>
+    </button>
+  )
+}
+
 /** One row of title cards (the same cards as Discover), for "Similar" and "Because you read". */
 export function HitStrip({
   label,
@@ -18,31 +50,15 @@ export function HitStrip({
       <div className="meta">{label}</div>
       <div className="strip">
         {hits.map((h) => (
-          <button key={h.key} className="card small" onClick={() => onOpen(h)}>
-            <div className="cover" data-letter={h.title.trim().slice(0, 1).toUpperCase()}>
-              {h.cover ? (
-                <img
-                  loading="lazy"
-                  decoding="async"
-                  src={coverSrc(h.cover, h.coverReferer)}
-                  onError={(e) => fallbackCover(e, h.coverFallback, h.coverReferer)}
-                />
-              ) : (
-                <div className="ph">{h.title.trim().slice(0, 1).toUpperCase()}</div>
-              )}
-            </div>
-            <div className="name" title={h.title}>
-              {h.title}
-            </div>
-            <div className="from">
-              {h.entries.length > 1 ? `${h.entries.length} sites` : h.entries[0]?.sourceName}
-            </div>
-          </button>
+          <HitCard key={h.key} h={h} onOpen={onOpen} />
         ))}
       </div>
     </section>
   )
 }
+
+/** How many similar titles show before "Show all". */
+const SIMILAR_FIRST = 6
 
 /** "Similar on your sites" for a series page: AniList's recommendations that you can open. */
 export function SimilarRow({
@@ -68,12 +84,42 @@ export function SimilarRow({
       cancelled = true
     }
   }, [title, seriesUrl, want])
+  const hits = got.for === want ? got.hits : []
+  // folded by default (remembered), and a handful at first: "Show all" opens the rest
+  const [open, setOpen] = useState(() => localStorage.getItem('similar.open') === '1')
+  // "Show all" belongs to this title only: another series opens with a handful again
+  const [allFor, setAllFor] = useState('')
+  const all = allFor === want
+  if (hits.length === 0) return null
+  const shown = all ? hits : hits.slice(0, SIMILAR_FIRST)
   return (
-    <HitStrip
-      label="Similar on your sites"
-      hits={got.for === want ? got.hits : []}
-      onOpen={onOpen}
-    />
+    <section className="similar fold">
+      <button
+        className="foldhead"
+        aria-expanded={open}
+        onClick={() => {
+          localStorage.setItem('similar.open', open ? '0' : '1')
+          setOpen(!open)
+        }}
+      >
+        <span className={`chev${open ? ' on' : ''}`} aria-hidden="true">
+          ▸
+        </span>
+        Similar on your sites <small>{hits.length}</small>
+      </button>
+      {open && (
+        <div className={all ? 'simgrid' : 'simrow'}>
+          {shown.map((h) => (
+            <HitCard key={h.key} h={h} onOpen={onOpen} />
+          ))}
+          {hits.length > SIMILAR_FIRST && (
+            <button className="simmore" onClick={() => setAllFor(all ? '' : want)}>
+              {all ? 'Show fewer' : `Show all ${hits.length}`}
+            </button>
+          )}
+        </div>
+      )}
+    </section>
   )
 }
 
