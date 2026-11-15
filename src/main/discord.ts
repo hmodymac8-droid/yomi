@@ -17,10 +17,10 @@ import {
  */
 
 /**
- * The Discord application named "Yomi" (Discord shows its name: "Playing Yomi"). Public, not a secret. Empty means
- * it is not set up yet, and nothing is shown.
+ * The Discord application named "Yomi" (Discord shows its name: "Playing Yomi"). Public, not a secret.
+ * Made in the Discord Developer Portal.
  */
-const CLIENT_ID = ''
+const CLIENT_ID = '1571593772608004256'
 
 const OP_HANDSHAKE = 0
 const OP_FRAME = 1

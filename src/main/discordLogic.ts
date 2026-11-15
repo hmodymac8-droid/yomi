@@ -21,7 +21,8 @@ export interface DiscordActivity {
 /** off: nothing on Discord. app: only that you are using Yomi. full: also the series and chapter. */
 export type PresenceMode = 'off' | 'app' | 'full'
 
-export const YOMI_LOGO = 'https://raw.githubusercontent.com/hmodymac8-droid/yomi/main/resources/icon.png'
+export const YOMI_LOGO =
+  'https://raw.githubusercontent.com/hmodymac8-droid/yomi/main/resources/icon.png'
 
 const SCREEN_TEXT: Record<string, string> = {
   browse: 'Browsing Discover',
@@ -46,14 +47,22 @@ function usableCover(u: string | undefined): string | undefined {
   return u && /^https:\/\//i.test(u) && u.length <= 256 ? u : undefined
 }
 
-export function activityFor(p: PresenceInput, mode: PresenceMode, since: number): DiscordActivity | null {
+export function activityFor(
+  p: PresenceInput,
+  mode: PresenceMode,
+  since: number
+): DiscordActivity | null {
   if (mode === 'off') return null
   const reading = p.screen === 'reader'
   const series = p.screen === 'series'
   const logo = { large_image: YOMI_LOGO, large_text: 'Yomi' }
   if (mode === 'app' || !(reading || series) || !fit(p.title)) {
     return {
-      details: reading ? 'Reading manga' : series ? 'Choosing what to read' : (SCREEN_TEXT[p.screen] ?? 'Using Yomi'),
+      details: reading
+        ? 'Reading manga'
+        : series
+          ? 'Choosing what to read'
+          : (SCREEN_TEXT[p.screen] ?? 'Using Yomi'),
       timestamps: { start: since },
       assets: logo
     }
@@ -85,7 +94,10 @@ export function encodeFrame(op: number, data: unknown): Buffer {
 }
 
 /** Splits what arrived into whole messages; returns them and whatever is left over for next time. */
-export function decodeFrames(buf: Buffer): { frames: { op: number; data: unknown }[]; rest: Buffer } {
+export function decodeFrames(buf: Buffer): {
+  frames: { op: number; data: unknown }[]
+  rest: Buffer
+} {
   const frames: { op: number; data: unknown }[] = []
   let at = 0
   while (buf.length - at >= 8) {
