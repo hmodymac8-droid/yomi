@@ -870,3 +870,10 @@ select { cursor: pointer; }
 .srcs .prefbtn:hover { opacity: 1; }
 .srcs button .rlang { margin-left: 6px; padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 10px; letter-spacing: 0.04em; opacity: 0.8; }
 .desc .storyfrom { font-size: 11px; color: var(--muted-foreground); white-space: nowrap; }
+/* Reader: page brightness (turned down for reading at night) */
+.readerview .page { filter: brightness(var(--page-bright, 1)); }
+.rbright { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px; }
+.rbright .rlabel b { color: var(--foreground); font-weight: 600; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.rbrightrow { display: flex; align-items: center; gap: 8px; }
+.rbrightrow input[type='range'] { flex: 1; accent-color: var(--primary); }
+.rbrightrow .iconbtn { width: 28px; height: 28px; font-size: 16px; line-height: 1; }
