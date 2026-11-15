@@ -110,7 +110,7 @@ async function recsFor(title: string, seriesUrl?: string): Promise<RecTitle[]> {
 }
 
 /** The recommended titles that are on your sites, best rated first (at most `limit`). */
-function onYourSites(recs: RecTitle[], exclude: string, limit: number): SearchHit[] {
+async function onYourSites(recs: RecTitle[], exclude: string, limit: number): Promise<SearchHit[]> {
   const out: SearchHit[] = []
   const seen = new Set<string>([exclude])
   for (const r of recs) {
@@ -118,7 +118,7 @@ function onYourSites(recs: RecTitle[], exclude: string, limit: number): SearchHi
     for (const t of r.titles) {
       const want = normalizeTitle(t)
       if (!want || seen.has(want)) continue
-      const hit = findTitle(t)
+      const hit = await findTitle(t)
       if (hit) {
         seen.add(want)
         seen.add(normalizeTitle(hit.title))
@@ -134,7 +134,7 @@ function onYourSites(recs: RecTitle[], exclude: string, limit: number): SearchHi
 export async function similarTo(title: string, seriesUrl?: string): Promise<SearchHit[]> {
   if (getSettings().recommendations === false) return [] // turned off in Settings: nothing is sent
   const recs = await recsFor(title, seriesUrl)
-  return onYourSites(recs, normalizeTitle(title), 18)
+  return await onYourSites(recs, normalizeTitle(title), 18)
 }
 
 /** "Because you read X" rows for Discover: from the series you read most recently. */

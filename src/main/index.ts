@@ -67,6 +67,7 @@ import {
   flushCatalog,
   scanDue,
   search,
+  searchAsync,
   sourcesWithChapterTitles
 } from './catalog'
 import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen, recordOpenSpeed } from './health'
@@ -814,7 +815,7 @@ app.whenReady().then(async () => {
       limit: number,
       kind?: 'manga' | 'manhwa' | 'manhua',
       genre?: string
-    ) => search(q, sourceIds, sort, offset, limit, kind, genre)
+    ) => searchAsync(q, sourceIds, sort, offset, limit, kind, genre)
   )
   // Nothing the screens wait for may hang forever: give up with a clear message instead.
   const withTimeout = <T>(p: Promise<T>, ms: number, what: string): Promise<T> =>
