@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, powerMonitor } from 'electron'
 import { unglueNumber } from './chapterText'
 import { join } from 'path'
 import { existsSync, statSync } from 'fs'
@@ -110,7 +110,7 @@ function load(): Store {
   )
   store.scan ??= {} // catalogs saved by older versions have no scan state
   registerFeedSources(store.sources) // sites with a data feed: their chapter pages are read from it
-  pruneForeignEntries(store)
+  schedulePrune()
   // Sites made earlier only to hold an added title (no scan, no sitemap) are marked as such
   for (const a of store.added ?? []) {
     const t = store.sources.find((x) => x.id === a.sourceId)
@@ -256,23 +256,57 @@ export function isNavUrl(url: string): boolean {
   }
 }
 
-function pruneForeignEntries(s: Store): void {
+/*
+ * Tidying every entry (addresses that are not series, titles that are only the site's name) takes 1-2 seconds over
+ * the whole catalog, and it used to run while the catalog was being opened, freezing the app at start. It now runs
+ * 20 seconds after start, one site at a time with a pause between, so nothing else waits for it. What it fixes was
+ * already fixed and saved in earlier runs; it only catches what changed since.
+ */
+let pruneTimer: ReturnType<typeof setTimeout> | undefined
+function schedulePrune(): void {
+  if (pruneTimer) return
+  pruneTimer = setTimeout(() => {
+    void (async () => {
+      const s = load()
+      let changed = false
+      for (const src of [...s.sources]) {
+        while (userBusy()) await new Promise((r) => setTimeout(r, 2000))
+        if (await pruneSite(s, src)) changed = true
+      }
+      if (changed) {
+        freshSearch()
+        saveSoon()
+      }
+    })().catch((e) => console.error('catalog tidy-up failed', e))
+  }, 20000)
+}
+
+async function pruneSite(s: Store, src: SourceDef): Promise<boolean> {
   let changed = false
-  for (const src of s.sources) {
+  {
     const list = s.series[src.id]
-    if (!list || list.length === 0) continue
+    if (!list || list.length === 0) return false
     let re: RegExp
     try {
       re = new RegExp(src.seriesRe)
     } catch {
-      continue
+      return false
     }
-    const keep = list.filter((e) => re.test(e.url) && !isNavUrl(e.url))
+    const keep: SeriesEntry[] = []
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i]
+      if (re.test(e.url) && !isNavUrl(e.url)) keep.push(e)
+      if (i % 3000 === 2999) await new Promise((r) => setImmediate(r))
+    }
+    // the site was removed, or its list replaced (a new scan), during the pauses: leave it for the next start
+    if (!s.sources.includes(src) || s.series[src.id] !== list) return false
     if (keep.length !== list.length) {
       s.series[src.id] = keep
       changed = true
     }
+    let n = 0
     for (const e of keep) {
+      if (++n % 3000 === 0) await new Promise((r) => setImmediate(r))
       // a title that is only the site's own name (read from a page that needs a browser to show the real one) goes
       // back to the name from the address, and is filled in properly later
       if (isSiteTitle(e.title, src, e.url)) {
@@ -288,7 +322,7 @@ function pruneForeignEntries(s: Store): void {
       }
     }
   }
-  if (changed) saveSoon()
+  return changed
 }
 
 /**
@@ -302,6 +336,8 @@ export function isSiteTitle(title: string, src: SourceDef, url: string): boolean
   if (!t) return false
   const host = siteHost(src).split('.')[0] // "manhwaarab"
   const names = [flat(src.name), flat(host)].filter((n) => n.length >= 5)
+  // almost every title doesn't name the site at all: stop before reading the address (this runs for every title)
+  if (!names.some((n) => t.includes(n))) return false
   const path = flat(
     decodeURIComponent(
       (() => {
@@ -368,11 +404,36 @@ function writeCatalog(sync: boolean): void {
     console.error('catalog save failed', e)
   }
 }
+/*
+ * A background save holds the app for most of a second, so it waits until you have not touched the mouse or keyboard
+ * for a couple of seconds (scrolling counts): it never lands in the middle of a scroll or a page turn. After five
+ * minutes of waiting it saves anyway.
+ */
+let waitingSince = 0
+function saveWhenIdle(): void {
+  saveTimer = undefined
+  if (!unsaved) return
+  waitingSince ||= Date.now()
+  if (userBusy() && Date.now() - waitingSince < 5 * 60 * 1000) {
+    saveTimer = setTimeout(saveWhenIdle, 3000)
+    return
+  }
+  waitingSince = 0
+  writeCatalog(false)
+}
+/** You touched the mouse or keyboard in the last two seconds. */
+export function userBusy(): boolean {
+  try {
+    return powerMonitor.getSystemIdleTime() < 2
+  } catch {
+    return false
+  }
+}
 function saveSoon(immediate = false): void {
   catalogVersion++
   unsaved = true
   if (immediate) writeCatalog(false)
-  else if (!saveTimer) saveTimer = setTimeout(() => writeCatalog(false), SAVE_EVERY_MS)
+  else if (!saveTimer) saveTimer = setTimeout(saveWhenIdle, SAVE_EVERY_MS)
 }
 /** Saves what is not saved yet (when Yomi closes). */
 export function flushCatalog(): void {
@@ -1340,13 +1401,37 @@ export function search(
   kind?: SeriesType,
   genre?: string
 ): SearchResult {
+  return pick(groupsFor(q, sourceIds, sort), kind, genre, offset, limit)
+}
+
+/**
+ * The title on your sites whose name is exactly this one (as "Similar" and "Because you read" need), looked up
+ * directly in the whole list instead of searching all ~400,000 titles once per name, which froze the app for 1-2
+ * seconds when a series page opened.
+ */
+const byKey = new WeakMap<Grp[], Map<string, Grp>>()
+export function findTitle(title: string): SearchHit | null {
+  const want = norm(title)
+  if (!want) return null
+  const groups = groupsFor('', [], 'az')
+  let m = byKey.get(groups)
+  if (!m) {
+    m = new Map()
+    for (const g of groups) if (!m.has(g.key)) m.set(g.key, g)
+    byKey.set(groups, m)
+  }
+  const g = m.get(want)
+  return g ? toHit(g) : null
+}
+
+function groupsFor(q: string, sourceIds: string[], sort: 'site' | 'az' | 'za' | 'sites' | 'genre'): Grp[] {
   const sig = `${catalogVersion}|${metaVersion}|${genreIndexVersion()}|${settingsVersion()}|${q}|${sourceIds.join(',')}|${sort}`
   const base = sig.slice(sig.indexOf('|') + 1)
   searchedNow()
   const saved = savedSearches.find(
     (x) => x.sig === sig || (x.base === base && Date.now() - x.at < STALE_OK_MS)
   )
-  if (saved) return pick(saved.groups, kind, genre, offset, limit)
+  if (saved) return saved.groups
   const s = load()
   const tokens = norm(q).split(' ').filter(Boolean)
   const only = sourceIds.length > 0 ? new Set(sourceIds) : null
@@ -1418,7 +1503,7 @@ export function search(
       return Number(!!b.coverE) - Number(!!a.coverE) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
     })
     rememberSearch({ sig, base, at: Date.now(), groups })
-    return pick(groups, kind, genre, offset, limit)
+    return groups
   }
   if (sort !== 'site' || tokens.length) {
     const first = tokens[0] ?? ''
@@ -1441,7 +1526,7 @@ export function search(
     })
   }
   rememberSearch({ sig, base, at: Date.now(), groups })
-  return pick(groups, kind, genre, offset, limit)
+  return groups
 }
 
 // ---- type / genres / status of series, as their pages stated them (kept apart from the chapter-list cache) ----
@@ -2423,7 +2508,9 @@ interface SeriesCacheEntry {
 }
 let seriesCache: Record<string, SeriesCacheEntry> | null = null
 let seriesTimer: NodeJS.Timeout | undefined
-const seriesCachePath = (): string => join(app.getPath('userData'), 'series-cache.json')
+let seriesCacheFile = ''
+const seriesCachePath = (): string =>
+  (seriesCacheFile ||= join(app.getPath('userData'), 'series-cache.json'))
 
 const SERIES_CACHE_VERSION = 7
 
