@@ -629,7 +629,7 @@ export function getSource(id: string): SourceDef | undefined {
 
 /** Every real source, including ones hidden by the library switch. Titles-only holders are left out. */
 export function sourceDefs(): SourceDef[] {
-  return load().sources.filter((s) => !s.titlesOnly && s.extensionEnabled !== false)
+  return load().sources.filter((s) => !s.titlesOnly)
 }
 
 /** The source whose home address is this host (a chapter URL on that host). */
@@ -720,7 +720,6 @@ export async function fillSiteLanguages(): Promise<void> {
 
 /** A Yomi Library site while the Settings switch "Show the Yomi Library" is off. */
 function isHiddenSite(src: SourceDef): boolean {
-  if (src.extensionEnabled === false) return true
   return !!src.library && !getSettings().showLibrary
 }
 
@@ -810,7 +809,7 @@ export function sourcesWithChapterTitles(): string[] {
 export function scanDue(id: string): boolean {
   const s = load()
   const src = s.sources.find((x) => x.id === id)
-  if (!src || crawling.has(id) || src.extensionEnabled === false) return false
+  if (!src || crawling.has(id)) return false
   if (src.maxPages <= 0 && !src.sitemaps?.length) return false // nothing to scan
   const at = s.scanAt?.[id] ?? 0
   const incomplete = Object.keys(s.scan).some(

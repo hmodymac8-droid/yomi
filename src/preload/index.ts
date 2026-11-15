@@ -144,14 +144,6 @@ const api = {
   anilistUnlink: (seriesUrl: string) => ipcRenderer.invoke('anilist-unlink', seriesUrl),
   anilistLinkFor: (seriesUrl: string) => ipcRenderer.invoke('anilist-link-for', seriesUrl),
   anilistImport: () => ipcRenderer.invoke('anilist-import'),
-  extensionsOverview: () => ipcRenderer.invoke('extensions-overview'),
-  extensionsAddRepo: (url: string) => ipcRenderer.invoke('extensions-add-repo', url),
-  extensionsRemoveRepo: (url: string) => ipcRenderer.invoke('extensions-remove-repo', url),
-  extensionsInstall: (url: string, sha256: string) =>
-    ipcRenderer.invoke('extensions-install', url, sha256),
-  extensionsRemove: (id: string) => ipcRenderer.invoke('extensions-remove', id),
-  extensionsSetEnabled: (id: string, enabled: boolean) =>
-    ipcRenderer.invoke('extensions-set-enabled', id, enabled),
   isMini,
   miniOpen: (session: unknown) => ipcRenderer.invoke('mini-open', session),
   miniUpdate: (session: unknown) => ipcRenderer.invoke('mini-update', session),
