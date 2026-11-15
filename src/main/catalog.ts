@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from 'electron'
+import { unglueNumber } from './chapterText'
 import { join } from 'path'
 import { existsSync, statSync } from 'fs'
 import type {
@@ -1681,7 +1682,10 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
   const seen = new Set();
   const chapters = [];
   // innerText keeps the visual separation between "C. 1" and "1d ago"; textContent glues them together.
-  const text = (a) => (a.innerText || a.textContent || '').trim().replace(/\\s+/g, ' ');
+  // A list in a hidden tab has no layout, so innerText is plain textContent there ("Chapter 5916 months ago"): walk the
+  // nodes instead, with a space between elements, and leave out the row's date (<time>), which is no part of the name.
+  const spaced = (el) => { let out = ''; const walk = (k) => { if (k.nodeType === 3) { out += k.data; return; } if (k.nodeType !== 1 || /^(TIME|SCRIPT|STYLE)$/.test(k.tagName)) return; out += ' '; for (const c of k.childNodes) walk(c); out += ' '; }; walk(el); return out; };
+  const text = (a) => spaced(a).trim().replace(/\\s+/g, ' ');
   // A chapter is a link whose ADDRESS looks like one (…/chapter-12) OR whose visible text does ("Chapter 12"):
   // some sites use opaque addresses (…/chapters/01J76X…), so the address alone misses their whole list.
   const byText = (t) => /^(vol(ume)?\\.?\\s*\\d+\\s*[,:.\\-]?\\s*)?(chapter|chap\\.?|ch\\.?|episode|ep\\.?|ال?فصل|حلقة|الحلقة)\\s*\\d/i.test(t);
@@ -1850,16 +1854,19 @@ const INNER_SCROLL = `(() => {
 const NUM = '(\\d+(?:\\.\\d+)?)'
 
 /** Chapter number from the visible title (used to merge the same chapter listed by several providers). */
-function numFromTitle(t: string): string | null {
+function numFromTitle(t: string, url = ''): string | null {
   const m =
     t.match(new RegExp(`\\bC\\.\\s*${NUM}`, 'i')) ||
     t.match(new RegExp(`\\b(?:chapter|chap|ch|ep|episode)\\.?\\s*${NUM}`, 'i'))
-  return m ? m[1] : null
+  if (!m) return null
+  // "Chapter 5916 months ago" on a …/chapter-59/ link is chapter 59 with its age glued on
+  const u = url.match(new RegExp(`(?:chapter|chap|ch|ep|episode)[-_/ ]?${NUM}/?$`, 'i'))
+  return unglueNumber(m[1], t.slice((m.index ?? 0) + m[0].length), u ? u[1] : null)
 }
 
 /** Chapter number from the title, falling back to the URL. */
 function chapterNum(c: Ch): number | null {
-  const t = numFromTitle(c.title)
+  const t = numFromTitle(c.title, c.url)
   if (t !== null) return Number(t)
   const m =
     c.url.match(new RegExp(`(?:chapter|chap|ch|ep|episode)[-_/ ]?${NUM}`, 'i')) ||
@@ -1875,7 +1882,7 @@ function mergeProviders(list: { title: string; url: string }[]): Ch[] {
   const out: Ch[] = []
   const byNum = new Map<string, Ch>()
   for (const c of list) {
-    const num = numFromTitle(c.title)
+    const num = numFromTitle(c.title, c.url)
     // One consistent name: "Chapter 34", whatever the site prints ("Ch. 34 108p Today", "34", "Ch.170 Thunderscans 4h ago").
     const shown = num ?? (chapterNum(c) !== null ? String(chapterNum(c)) : null)
     const title = shown !== null ? `Chapter ${shown}` : c.title || 'Chapter'

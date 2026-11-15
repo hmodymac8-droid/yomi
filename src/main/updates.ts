@@ -253,6 +253,31 @@ async function notify(found: { rec: FollowRecord; fresh: NewChapter[] }[]): Prom
   }
 }
 
+/**
+ * New-chapter entries whose chapter now has another name (a site glued the chapter's age onto its number, so
+ * "Chapter 48" was read as "Chapter 4819"): the newest chapter keeps its entry under the right name, an older one was
+ * never new and is dropped.
+ */
+function retitleNew(rec: FollowRecord, chapters: { title: string; url: string }[]): void {
+  if (rec.newChapters.length === 0) return
+  const nameOf = new Map(chapters.map((c) => [c.url, c.title]))
+  const num = (t: string): number => Number(t.match(/(\d+(?:\.\d+)?)/)?.[1] ?? NaN)
+  const top = Math.max(...chapters.map((c) => num(c.title)).filter((n) => !Number.isNaN(n)))
+  let changed = false
+  rec.newChapters = rec.newChapters.flatMap((c) => {
+    const now = nameOf.get(c.url)
+    // not on the newest page any more, but numbered far past the newest chapter: a glued name like "Chapter 182120"
+    if (now === undefined && top > 0 && num(c.title) > top * 10) {
+      changed = true
+      return []
+    }
+    if (now === undefined || now === c.title) return [c]
+    changed = true
+    return num(now) >= top ? [{ ...c, title: now }] : []
+  })
+  if (changed) saveSoon()
+}
+
 /** Checks every followed series for chapters that weren't there last time. */
 export async function checkAll(manual: boolean): Promise<void> {
   if (checking) return
@@ -269,16 +294,18 @@ export async function checkAll(manual: boolean): Promise<void> {
       try {
         const d = await getSeries(rec.sourceId, rec.seriesUrl, true) // newest chapters only
         mergeNewest(rec.seriesUrl, d) // keep the saved chapter list current, so opening the series needs no load
-        const keys = d.chapters.map(keyOf)
         if (d.chapters.length === 0) continue // the page gave nothing: don't treat that as "all chapters removed"
+        retitleNew(rec, d.chapters)
+        // a chapter is known by its name and by its address, so a site that renames chapters doesn't make old ones new
+        const keys = [...d.chapters.map(keyOf), ...d.chapters.map((c) => c.url)]
         if (rec.known.length === 0) {
           // first look at this series: what's on it counts as already known (newest page only, which is
           // enough: later checks only ever see the newest page too)
           rec.known = keys
         } else {
-          const known = new Set(rec.known)
+          const known = new Set([...rec.known, ...rec.newChapters.map((c) => c.url)])
           const fresh: NewChapter[] = d.chapters
-            .filter((c) => !known.has(keyOf(c)))
+            .filter((c) => !known.has(keyOf(c)) && !known.has(c.url))
             .map((c) => ({ title: c.title, url: c.url, alts: c.alts, at: Date.now() }))
           rec.known = [...new Set([...rec.known, ...keys])]
           // A sudden flood of "new" chapters means the site changed how it lists them, not that 50 chapters dropped.
