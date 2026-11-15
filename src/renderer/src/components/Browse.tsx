@@ -8,7 +8,7 @@ import type {
   SourceInfo,
   UpdateStatus
 } from '../../../preload/index.d'
-import { OpenChapter, OpenSeries, fallbackCover, coverSrc, timeAgo } from '../lib'
+import { OpenChapter, OpenSeries, fallbackCover, coverSrc, timeAgo, shortSites } from '../lib'
 import Featured from './Featured'
 import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
@@ -460,8 +460,23 @@ export default function Browse({
   // with a language chosen, your own shelves show only that language's sites too
   const inLang = (id: string): boolean => !lang || sources.find((x) => x.id === id)?.lang === lang
   const followsL = follows.filter((f) => inLang(f.sourceId))
-  const recentL = recent.filter((r) => inLang(r.sourceId))
-  const withNew = followsL.filter((f) => f.unread > 0)
+  // one card per series: the same title read on two sites (or under two names of one site) shows once, the latest
+  const seenTitle = new Set<string>()
+  const recentL = recent.filter((r) => {
+    if (!inLang(r.sourceId)) return false
+    const k = r.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+    if (seenTitle.has(k)) return false
+    seenTitle.add(k)
+    return true
+  })
+  const seenNew = new Set<string>()
+  // one chip per series, also when it is followed on two sites
+  const withNew = followsL.filter((f) => {
+    const k = f.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+    if (f.unread <= 0 || seenNew.has(k)) return false
+    seenNew.add(k)
+    return true
+  })
 
   const openRecent = (r: ProgressRecord): void => {
     const name = sources.find((s) => s.id === r.sourceId)?.name ?? r.sourceId
@@ -789,40 +804,6 @@ export default function Browse({
                   onRead={onRead}
                 />
               )}
-              {withNew.length > 0 && !topQ.trim() && (
-                <section className="continue">
-                  <div className="meta">New chapters</div>
-                  <div className="strip">
-                    {withNew.map((f) => (
-                      <div key={f.seriesUrl} className="newcard">
-                        <button className="card small" onClick={() => openFollow(f)}>
-                          <div className="cover">
-                            {f.cover && (
-                              <img loading="lazy" src={coverSrc(f.cover, f.coverReferer)} />
-                            )}
-                            <span className="badge">+{f.unread}</span>
-                          </div>
-                          <div className="name" title={f.title}>
-                            {f.title}
-                          </div>
-                          <div className="from">{f.unreadChapters[0]?.title}</div>
-                        </button>
-                        <button
-                          className="x"
-                          title="Dismiss"
-                          onClick={() =>
-                            window.api
-                              .followDismiss(f.seriesUrl)
-                              .then(() => window.api.followList().then(setFollows))
-                          }
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
               {recentL.length > 0 && !topQ.trim() && (
                 <section className="continue">
                   <div className="meta">Continue reading</div>
@@ -863,6 +844,43 @@ export default function Browse({
                           }}
                         >
                           ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+              {withNew.length > 0 && !topQ.trim() && (
+                <section className="newslim">
+                  <div className="newslimhead">
+                    New chapters <small>{withNew.length}</small>
+                  </div>
+                  <div className="newchips">
+                    {withNew.map((f) => (
+                      <div key={f.seriesUrl} className="newchip">
+                        <button
+                          className="nchip"
+                          onClick={() => openFollow(f)}
+                          title={`${f.title}${f.unreadChapters[0] ? ' · ' + f.unreadChapters[0].title : ''}`}
+                        >
+                          <span className="nthumb">
+                            {f.cover && (
+                              <img loading="lazy" src={coverSrc(f.cover, f.coverReferer)} />
+                            )}
+                          </span>
+                          <span className="nname">{f.title}</span>
+                          <span className="nplus">+{f.unread}</span>
+                        </button>
+                        <button
+                          className="x"
+                          title="Dismiss"
+                          onClick={() =>
+                            window.api
+                              .followDismiss(f.seriesUrl)
+                              .then(() => window.api.followList().then(setFollows))
+                          }
+                        >
+                          ✕
                         </button>
                       </div>
                     ))}
@@ -1076,7 +1094,9 @@ export default function Browse({
                     <div className="name" title={h.title}>
                       {h.title}
                     </div>
-                    <div className="from">{h.entries.map((e) => e.sourceName).join(' · ')}</div>
+                    <div className="from" title={h.entries.map((e) => e.sourceName).join(' · ')}>
+                      {shortSites(h.entries.map((e) => e.sourceName))}
+                    </div>
                   </button>
                 ))}
               </div>

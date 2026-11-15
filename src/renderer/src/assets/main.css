@@ -882,3 +882,19 @@ select { cursor: pointer; }
 .rbrightrow { display: flex; align-items: center; gap: 8px; }
 .rbrightrow input[type='range'] { flex: 1; accent-color: var(--primary); }
 .rbrightrow .iconbtn { width: 28px; height: 28px; font-size: 16px; line-height: 1; }
+
+/* Discover: new chapters as one slim line under Continue reading */
+.newslim { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.newslimhead { font-size: 13px; font-weight: 600; color: var(--muted-foreground); margin-bottom: 8px; }
+.newslimhead small { margin-left: 4px; font-weight: 400; }
+.newchips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.newchips::-webkit-scrollbar { display: none; }
+.newchip { position: relative; flex: none; }
+.newchip .nchip { display: flex; align-items: center; gap: 8px; max-width: 240px; padding: 4px 10px 4px 4px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--foreground); font-size: 12px; cursor: pointer; }
+.newchip .nchip:hover { background: var(--muted); }
+.newchip .nthumb { width: 24px; height: 34px; flex: none; border-radius: 3px; overflow: hidden; background: var(--muted); }
+.newchip .nthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.newchip .nname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.newchip .nplus { flex: none; color: var(--primary-text); font-weight: 600; }
+.newchip .x { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: var(--background); color: var(--muted-foreground); font-size: 9px; line-height: 1; display: none; cursor: pointer; }
+.newchip:hover .x { display: block; }
