@@ -454,6 +454,11 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
                   >
                     {sp && <span className={`rdot ${sp.label}`} aria-hidden="true" />}
                     {e.sourceName}
+                    {(sp?.lang === 'ar' || sp?.lang === 'en') && (
+                      <small className="rlang" title={sp.lang === 'ar' ? 'Arabic' : 'English'}>
+                        {sp.lang.toUpperCase()}
+                      </small>
+                    )}
                     {sp?.ms !== undefined && <small className="rspeed">{(sp.ms / 1000).toFixed(1)} s</small>}
                     {pinnedId === e.sourceId && <small className="rstar"> ★</small>}
                   </button>

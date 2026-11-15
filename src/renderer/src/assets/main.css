@@ -868,3 +868,4 @@ select { cursor: pointer; }
 .srcs button .rstar { color: var(--primary); }
 .srcs .prefbtn { background: transparent; border-style: dashed; opacity: 0.85; }
 .srcs .prefbtn:hover { opacity: 1; }
+.srcs button .rlang { margin-left: 6px; padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 10px; letter-spacing: 0.04em; opacity: 0.8; }

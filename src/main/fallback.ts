@@ -125,6 +125,18 @@ export function reportFailure(
   return commitFailure(id, classifyFailure(message), message)
 }
 
+/** The language a site is written in, when known. */
+export function langOf(id: string): 'ar' | 'en' | 'other' | undefined {
+  return getSource(id)?.lang
+}
+
+/** Two sites can stand in for each other: same language, or one of them not known yet. */
+export function sameLang(a: string, b: string): boolean {
+  const la = langOf(a)
+  const lb = langOf(b)
+  return !la || !lb || la === lb
+}
+
 /**
  * Other sites that have this title, already ordered: your pin, then the one you read last, then the
  * fastest healthy site. Down sites and Comix (unless you pinned it) are left out. At most 5.
@@ -136,8 +148,11 @@ export function listFallbackSites(title: string, excludeIds: string[]): Fallback
   if (!found) return []
   const pin = pinnedSite(title)
   const exclude = new Set(excludeIds)
+  // the site being read stands first in excludeIds: a stand-in is in the same language (no English chapter in an
+  // Arabic read)
+  const reading = excludeIds[0]
   const cands = found.entries
-    .filter((e) => !exclude.has(e.sourceId))
+    .filter((e) => !exclude.has(e.sourceId) && (!reading || sameLang(reading, e.sourceId)))
     .map((e) => {
       const src = getSource(e.sourceId)
       return {
@@ -167,7 +182,7 @@ export function siteSpeed(id: string): SiteSpeed {
         : ms < 5000
           ? 'ok'
           : 'slow'
-  return { label, ms }
+  return { label, ms, lang: src?.lang }
 }
 
 /**
@@ -206,7 +221,10 @@ export function seriesStart(
   })
   const ranked = rankAlternatives(cands, cands.length)
   const readAny = cands.some((c) => c.lastReadAt > 0)
-  let start = pinned?.url ?? ranked[0]?.url ?? entries[0].url
+  // with no pick and nothing read, the fastest site in the language of the site it came from
+  const lastRead = ranked.find((r) => (getProgress(r.url)?.updatedAt ?? 0) > 0)
+  const sameAsCame = ranked.find((r) => sameLang(given[0].sourceId, r.sourceId))
+  let start = pinned?.url ?? lastRead?.url ?? sameAsCame?.url ?? ranked[0]?.url ?? entries[0].url
   if (single && !pinned && !readAny) start = given[0].url
   // the sites are listed best first; ones left out of the ranking (down, Comix) go last
   const order = [...ranked.map((r) => r.url), ...entries.map((e) => e.url)]
