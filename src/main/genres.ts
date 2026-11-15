@@ -44,7 +44,8 @@ interface SiteIndex {
 let index: Record<string, SiteIndex> | null = null
 let version = 0
 let lookup: Map<string, { g?: string[]; t?: SeriesType }> | null = null
-const indexPath = (): string => join(app.getPath('userData'), 'genre-index.json')
+let indexFile = ''
+const indexPath = (): string => (indexFile ||= join(app.getPath('userData'), 'genre-index.json'))
 
 function loadIndex(): Record<string, SiteIndex> {
   if (index && !isUnreadable(indexPath())) return index
@@ -61,8 +62,17 @@ function saveIndex(): void {
   }
 }
 
+const PLAIN_URL = /^https?:\/\/([a-z0-9.-]+)(\/[^?#\\]*)?(?:[?#].*)?$/i
+
 /** Same series address written slightly differently (www., trailing slash, http) gives the same key. */
 export function urlKey(u: string): string {
+  // the common plain address is read directly (making a URL object for each of ~400,000 titles took half a second);
+  // anything unusual (an encoded character, a port, "./", a non-Latin host) still goes through URL, to give the
+  // very same key
+  const m = PLAIN_URL.exec(u)
+  if (m && !/%|\/\.\.?(?:\/|$)/.test(m[2] ?? '')) {
+    return (m[1].replace(/^www\./i, '') + (m[2] ?? '').replace(/\/+$/, '')).toLowerCase()
+  }
   try {
     const x = new URL(u)
     return (

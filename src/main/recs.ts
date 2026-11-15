@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join } from 'path'
 import type { SearchHit } from '../preload/index.d'
-import { search } from './catalog'
+import { findTitle } from './catalog'
 import { getAniListLink } from './anilist'
 import { recentProgress } from './progress'
 import { normalizeTitle } from './repair'
@@ -118,7 +118,7 @@ function onYourSites(recs: RecTitle[], exclude: string, limit: number): SearchHi
     for (const t of r.titles) {
       const want = normalizeTitle(t)
       if (!want || seen.has(want)) continue
-      const hit = search(t, [], 'az', 0, 6).hits.find((h) => normalizeTitle(h.title) === want)
+      const hit = findTitle(t)
       if (hit) {
         seen.add(want)
         seen.add(normalizeTitle(hit.title))
