@@ -290,6 +290,8 @@ export interface SiteSpeed {
   label: 'fast' | 'ok' | 'slow' | 'trouble' | 'new'
   /** Typical chapter-open time (ms); missing until a chapter was opened there. */
   ms?: number
+  /** The site's language, when known. */
+  lang?: 'ar' | 'en' | 'other'
 }
 
 /** Which of a series' sites to open first, and how each one is doing. */
