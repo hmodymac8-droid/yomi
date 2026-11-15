@@ -90,16 +90,6 @@ import { flushModes } from './hostmode'
 import { detectSource } from './sources'
 import { flushProgress, getProgress, hideProgress, recentProgress, saveProgress } from './progress'
 import {
-  addExtensionRepo,
-  extensionsOverview,
-  installFromUrl,
-  loadInstalledExtensions,
-  removeExtension,
-  removeExtensionRepo,
-  setExtensionEnabled
-} from './extensions'
-import { prepareSandbox, runExtensionScript } from './extensionSandbox'
-import {
   anilistStatus,
   connectAniList,
   disconnectAniList,
@@ -677,10 +667,6 @@ app.whenReady().then(async () => {
   startGenreScheduler()
   startAutoUpdates()
   startAniListWorker()
-  // (JS extensions run in the QuickJS sandbox, which starts in a few milliseconds)
-  void prepareSandbox()
-    .catch((e) => console.error('[extensions] sandbox did not start', e))
-    .then(() => loadInstalledExtensions())
   // A site that "Needs a look" is often fine (a series that opened short once, a site that cuts chapters into a few
   // long strips): a minute and a half after start, each site not marked fine is re-checked quietly, at most once a
   // day, so the Sites screen shows how it really is without you pressing Re-check.
@@ -734,16 +720,6 @@ app.whenReady().then(async () => {
   ipcMain.handle('anilist-unlink', (_e, seriesUrl: string) => unlinkAniList(String(seriesUrl ?? '')))
   ipcMain.handle('anilist-link-for', (_e, seriesUrl: string) => getAniListLink(String(seriesUrl ?? '')))
   ipcMain.handle('anilist-import', () => importProgressFromAniList())
-  ipcMain.handle('extensions-overview', () => extensionsOverview())
-  ipcMain.handle('extensions-add-repo', (_e, url: string) => addExtensionRepo(String(url ?? '')))
-  ipcMain.handle('extensions-remove-repo', (_e, url: string) => removeExtensionRepo(String(url ?? '')))
-  ipcMain.handle('extensions-install', (_e, url: string, sha256: string) =>
-    installFromUrl(String(url ?? ''), String(sha256 ?? ''))
-  )
-  ipcMain.handle('extensions-remove', (_e, id: string) => removeExtension(String(id ?? '')))
-  ipcMain.handle('extensions-set-enabled', (_e, id: string, enabled: boolean) =>
-    setExtensionEnabled(String(id ?? ''), !!enabled)
-  )
   ipcMain.handle('page-bytes', (_e, src: string) => pageBytes(src))
   setSourceSignal(onSourceSignal)
   ipcMain.handle('source-state', (_e, id: string) => sourceState(id))
@@ -1878,26 +1854,6 @@ app.whenReady().then(async () => {
       probe.destroy()
     })()
       .catch((e) => console.log('E2E_ERROR ' + (e instanceof Error ? e.stack : String(e))))
-      .finally(() => app.quit())
-    return
-  }
-
-  // Dev helper: MR_EXTTEST=1 runs known sandbox escapes through the JS extension sandbox and reports what they reached.
-  if (process.env['MR_EXTTEST']) {
-    ;(async () => {
-      await prepareSandbox()
-      const probes = {
-        moduleCtor: "module.exports = { leak: typeof module.constructor.constructor('return process')() }",
-        thisCtor: "module.exports = { leak: typeof (function(){ return this.constructor.constructor('return process')() })() }",
-        require: "module.exports = { leak: typeof require }",
-        globalProcess: "module.exports = { leak: typeof globalThis.process }"
-      }
-      for (const [name, code] of Object.entries(probes)) {
-        const r = runExtensionScript(code)
-        console.log('EXT ' + name + ' ' + JSON.stringify(r.ok ? 'manifest?' : (r.error ?? r.issues.map((i) => i.path + ' ' + i.message).join('; '))))
-      }
-    })()
-      .catch((e) => console.log('EXT_ERROR ' + (e instanceof Error ? e.stack : String(e))))
       .finally(() => app.quit())
     return
   }
