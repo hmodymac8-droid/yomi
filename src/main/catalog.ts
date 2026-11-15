@@ -1410,10 +1410,10 @@ export function search(
  * seconds when a series page opened.
  */
 const byKey = new WeakMap<Grp[], Map<string, Grp>>()
-export function findTitle(title: string): SearchHit | null {
+export async function findTitle(title: string): Promise<SearchHit | null> {
   const want = norm(title)
   if (!want) return null
-  const groups = groupsFor('', [], 'az')
+  const groups = await groupsForAsync('', [], 'az')
   let m = byKey.get(groups)
   if (!m) {
     m = new Map()
@@ -1424,7 +1424,65 @@ export function findTitle(title: string): SearchHit | null {
   return g ? toHit(g) : null
 }
 
-function groupsFor(q: string, sourceIds: string[], sort: 'site' | 'az' | 'za' | 'sites' | 'genre'): Grp[] {
+type SortKind = 'site' | 'az' | 'za' | 'sites' | 'genre'
+
+/*
+ * Grouping all ~400,000 titles and working out each one's type and genres takes 2-3 seconds the first time after
+ * start (afterwards it is kept). Done in one go, it froze the whole app: covers, clicks, everything. The work is
+ * written as generators that pause every couple of thousand titles; the search the screen asks for (searchAsync)
+ * runs them in slices of about 12 ms, so the app keeps answering in between. Other callers still run them in one go.
+ */
+const SLICE_EVERY = 2000
+function runSync<T>(gen: Generator<void, T, void>): T {
+  for (;;) {
+    const r = gen.next()
+    if (r.done) return r.value
+  }
+}
+async function runSliced<T>(gen: Generator<void, T, void>): Promise<T> {
+  let start = Date.now()
+  for (;;) {
+    const r = gen.next()
+    if (r.done) return r.value
+    if (Date.now() - start > 12) {
+      await new Promise((res) => setImmediate(res))
+      start = Date.now()
+    }
+  }
+}
+
+function groupsFor(q: string, sourceIds: string[], sort: SortKind): Grp[] {
+  return runSync(groupsWork(q, sourceIds, sort))
+}
+
+/** The same search being built for the screen twice at once is built once. */
+const building = new Map<string, Promise<Grp[]>>()
+function groupsForAsync(q: string, sourceIds: string[], sort: SortKind): Promise<Grp[]> {
+  const k = `${catalogVersion}|${metaVersion}|${genreIndexVersion()}|${settingsVersion()}|${q}|${sourceIds.join(',')}|${sort}`
+  let p = building.get(k)
+  if (!p) {
+    p = runSliced(groupsWork(q, sourceIds, sort)).finally(() => building.delete(k))
+    building.set(k, p)
+  }
+  return p
+}
+
+/** search() for the screen: the same answer, but the app keeps responding while a new list is put together. */
+export async function searchAsync(
+  q: string,
+  sourceIds: string[],
+  sort: SortKind,
+  offset: number,
+  limit: number,
+  kind?: SeriesType,
+  genre?: string
+): Promise<SearchResult> {
+  const groups = await groupsForAsync(q, sourceIds, sort)
+  await runSliced(kindMemoWork(groups))
+  return pick(groups, kind, genre, offset, limit)
+}
+
+function* groupsWork(q: string, sourceIds: string[], sort: SortKind): Generator<void, Grp[], void> {
   const sig = `${catalogVersion}|${metaVersion}|${genreIndexVersion()}|${settingsVersion()}|${q}|${sourceIds.join(',')}|${sort}`
   const base = sig.slice(sig.indexOf('|') + 1)
   searchedNow()
@@ -1439,7 +1497,9 @@ function groupsFor(q: string, sourceIds: string[], sort: 'site' | 'az' | 'za' | 
   for (const src of s.sources) {
     if (only && !only.has(src.id)) continue
     if (isHiddenSite(src)) continue
+    let n = 0
     for (const e of s.series[src.id] ?? []) {
+      if (++n % SLICE_EVERY === 0) yield
       const key = titleKey(e)
       if (!key) continue
       if (tokens.length && !tokens.every((t) => key.includes(t))) continue
@@ -1462,7 +1522,9 @@ function groupsFor(q: string, sourceIds: string[], sort: 'site' | 'az' | 'za' | 
   // A site that is down gives its place to a healthy one, unless you pinned it. The choice is saved with the
   // search, and thrown away when a source's status changes.
   const pins = pinMap()
+  let n = 0
   for (const g of groups) {
+    if (++n % SLICE_EVERY === 0) yield
     const members = [{ e: g.e, src: g.src }, ...(g.more ?? [])]
     if (members.length < 2) continue
     const ids = orderSourceIds(
@@ -1495,7 +1557,11 @@ function groupsFor(q: string, sourceIds: string[], sort: 'site' | 'az' | 'za' | 
   if (sort === 'genre' && !tokens.length) {
     // grouped by each title's main genre (the first its page lists), genres A-Z, titles without one last
     const main = new Map<Grp, string>()
-    for (const g of groups) main.set(g, genresOf(g)[0] ?? '\uffff')
+    let ng = 0
+    for (const g of groups) {
+      if (++ng % SLICE_EVERY === 0) yield
+      main.set(g, genresOf(g)[0] ?? '\uffff')
+    }
     groups.sort((a, b) => {
       const ga = main.get(a)!
       const gb = main.get(b)!
@@ -1705,6 +1771,27 @@ const kindMemo = new WeakMap<
   Grp[],
   { v: string; kinds: (SeriesType | null)[]; genres: string[][] }
 >()
+function* kindMemoWork(groups: Grp[]): Generator<
+  void,
+  { v: string; kinds: (SeriesType | null)[]; genres: string[][] },
+  void
+> {
+  const v = metaVersion + ':' + genreIndexVersion()
+  const have = kindMemo.get(groups)
+  if (have && have.v === v) return have
+  const m = loadMeta()
+  const kinds: (SeriesType | null)[] = new Array(groups.length)
+  const genres: string[][] = new Array(groups.length)
+  for (let i = 0; i < groups.length; i++) {
+    if (i % SLICE_EVERY === SLICE_EVERY - 1) yield
+    kinds[i] = kindOf(groups[i], m)
+    genres[i] = genresOf(groups[i], m)
+  }
+  const memo = { v, kinds, genres }
+  kindMemo.set(groups, memo)
+  return memo
+}
+
 function pick(
   groups: Grp[],
   kind: SeriesType | undefined,
@@ -1712,13 +1799,7 @@ function pick(
   offset: number,
   limit: number
 ): SearchResult {
-  let memo = kindMemo.get(groups)
-  const v = metaVersion + ':' + genreIndexVersion()
-  if (!memo || memo.v !== v) {
-    const m = loadMeta()
-    memo = { v, kinds: groups.map((x) => kindOf(x, m)), genres: groups.map((x) => genresOf(x, m)) }
-    kindMemo.set(groups, memo)
-  }
+  const memo = runSync(kindMemoWork(groups))
   // '__none__' = the titles whose genres aren't known yet (open one and its genres load)
   const none = genre === '__none__'
   const g = genre && !none ? canonGenres([genre])[0] : undefined
