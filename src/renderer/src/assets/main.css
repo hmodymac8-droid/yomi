@@ -903,3 +903,11 @@ select { cursor: pointer; }
 
 /* while scrolling, nothing under the mouse reacts (see main.tsx) */
 .scrolling .card, .scrolling .nchip, .scrolling .chapter { pointer-events: none; }
+/* Reader: zoom lens (Z, or double-click a page) */
+.zoomlens { position: fixed; z-index: 60; overflow: hidden; border-radius: 14px; border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55); background: #111; pointer-events: none; }
+.zoomlens .zlimg { position: absolute; inset: 0; background-repeat: no-repeat; filter: var(--pagefilter, none) brightness(var(--page-bright, 1)); }
+.zlctl { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 61; display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 10px; background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 13px; }
+.zlctl button { min-width: 30px; height: 28px; border: 0; border-radius: 6px; background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 16px; cursor: pointer; }
+.zlctl button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.28); }
+.zlctl button:disabled { opacity: 0.35; cursor: default; }
+.zlctl b { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }

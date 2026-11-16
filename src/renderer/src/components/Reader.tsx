@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import ZoomLens from './ZoomLens'
 import { OpenChapter, OpenSeries, chapterNumber, localPage, pageSrc } from '../lib'
 import { Icon } from './Icon'
 import { ThemeToggle } from './ThemeToggle'
@@ -122,8 +123,11 @@ export default function Reader({
     saved('fit', ['width', 'height'] as const, 'width')
   )
   const [bg, setBg] = useState<Bg>(() => saved('bg', ['dark', 'black', 'sepia'] as const, 'dark'))
-  const [zoom, setZoom] = useState(() => clampW(savedNum('zoom', 400, 2000, 900))) // page width in px when fitting width
+  const [zoom, setZoomRaw] = useState(() => clampW(savedNum('zoom', 400, 2000, 900))) // page width in px when fitting width
   const [pct, setPct] = useState(0)
+  // Magnifying glass that follows the pointer (Z or the magnifier button)
+  const [lens, setLens] = useState<{ x: number; y: number } | null>(null)
+  const mouse = useRef({ x: 0, y: 0 })
   const [menu, setMenu] = useState(false)
   // Menu-only UI state (not remembered): the Reading mode fold, and whether changes go to this series or all.
   const [howOpen, setHowOpen] = useState(false)
@@ -131,6 +135,35 @@ export default function Reader({
   const [index, setIndex] = useState(0)
   const [, setEager] = useState(false) // every page loads eagerly now; kept so resuming still flags it
   const scroller = useRef<HTMLDivElement>(null)
+  // Making the pages narrower or wider changes how tall the chapter is. So that you stay where you are, note which page
+  // is in the middle of the screen (and how far down it) before the change, and put that spot back in the middle after.
+  const zoomAnchor = useRef<{ i: number; f: number } | null>(null)
+  const setZoom: typeof setZoomRaw = (u) => {
+    const el = scroller.current
+    zoomAnchor.current = null
+    if (el && el.scrollHeight > el.clientHeight) {
+      const boxes = el.querySelectorAll<HTMLElement>('.pagebox')
+      const mid = el.getBoundingClientRect().top + el.clientHeight / 2
+      for (let i = 0; i < boxes.length; i++) {
+        const r = boxes[i].getBoundingClientRect()
+        if (r.bottom >= mid) {
+          zoomAnchor.current = { i, f: r.height > 0 ? Math.min(1, Math.max(0, (mid - r.top) / r.height)) : 0 }
+          break
+        }
+      }
+    }
+    setZoomRaw(u)
+  }
+  useLayoutEffect(() => {
+    const a = zoomAnchor.current
+    zoomAnchor.current = null
+    const el = scroller.current
+    if (!a || !el) return
+    const b = el.querySelectorAll<HTMLElement>('.pagebox')[a.i]
+    if (!b) return
+    const r = b.getBoundingClientRect()
+    el.scrollTop += r.top + a.f * r.height - (el.getBoundingClientRect().top + el.clientHeight / 2)
+  }, [zoom])
   const root = useRef<HTMLDivElement>(null)
   // Pages can come from another site when this one fails (see fromOtherSites): they need that site as Referer.
   const [pageRef, setPageRef] = useState(chapter.referer)
@@ -847,6 +880,8 @@ export default function Reader({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      if (lens) return // the zoom lens has its own keys
+      if ((e.key === 'z' || e.key === 'Z') && !e.ctrlKey && !e.metaKey && !e.altKey) return setLens({ ...mouse.current })
       if (e.key === 'Escape') return onBack()
       if (e.key === 'm') cycleMode()
       if (e.key === '[') setBright((b) => Math.max(BRIGHT_MIN, b - BRIGHT_STEP))
@@ -961,6 +996,7 @@ export default function Reader({
       ref={root}
       style={{ ['--page-bright' as string]: String(bright / 100) }}
       onMouseMove={(e) => {
+        mouse.current = { x: e.clientX, y: e.clientY }
         if (e.clientY < 60) showBar()
         if (autoRun && e.clientY > window.innerHeight - 110) showCtl()
       }}
@@ -1036,6 +1072,14 @@ export default function Reader({
             <Icon name="plus" />
           </button>
         </div>
+        <button
+          className="iconbtn"
+          title="Zoom in on a page (Z). Scroll to zoom, drag to move"
+          aria-label="Zoom in on a page"
+          onClick={() => setLens((l) => (l ? null : { ...mouse.current }))}
+        >
+          <Icon name="search" />
+        </button>
         {!compact && (
           <button
             className="iconbtn"
@@ -1481,6 +1525,9 @@ export default function Reader({
             renderPage(pages[index], index, true)
           )}
         </div>
+      )}
+      {lens && root.current && (
+        <ZoomLens root={root.current} start={lens} filter={pageFilter} onClose={() => setLens(null)} />
       )}
     </div>
   )

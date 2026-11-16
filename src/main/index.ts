@@ -7,6 +7,7 @@ import { join } from 'path'
 import { dataLog } from './safefile'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { fetchHtml } from './http'
+import { coverBytes } from './imageProxy'
 import { startAutoUpdates } from './updater'
 import { fillGaps } from './gapfill'
 import { importMihonBackup } from './mihon'
@@ -650,6 +651,20 @@ app.whenReady().then(async () => {
         chapterTitle: p.chapterTitle
       })
     }
+  })
+  // uploads a finished share card to the Yomi share service and returns its short link
+  ipcMain.handle('share-create', async (_e, meta: Record<string, unknown>, image: Uint8Array) => {
+    const form = new FormData()
+    form.set('meta', JSON.stringify(meta))
+    form.set('img', new Blob([image as BlobPart], { type: 'image/jpeg' }), 'card.jpg')
+    const res = await fetch('https://yomi.yomi-reader.workers.dev/new', { method: 'POST', body: form, signal: AbortSignal.timeout(20000) })
+    if (!res.ok) throw new Error('share failed ' + res.status)
+    return String(((await res.json()) as { url: string }).url)
+  })
+  // the cover as bytes, for drawing the share card (a canvas can't read the mr-img:// pictures itself)
+  ipcMain.handle('cover-bytes', async (_e, url: string, referer: string) => {
+    const got = await coverBytes(String(url), referer ? String(referer) : undefined)
+    return got ? { type: got.type, data: new Uint8Array(got.buf) } : null
   })
   ipcMain.handle('follow-list', () => listFollows())
   ipcMain.handle('follow-get', (_e, url: string) => getFollow(url))

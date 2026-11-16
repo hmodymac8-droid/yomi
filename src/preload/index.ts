@@ -18,6 +18,8 @@ const api = {
     return () => ipcRenderer.removeListener('detect-progress', h)
   },
   enrich: (urls: string[]) => ipcRenderer.invoke('enrich', urls),
+  shareCreate: (meta: unknown, image: Uint8Array) => ipcRenderer.invoke('share-create', meta, image),
+  coverBytes: (url: string, referer: string) => ipcRenderer.invoke('cover-bytes', url, referer),
   followList: () => ipcRenderer.invoke('follow-list'),
   followGet: (seriesUrl: string) => ipcRenderer.invoke('follow-get', seriesUrl),
   followSet: (meta: unknown, following: boolean) =>
