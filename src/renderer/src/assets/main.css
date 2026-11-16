@@ -700,6 +700,15 @@ select { cursor: pointer; }
 .addsite .add { max-width: 620px; }
 .addsite .add input { height: 48px; font-size: 15px; padding: 0 16px; }
 .addsite .add button { height: 48px; padding: 0 24px; font-size: 15px; font-weight: 600; }
+/* Discover: Popular sites (tested sites, one click to add) */
+.sitedir { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 4px 0 14px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.sitedir .mini { margin-left: 0; }
+.sitedir .sub { font-size: 12px; color: var(--muted-foreground); }
+.sitedirgroup { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sitedirlang { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary-text); min-width: 64px; }
+.sitepick { background: var(--paper); border: 1px solid var(--border); color: var(--foreground); padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+.sitepick:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-text); }
+.sitepick:disabled { opacity: 0.5; cursor: default; }
 /* Following: per-series auto-download switch */
 .autodl { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); cursor: pointer; margin-top: 4px; }
 .autoscroll .speedbar { width: 160px; accent-color: var(--primary); cursor: pointer; }

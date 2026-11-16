@@ -1,0 +1,9494 @@
+[
+ {
+  "file": "ACGN.ts",
+  "id": "acgn",
+  "name": "動漫戲說(ACGN.cc) - 免費線上漫畫,遊戲",
+  "url": "https://comic.acgn.cc",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AeroToon.ts",
+  "id": "aerotoon",
+  "name": "AeroToon",
+  "url": "https://aerotoon.vercel.app",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AesirScans.ts",
+  "id": "aesirscans",
+  "name": "Aesir Scans",
+  "url": "https://www.aesirscans.site",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": true
+ },
+ {
+  "file": "Aftertoon.ts",
+  "id": "aftertoon",
+  "name": "Aftertoon",
+  "url": "https://aftertoon.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AGCScanlation.ts",
+  "id": "agcscanlation",
+  "name": "AGCScanlation",
+  "url": "http://www.agcscanlation.it",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "AiluraScans.ts",
+  "id": "ailurascans",
+  "name": "Ailura Scans",
+  "url": "https://ailurascans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Ainzscans.ts",
+  "id": "ainzscans",
+  "name": "Ainzscans",
+  "url": "https://v3.ainzscans01.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Akuma.ts",
+  "id": "akuma",
+  "name": "Akuma.moe",
+  "url": "https://akuma.moe",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "AllHentai.ts",
+  "id": "allhentai",
+  "name": "AllHentai",
+  "url": "https://20.allhen.online",
+  "langs": [
+   "Russian"
+  ],
+  "adult": true,
+  "family": "Grouple",
+  "custom": true
+ },
+ {
+  "file": "AllManga.ts",
+  "id": "allmanga",
+  "name": "AllManga",
+  "url": "https://mkissa.to",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AllPornComic.ts",
+  "id": "allporncomic",
+  "name": "AllPornComic",
+  "url": "https://allporncomic.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Alphapolis.ts",
+  "id": "alphapolis",
+  "name": "ALPHAPOLIS (アルファポリス)",
+  "url": "https://www.alphapolis.co.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AmangaPlanet.ts",
+  "id": "amangaplanet",
+  "name": "Amanga Planet",
+  "url": "https://www.amangaplanet.com.tr",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "AmuyScan.ts",
+  "id": "amuyscan",
+  "name": "AmuyScan",
+  "url": "https://www.apenasmaisumyaoi.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Anikiga.ts",
+  "id": "anikiga",
+  "name": "Anikiga",
+  "url": "https://anikiga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "AnimeSama.ts",
+  "id": "animesama",
+  "name": "Anime-Sama",
+  "url": "https://anime-sama.to",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "AnimeXNovel.ts",
+  "id": "animexnovel",
+  "name": "Anime X Novel",
+  "url": "https://www.animexnovel.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Aniverse.ts",
+  "id": "aniverse",
+  "name": "Aniverse",
+  "url": "https://aniverse.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AnzManga.ts",
+  "id": "anzmanga",
+  "name": "AnzManga",
+  "url": "https://www.anzmanga25.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "MangaReaderCMS",
+  "custom": false
+ },
+ {
+  "file": "APKomik.ts",
+  "id": "apkomik",
+  "name": "APKomik",
+  "url": "https://01.apkomik.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "ApollComics.ts",
+  "id": "apollcomics",
+  "name": "Apoll Comics",
+  "url": "https://apollcomics.es",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "AquaManga.ts",
+  "id": "aquamanga",
+  "name": "AquaManga",
+  "url": "https://aquareader.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ArabsHentai.ts",
+  "id": "arabshentai",
+  "name": "ArabsHentai",
+  "url": "https://arabshentai.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ArabToons.ts",
+  "id": "arabtoons",
+  "name": "ArabToons",
+  "url": "https://arabtoons.net",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ArcaneFansub.ts",
+  "id": "arcanefansub",
+  "name": "Arcane Fansub",
+  "url": "https://arcanefansub.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ArcRelight.ts",
+  "id": "arcrelight",
+  "name": "Arc-Relight",
+  "url": "https://arc-relight.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ArcuraFansub.ts",
+  "id": "arcurafansub",
+  "name": "Arcura Fansub",
+  "url": "https://arcurafansub.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ArenaScan.ts",
+  "id": "arenascan",
+  "name": "Arena Scan",
+  "url": "https://arenascan.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ArgosScan.ts",
+  "id": "argosscan",
+  "name": "Argos Scan",
+  "url": "https://aniargos.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "YomuVerseBase",
+  "custom": false
+ },
+ {
+  "file": "Armageddon.ts",
+  "id": "armageddon",
+  "name": "Armageddon",
+  "url": "https://www.silentquill.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ArthurScan.ts",
+  "id": "arthurscan",
+  "name": "Arthur Scan",
+  "url": "https://arthurscan.xyz",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "AsmHentai.ts",
+  "id": "asmhentai",
+  "name": "AsmHentai",
+  "url": "https://asmhentai.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "AsmodeusScans.ts",
+  "id": "asmodeusscans",
+  "name": "Asmodeus Scans",
+  "url": "https://asmotoon.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AstralManga.ts",
+  "id": "astralmanga",
+  "name": "AstralManga",
+  "url": "https://astral-manga.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "AstraToons.ts",
+  "id": "AstraToons",
+  "name": "",
+  "url": "",
+  "langs": [],
+  "family": "unparsed",
+  "custom": true,
+  "adult": false
+ },
+ {
+  "file": "AstreaScans.ts",
+  "id": "astreascans",
+  "name": "Astrea Scans",
+  "url": "https://astreascans.xyz",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "HolyScanBase",
+  "custom": false
+ },
+ {
+  "file": "AsuraScans.ts",
+  "id": "asurascans",
+  "name": "Asura Scans",
+  "url": "https://asurascans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "AsuraToons.ts",
+  "id": "asuratoons",
+  "name": "Asura Toons",
+  "url": "https://www.asuratoons.info",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Atsumaru.ts",
+  "id": "atsumaru",
+  "name": "Atsumaru",
+  "url": "https://atsu.moe",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": true
+ },
+ {
+  "file": "AverisFansub.ts",
+  "id": "averisfansub",
+  "name": "Averis Fansub",
+  "url": "https://averisfansub.site",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Aymry.ts",
+  "id": "aymry",
+  "name": "Aymry",
+  "url": "https://www.aymry.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "AzoraWorld.ts",
+  "id": "azoraworld",
+  "name": "ازورا مانجا (AZORA MANGA / WORLD)",
+  "url": "https://azorafly.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "VTheme",
+  "custom": false
+ },
+ {
+  "file": "BacaKomik.ts",
+  "id": "bacakomik",
+  "name": "BacaKomik",
+  "url": "https://bacakomik.my",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Bacami.ts",
+  "id": "bacami",
+  "name": "Bacami",
+  "url": "https://v1.bacami.site",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "BakaMH.ts",
+  "id": "bakamh",
+  "name": "BakaMH",
+  "url": "https://bakamh.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "Baozimh.ts",
+  "id": "baozimh",
+  "name": "包子漫書 (baozimh)",
+  "url": "https://www.baozimh.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "BarManga.ts",
+  "id": "barmanga",
+  "name": "BarManga",
+  "url": "https://archiviumbar.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Batcave.ts",
+  "id": "batcave",
+  "name": "Batcave",
+  "url": "https://batcave.biz",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "BigComics.ts",
+  "id": "bigcomics",
+  "name": "Big Comics",
+  "url": "https://bigcomics.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "BigSolo.ts",
+  "id": "bigsolo",
+  "name": "BigSolo",
+  "url": "https://bigsolo.org",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "BilibiliManhua.ts",
+  "id": "bilibilimanhua",
+  "name": "哔哩哔哩 漫画 (Bilibili Manhua)",
+  "url": "https://manga.bilibili.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Bokugents.ts",
+  "id": "bokugents",
+  "name": "Bokugen Translation",
+  "url": "https://bokugents.com",
+  "langs": [
+   "Spanish",
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Bomtoon.ts",
+  "id": "bomtoon",
+  "name": "Bomtoon",
+  "url": "https://www.bomtoon.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "DelitoonBase",
+  "custom": false
+ },
+ {
+  "file": "BomtoonCN.ts",
+  "id": "bomtooncn",
+  "name": "Bomtoon (Chinese)",
+  "url": "https://www.bomtoon.tw",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "DelitoonBase",
+  "custom": false
+ },
+ {
+  "file": "BoyLoveCC.ts",
+  "id": "boylovecc",
+  "name": "Boylove.cc",
+  "url": "https://boylove.cc",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "BrainRotComics.ts",
+  "id": "brainrotcomics",
+  "name": "BrainRotComics",
+  "url": "https://brainrotcomics.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "CapibaraTraductor.ts",
+  "id": "capibaratraductor",
+  "name": "Capibara Traductor",
+  "url": "https://capibaratraductor.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CatharsisWorld.ts",
+  "id": "catharsisworld",
+  "name": "Catharsis World",
+  "url": "https://newcatharsis.dig-it.info",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CGBum.ts",
+  "id": "cgbum",
+  "name": "CGBum",
+  "url": "https://cgbum.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ChampionCross.ts",
+  "id": "championcross",
+  "name": "Champion Cross",
+  "url": "https://championcross.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Chochox.ts",
+  "id": "chochox",
+  "name": "Chochox",
+  "url": "https://chochox.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "CiaoPlus.ts",
+  "id": "ciaoplus",
+  "name": "Ciao Plus",
+  "url": "https://ciao.shogakukan.co.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Cocomic.ts",
+  "id": "cocomic",
+  "name": "Cocomic",
+  "url": "https://cocomic.co",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ColorcitoScans.ts",
+  "id": "colorcitoscans",
+  "name": "Colorcito Scans",
+  "url": "https://coloresito.site",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ColorcitoToons.ts",
+  "id": "colorcitotoons",
+  "name": "Colorcito Toons",
+  "url": "https://colorcitotoons.site",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ComicAction.ts",
+  "id": "comicaction",
+  "name": "webアクション (Comic Action)",
+  "url": "https://comic-action.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ComicBorder.ts",
+  "id": "comicborder",
+  "name": "コミックボーダー (ComicBorder)",
+  "url": "https://comicborder.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ComicDays.ts",
+  "id": "comicdays",
+  "name": "コミックDAYS (Comic Days)",
+  "url": "https://comic-days.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": true
+ },
+ {
+  "file": "ComicEarthStar.ts",
+  "id": "comicearthstar",
+  "name": "コミック アース・スター (Comic Earth Star)",
+  "url": "https://comic-earthstar.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": true
+ },
+ {
+  "file": "ComicFuz.ts",
+  "id": "comicfuz",
+  "name": "COMIC FUZ",
+  "url": "https://comic-fuz.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ComicGardo.ts",
+  "id": "comicgardo",
+  "name": "コミックガルド (Comic Gardo)",
+  "url": "https://comic-gardo.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ComicGrowl.ts",
+  "id": "comicgrowl",
+  "name": "コミックグロウル (Comic Growl)",
+  "url": "https://comic-growl.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "ComicHubFree.ts",
+  "id": "mycomiclist",
+  "name": "ComicHub Free",
+  "url": "https://comichubfree.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Comick.ts",
+  "id": "comick",
+  "name": "Comick (.live)",
+  "url": "https://comick.live",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ComickFan.ts",
+  "id": "comickfan",
+  "name": "Comick Fanmade",
+  "url": "https://comickfan.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ComicLand.ts",
+  "id": "comicland",
+  "name": "ComicLand",
+  "url": "https://comicland.org",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Comico.ts",
+  "id": "comico",
+  "name": "Comico (コミコ)",
+  "url": "https://www.comico.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ComicOgyaaa.ts",
+  "id": "comicogyaaa",
+  "name": "Comic Ogyaaa",
+  "url": "https://comic-ogyaaa.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ComicPash.ts",
+  "id": "comicpash",
+  "name": "Comic Pash",
+  "url": "https://comicpash.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "ComicRide.ts",
+  "id": "comicride",
+  "name": "Comic Ride",
+  "url": "https://comicride.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "ComicRyu.ts",
+  "id": "comicryu",
+  "name": "COMICリュウ",
+  "url": "https://comic-ryu.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "ComicSeasons.ts",
+  "id": "comicseasons",
+  "name": "Comic Seasons",
+  "url": "https://comic-seasons.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ComicsValley.ts",
+  "id": "comicsvalley",
+  "name": "Comics Valley",
+  "url": "https://comicsvalley.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ComicTrail.ts",
+  "id": "comictrail",
+  "name": "Comic Trail (コミックトレイル)",
+  "url": "https://comic-trail.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ComicZenon.ts",
+  "id": "comiczenon",
+  "name": "ゼノン編集部 (Comic Zenon)",
+  "url": "https://comic-zenon.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ComicZerosum.ts",
+  "id": "comiczerosum",
+  "name": "Comic ゼロサム (Comic ZEROSUM)",
+  "url": "https://zerosumonline.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Comikey.ts",
+  "id": "comikey",
+  "name": "Comikey",
+  "url": "https://comikey.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ComikeyArchive.ts",
+  "id": "comikey-archive",
+  "name": "Comikey (Archive)",
+  "url": "https://cdn.comikey-cloud.workers.dev",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Comix.ts",
+  "id": "comix",
+  "name": "Comix",
+  "url": "https://comix.to",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CookMana.ts",
+  "id": "cookmana",
+  "name": "CookMana",
+  "url": "https://cookmana.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CoolMic.ts",
+  "id": "coolmic",
+  "name": "CoolMic",
+  "url": "https://coolmic.me",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CopyManga.ts",
+  "id": "CopyManga",
+  "name": "",
+  "url": "",
+  "langs": [],
+  "family": "unparsed",
+  "custom": true,
+  "adult": false
+ },
+ {
+  "file": "CoroCoro.ts",
+  "id": "corocoro",
+  "name": "CoroCoro Online (コロコロオンライン)",
+  "url": "https://www.corocoro.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CosmicScansIndonesia.ts",
+  "id": "cosmicscansid",
+  "name": "Cosmic Scans Indonesia",
+  "url": "https://04.cosmicscans.to",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CovenScan.ts",
+  "id": "covenscan",
+  "name": "CovenScan",
+  "url": "https://covendasbruxonas.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "CreativeComic.ts",
+  "id": "creativecomic",
+  "name": "Creative Comic",
+  "url": "https://www.creative-comic.tw",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "CulturedWorks.ts",
+  "id": "culturedworks",
+  "name": "Cultured Works",
+  "url": "https://culturedworks.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "CyComi.ts",
+  "id": "cycomi",
+  "name": "CyComi",
+  "url": "https://cycomi.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "DankeFursLesen.ts",
+  "id": "dankefurslesen",
+  "name": "Danke fürs Lesen",
+  "url": "https://danke.moe",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Guya",
+  "custom": false
+ },
+ {
+  "file": "DatgarScan.ts",
+  "id": "datgarscan",
+  "name": "Datgar Scan",
+  "url": "https://datgarscanlation.blogspot.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": false
+ },
+ {
+  "file": "Daysneo.ts",
+  "id": "daysneo",
+  "name": "Daysneo",
+  "url": "https://daysneo.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "DeathTollScans.ts",
+  "id": "deathtollscans",
+  "name": "DeathTollScans",
+  "url": "https://reader.deathtollscans.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "DecadenceScans.ts",
+  "id": "decadencescans",
+  "name": "Decadence",
+  "url": "https://reader.decadencescans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "DennoMavo.ts",
+  "id": "dennomavo",
+  "name": "Denno Mavo",
+  "url": "https://mavo.takekuma.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "DesireScans.ts",
+  "id": "desirescans",
+  "name": "Desire Scans",
+  "url": "https://desirescans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "NovelDexTheme",
+  "custom": false
+ },
+ {
+  "file": "Desu.ts",
+  "id": "desu",
+  "name": "Desu",
+  "url": "https://desu.uno",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "DiamondFansub.ts",
+  "id": "diamondfansub",
+  "name": "DiamondFansub",
+  "url": "https://diamondfansub.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Digimon.ts",
+  "id": "digimon",
+  "name": "Digimon",
+  "url": "https://digimon.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Dilar.ts",
+  "id": "dilar",
+  "name": "Dilar",
+  "url": "https://dilar.tube",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "DingManhua.ts",
+  "id": "dingmanhua",
+  "name": "DingManhua",
+  "url": "https://www.dingmanhua.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "DivaScans.ts",
+  "id": "divascans",
+  "name": "Diva Scans",
+  "url": "https://divascans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "NovelDexTheme",
+  "custom": false
+ },
+ {
+  "file": "Dm5.ts",
+  "id": "dm5",
+  "name": "DM5 漫画",
+  "url": "https://www.dm5.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "DM5",
+  "custom": true
+ },
+ {
+  "file": "DongManManhua.ts",
+  "id": "dongmanmanhua",
+  "name": "咚漫 (DongMan Manhua)",
+  "url": "https://www.dongmanmanhua.cn",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "LineWebtoonBase",
+  "custom": false
+ },
+ {
+  "file": "Doujin69.ts",
+  "id": "doujin69",
+  "name": "Doujin69",
+  "url": "https://doujin69.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "DoujinDesu.ts",
+  "id": "doujindesu",
+  "name": "DoujinDesu",
+  "url": "https://doujin.desu.xxx",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "DoujinHentai.ts",
+  "id": "doujinhentai",
+  "name": "DoujinHentai",
+  "url": "https://doujinhentai.net",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Doujinku.ts",
+  "id": "doujinku",
+  "name": "Doujinku",
+  "url": "https://doujinku.org",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "DoujinLC.ts",
+  "id": "doujinlc",
+  "name": "DoujinLC",
+  "url": "https://doujin-lc.net",
+  "langs": [
+   "Thai"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Doujins.ts",
+  "id": "doujins",
+  "name": "Doujins",
+  "url": "https://doujins.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "DoujinZa.ts",
+  "id": "doujinza",
+  "name": "DoujinZa",
+  "url": "https://doujinza.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "DragonTea.ts",
+  "id": "dragontea",
+  "name": "Dragon Tea Scans",
+  "url": "https://dragontea.ink",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "DragonTranslation.ts",
+  "id": "dragontranslation",
+  "name": "DragonTranslation",
+  "url": "https://dragontranslation.org",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "DrakeScans.ts",
+  "id": "drakescans",
+  "name": "Drake Scans",
+  "url": "https://drakecomic.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "NovelDexTheme",
+  "custom": false
+ },
+ {
+  "file": "DreComicPlus.ts",
+  "id": "drecomicplus",
+  "name": "DreComicPlus",
+  "url": "https://drecomi-plus.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "DuaLeoTruyen.ts",
+  "id": "dualeotruyen",
+  "name": "DuaLeoTruyen",
+  "url": "https://dualeotruyenkf.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Dumanwu.ts",
+  "id": "dumanwu",
+  "name": "Dumanwu",
+  "url": "https://dumanwu1.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "DxdFansub.ts",
+  "id": "dxdfansub",
+  "name": "DxD Fansub",
+  "url": "https://dxdfansub.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "DynastyScans.ts",
+  "id": "dynasty-scans",
+  "name": "Dynasty Reader",
+  "url": "https://dynasty-scans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "EcchiDoujin.ts",
+  "id": "ecchidoujin",
+  "name": "Ecchi-Doujin",
+  "url": "https://ecchi-doujin.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "EightComic.ts",
+  "id": "eightcomic",
+  "name": "8Comic",
+  "url": "https://www.8comic.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "EighteenComic.ts",
+  "id": "18comic",
+  "name": "18comic",
+  "url": "https://18comic.vip",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "EightMuses.ts",
+  "id": "8muses",
+  "name": "8 MUSES",
+  "url": "https://comics.8muses.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "EightMusesXXX.ts",
+  "id": "8musesxxx",
+  "name": "8 MUSES XXX",
+  "url": "https://8muses.xxx",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ElderManga.ts",
+  "id": "eldermanga",
+  "name": "ElderManga",
+  "url": "https://eldermanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "TurkMangaBase",
+  "custom": false
+ },
+ {
+  "file": "ElevenToon.ts",
+  "id": "11toon",
+  "name": "11toon",
+  "url": "https://www.11toon.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ElfToon.ts",
+  "id": "elftoon",
+  "name": "Elf Toon",
+  "url": "https://elftoon.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "NovelDexTheme",
+  "custom": false
+ },
+ {
+  "file": "ErisScans.ts",
+  "id": "erisscans",
+  "name": "Eris Scans",
+  "url": "https://erisscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "KeyoApp",
+  "custom": false
+ },
+ {
+  "file": "EskiMangalar.ts",
+  "id": "eskimangalar",
+  "name": "Eski Mangalar",
+  "url": "https://eskimangalar.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "TurkMangaBase",
+  "custom": false
+ },
+ {
+  "file": "EternalMangas.ts",
+  "id": "eternalmangas",
+  "name": "Eternal Mangas",
+  "url": "https://eternalmangas.org",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "EuphoriaScan.ts",
+  "id": "euphoriascan",
+  "name": "Euphoria Scan",
+  "url": "https://euphoriascan.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "EvaScans.ts",
+  "id": "evascans",
+  "name": "Eva Scans",
+  "url": "https://evascans.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "EZManga.ts",
+  "id": "ezmanga",
+  "name": "EZManga",
+  "url": "https://ezmanga.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "EzMangaBase",
+  "custom": false
+ },
+ {
+  "file": "FalcoScan.ts",
+  "id": "tenkai",
+  "name": "Falco Scan",
+  "url": "https://falcoscan.net",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "FastestManga.ts",
+  "id": "fastestmanga",
+  "name": "Fastest Manga",
+  "url": "https://www.fastestmanga.com",
+  "langs": [
+   "English",
+   "Turkish",
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "FavComic.ts",
+  "id": "favcomic",
+  "name": "FavComic",
+  "url": "https://www.favcomic.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "FbSquads.ts",
+  "id": "fbsquads",
+  "name": "Fleur Blanche Squads",
+  "url": "https://fbsscan.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "FeelWeb.ts",
+  "id": "feelweb",
+  "name": "FeelWeb",
+  "url": "https://feelweb.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "FlameComics.ts",
+  "id": "flamecomics",
+  "name": "Flame Comics",
+  "url": "https://flamecomics.xyz",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "FlashManga.ts",
+  "id": "flashmanga",
+  "name": "Flash Manga",
+  "url": "https://www.flash-manga.net",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "FlowerComics.ts",
+  "id": "flowercomics",
+  "name": "Flower Comics",
+  "url": "https://flowercomics.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "FlowerMangas.ts",
+  "id": "flowermangas",
+  "name": "Flower Mangas",
+  "url": "https://flowermangas.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "FMTeam.ts",
+  "id": "fmteam",
+  "name": "FMTeam",
+  "url": "https://fmteam.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "FoxTruyen.ts",
+  "id": "truyengg",
+  "name": "FoxTruyen",
+  "url": "https://foxtruyen2.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "FuryoSociety.ts",
+  "id": "furiosociety",
+  "name": "Furyo Society",
+  "url": "https://furyosociety.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "GaiaToon.ts",
+  "id": "gaiatoon",
+  "name": "GaiaToon",
+  "url": "https://gaiatoon.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "GanGanOnline.ts",
+  "id": "ganganonline",
+  "name": "ガンガンONLINE (Gangan Online)",
+  "url": "https://www.ganganonline.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Ganma.ts",
+  "id": "ganma",
+  "name": "GANMA!",
+  "url": "https://ganma.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "GComi.ts",
+  "id": "comicmedu",
+  "name": "G-Comi",
+  "url": "https://g-comi.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "GDScans.ts",
+  "id": "gdscans",
+  "name": "GD Scans",
+  "url": "https://gdscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "GedeComix.ts",
+  "id": "gedecomix",
+  "name": "GedeComix",
+  "url": "https://gedecomix.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "GenzToon.ts",
+  "id": "genztoon",
+  "name": "GenzToon",
+  "url": "https://genztoons.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "KeyoApp",
+  "custom": false
+ },
+ {
+  "file": "Gntai.ts",
+  "id": "gntai",
+  "name": "GNTAI",
+  "url": "https://www.gntai.net",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "GodaComic.ts",
+  "id": "godacomic",
+  "name": "GodaComic",
+  "url": "https://manhuascans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "GodaBase",
+  "custom": true
+ },
+ {
+  "file": "GodaManhua.ts",
+  "id": "godamanhua",
+  "name": "GodaManhua",
+  "url": "https://baozimh.org",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "GodaBase",
+  "custom": false
+ },
+ {
+  "file": "GodDoujin.ts",
+  "id": "goddoujin",
+  "name": "God-Doujin",
+  "url": "https://god-doujin.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "GolgeBahcesi.ts",
+  "id": "golgebahcesi",
+  "name": "Gölge Bahçesi",
+  "url": "https://golgebahcesi.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "GoodToon.ts",
+  "id": "goodtoon",
+  "name": "GoodToon",
+  "url": "https://www.goodtoon011.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "GorakuWeb.ts",
+  "id": "gorakuweb",
+  "name": "Goraku Web",
+  "url": "https://gorakuweb.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "GourmetScans.ts",
+  "id": "gourmetscans",
+  "name": "Gourmet Scans",
+  "url": "https://gourmetsupremacy.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "GrabberZone.ts",
+  "id": "grabberzone",
+  "name": "Grabber Zone",
+  "url": "https://grabber.zone",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Grimelek.ts",
+  "id": "grimelek",
+  "name": "Siyah Melek",
+  "url": "https://siyahmelek.my",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "GrimScans.ts",
+  "id": "grimscans",
+  "name": "Grim Scans",
+  "url": "https://grimscans.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "KeyoApp",
+  "custom": false
+ },
+ {
+  "file": "GTOTheGreatSite.ts",
+  "id": "gtotgs",
+  "name": "GTO The Great Site",
+  "url": "https://reader.gtothegreatsite.net",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "Guoman8.ts",
+  "id": "guoman8",
+  "name": "国漫吧 (Guoman8)",
+  "url": "https://www.guoman8.cc",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "SinMH",
+  "custom": false
+ },
+ {
+  "file": "GuruKomik.ts",
+  "id": "gurukomik",
+  "name": "Guru Komik",
+  "url": "https://gurukomiklive.blogspot.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": false
+ },
+ {
+  "file": "Hachirumi.ts",
+  "id": "hachirumi",
+  "name": "Hachirumi",
+  "url": "https://hachirumi.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Guya",
+  "custom": false
+ },
+ {
+  "file": "HadesNoFansub.ts",
+  "id": "hadesnofansub",
+  "name": "Hades No Fansub",
+  "url": "https://lectorhades.latamtoon.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "HadesScans.ts",
+  "id": "hadesscans",
+  "name": "Hades Scans",
+  "url": "https://hadesscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "HanamiHeaven.ts",
+  "id": "noindexscan",
+  "name": "Hanami Heaven",
+  "url": "https://hanamiheaven.org",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HanaYume.ts",
+  "id": "hanayume",
+  "name": "HanaYume",
+  "url": "https://hanayume.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "Hanman18.ts",
+  "id": "hanman18",
+  "name": "Hanman18",
+  "url": "https://hanman18.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "HarmonyScan.ts",
+  "id": "harmonyscan",
+  "name": "Harmony Scan",
+  "url": "https://harmony-scan.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HastaTeam.ts",
+  "id": "hastateam",
+  "name": "Hasta Team",
+  "url": "https://reader.hastateam.com",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "HastaTeamDDT.ts",
+  "id": "hastateamddt",
+  "name": "Hasta Team DDT",
+  "url": "https://ddt.hastateam.com",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "HattoriScans.ts",
+  "id": "hattoriscans",
+  "name": "Hattori Scans",
+  "url": "https://hattoriscans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Hayalistic.ts",
+  "id": "hayalistic",
+  "name": "Hayalistic",
+  "url": "https://hayalistic.online",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HDPornComics.ts",
+  "id": "hdporncomics",
+  "name": "HDPornComics",
+  "url": "https://hdporncomics.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HeavenManga2.ts",
+  "id": "heavenmanga2",
+  "name": "HeavenManga",
+  "url": "https://heavenmanga.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HenChan.ts",
+  "id": "henchan",
+  "name": "Хентай-тян! (Hentai-chan)",
+  "url": "https://hentaichan.live",
+  "langs": [
+   "Russian"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Hentai18.ts",
+  "id": "hentai18",
+  "name": "Hentai18",
+  "url": "https://hentai18.net",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Hentai20.ts",
+  "id": "hentai20",
+  "name": "Hentai20",
+  "url": "https://hentai20.io",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Hentai2Read.ts",
+  "id": "hentai2read",
+  "name": "Hentai2R",
+  "url": "https://hentai2read.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "HentaiComics.ts",
+  "id": "hentaicomics",
+  "name": "HentaiComics",
+  "url": "https://hentaicomics.biz",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "HentaiDaTia.ts",
+  "id": "hentaidatia",
+  "name": "Hentai da Tia",
+  "url": "https://hentaidatia.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HentaiFox.ts",
+  "id": "hentaifox",
+  "name": "HentaiFox",
+  "url": "https://hentaifox.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "HentaiHall.ts",
+  "id": "hentaihall",
+  "name": "HentaiHall",
+  "url": "https://hentaihall.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HentaiHand.ts",
+  "id": "hentaihand",
+  "name": "HentaiHand",
+  "url": "https://hentaihand.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HentaiHere.ts",
+  "id": "hentaihere",
+  "name": "HentaiHere",
+  "url": "https://hentaihere.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "HentaiLib.ts",
+  "id": "hentailib",
+  "name": "HentaiLib",
+  "url": "https://hentailib.me",
+  "langs": [
+   "Russian"
+  ],
+  "adult": true,
+  "family": "LibGroup",
+  "custom": false
+ },
+ {
+  "file": "HentaiNexus.ts",
+  "id": "hentainexus",
+  "name": "HentaiNexus",
+  "url": "https://hentainexus.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HentaiRead.ts",
+  "id": "hentairead",
+  "name": "HentaiRead",
+  "url": "https://hentairead.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "HentaiTeca.ts",
+  "id": "hentaiteca",
+  "name": "HentaiTeca",
+  "url": "https://hentaiteca.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HentaiTokyo.ts",
+  "id": "hentaitokyo",
+  "name": "Hentai Tokyo",
+  "url": "https://hentaitokyo.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "HentaiVN.ts",
+  "id": "hentaivn",
+  "name": "HentaiVN",
+  "url": "https://hentaivn.show",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HentaiXYuri.ts",
+  "id": "hentaixyuri",
+  "name": "HentaiXYuri",
+  "url": "https://hentaixyuri.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HentaiZone.ts",
+  "id": "hentaizone",
+  "name": "HentaiZone",
+  "url": "https://hentaizone.xyz",
+  "langs": [
+   "French"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HerosWebNew.ts",
+  "id": "HerosWebNew",
+  "name": "",
+  "url": "",
+  "langs": [],
+  "family": "unparsed",
+  "custom": true,
+  "adult": false
+ },
+ {
+  "file": "HijalaScans.ts",
+  "id": "hijalascans",
+  "name": "Hijala Scans",
+  "url": "https://en-hijala.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "VTheme",
+  "custom": false
+ },
+ {
+  "file": "Hiperdex.ts",
+  "id": "hiperdex",
+  "name": "Hiperdex",
+  "url": "https://hiperdex.tv",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "HiperManga",
+  "custom": false
+ },
+ {
+  "file": "Hipertoon.ts",
+  "id": "hipertoon",
+  "name": "Hipertoon",
+  "url": "https://hipertoon.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "HiperManga",
+  "custom": false
+ },
+ {
+  "file": "Hitomi.ts",
+  "id": "hitomi",
+  "name": "Hitomi",
+  "url": "https://hitomi.la",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HiveScans.ts",
+  "id": "hivescans",
+  "name": "Hive Scans",
+  "url": "https://hivetoons.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "VTheme",
+  "custom": false
+ },
+ {
+  "file": "HniScanTrad.ts",
+  "id": "hniscantrad",
+  "name": "HNI-Scantrad",
+  "url": "https://hni-scantrad.net",
+  "langs": [
+   "French",
+   "English"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "HolonoMetria.ts",
+  "id": "holonometria",
+  "name": "HolonoMetria",
+  "url": "https://holoearth.com",
+  "langs": [
+   "Japanese",
+   "English",
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HolyScans.ts",
+  "id": "holyscans",
+  "name": "HolyScans",
+  "url": "https://holyscans.com.tr",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "HolyScanBase",
+  "custom": false
+ },
+ {
+  "file": "Honeytoon.ts",
+  "id": "honeytoon",
+  "name": "Honeytoon",
+  "url": "https://honeytoon.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HotManga.ts",
+  "id": "hotmanga",
+  "name": "Hot-Manga",
+  "url": "https://www.hot-manga.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": true,
+  "family": "MeianBase",
+  "custom": true
+ },
+ {
+  "file": "HqNow.ts",
+  "id": "hqnow",
+  "name": "Hq Now",
+  "url": "https://www.hq-now.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "HunterScan.ts",
+  "id": "hunterscan",
+  "name": "Hunters Scan",
+  "url": "https://readhunters.xyz",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "HwagoID.ts",
+  "id": "hwagoid",
+  "name": "Hwago",
+  "url": "https://01.hwago.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "IchijinPlus.ts",
+  "id": "ichijin-plus",
+  "name": "一迅プラス (Ichijin Plus)",
+  "url": "https://ichicomi.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "Ikanmh.ts",
+  "id": "ikanmh",
+  "name": "Ikanmh",
+  "url": "https://ikanmh.cc",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "MH",
+  "custom": false
+ },
+ {
+  "file": "IkigaiMangas.ts",
+  "id": "ikigaimangas",
+  "name": "Ikigai Mangas",
+  "url": "https://visualikigai.cmpunjabrashancard.pk",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Ikiru.ts",
+  "id": "ikiru",
+  "name": "Ikiru",
+  "url": "https://11.ikiru.wtf",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Imgur.ts",
+  "id": "imgur",
+  "name": "Imgur",
+  "url": "https://imgur.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "IMHentai.ts",
+  "id": "imhentai",
+  "name": "IMHentai",
+  "url": "https://imhentai.xxx",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ImperioDaBritannia.ts",
+  "id": "imperiodabritania",
+  "name": "Imperio Da Britannia",
+  "url": "https://imperiodabritannia.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ImperioManhwa.ts",
+  "id": "imperiomanhwa",
+  "name": "Imperio Manhwa",
+  "url": "https://imperiomanhwa.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "InfraFandub.ts",
+  "id": "infrafandub",
+  "name": "Infra Fandub",
+  "url": "https://infrafandub.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Inkapk.ts",
+  "id": "inkapk",
+  "name": "Inkapk",
+  "url": "https://inkapk.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "InManga.ts",
+  "id": "inmanga",
+  "name": "InManga",
+  "url": "https://inmanga.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "InmortalScan.ts",
+  "id": "inmortalscan",
+  "name": "Inmortal Scan",
+  "url": "https://scan-inmortal.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "iqiyi.ts",
+  "id": "iqiyi",
+  "name": "iqiyi",
+  "url": "https://manhua.iqiyi.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "JapScan.ts",
+  "id": "japscan",
+  "name": "JapScan",
+  "url": "https://www.japscan.foo",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "JeazScans.ts",
+  "id": "jeazscans",
+  "name": "Jeaz Scans",
+  "url": "https://lectorhub.j5z.xyz",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "JEnta.ts",
+  "id": "jenta",
+  "name": "J-Enta",
+  "url": "https://comic.j-nbooks.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "Jjaptoon.ts",
+  "id": "jjaptoon",
+  "name": "Jjaptoon",
+  "url": "https://www.jjaptoon007.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "JManga.ts",
+  "id": "jmanga",
+  "name": "JManga",
+  "url": "https://jmanga.party",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Liliana",
+  "custom": true
+ },
+ {
+  "file": "JuinJutsuTeam.ts",
+  "id": "juinjutsuteam",
+  "name": "JuinJutsu Team",
+  "url": "https://www.juinjutsureader.ovh",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "KadoComi.ts",
+  "id": "kadocomi",
+  "name": "カドコミ (KadoComi)",
+  "url": "https://comic-walker.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Kagane.ts",
+  "id": "kagane",
+  "name": "Kagane",
+  "url": "https://kagane.moe",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Kairatoon.ts",
+  "id": "kairatoon",
+  "name": "Kairatoon",
+  "url": "https://kairatoon.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Kakaopage.ts",
+  "id": "kakaopage",
+  "name": "Page Kakao (카카오페이지)",
+  "url": "https://page.kakao.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "KanMan.ts",
+  "id": "kanman",
+  "name": "看漫画 (KanMan)",
+  "url": "https://www.kanman.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Kanzenin.ts",
+  "id": "kanzenin",
+  "name": "Kanzenin",
+  "url": "https://kanzenin.info",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "KaynScan.ts",
+  "id": "kaynscan",
+  "name": "Kayn Scan",
+  "url": "https://kaynscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "NovelDexTheme",
+  "custom": false
+ },
+ {
+  "file": "KazeScans.ts",
+  "id": "kazescans",
+  "name": "Kaze Scans",
+  "url": "https://www.kazescans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": false
+ },
+ {
+  "file": "KimiComi.ts",
+  "id": "kimicomi",
+  "name": "キミコミ (KimiComi)",
+  "url": "https://kimicomi.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "KingOfShojo.ts",
+  "id": "kingofshojo",
+  "name": "KingOfShojo",
+  "url": "https://kingofshojo.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Kiryuu.ts",
+  "id": "kiryuu",
+  "name": "Kiryuu",
+  "url": "https://v7.kiryuu.to",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "KiruBase",
+  "custom": true
+ },
+ {
+  "file": "KissmangaIN.ts",
+  "id": "kissmangain",
+  "name": "Kissmanga",
+  "url": "https://kissmanga.in",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "KlikManga.ts",
+  "id": "klikmanga",
+  "name": "KlikManga",
+  "url": "https://klikmanga.org",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "KLManga.ts",
+  "id": "klmanga",
+  "name": "KLManga",
+  "url": "https://klz9.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "KLMangash.ts",
+  "id": "klmangash",
+  "name": "KLManga(.sh)",
+  "url": "https://klmanga.tips",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Zing92Base",
+  "custom": true
+ },
+ {
+  "file": "Kmansin09.ts",
+  "id": "kmansin09",
+  "name": "K-漫神 (Kmansin09)",
+  "url": "https://kmansin09.top",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "KolNovel.ts",
+  "id": "kolnovel",
+  "name": "Kol Novel (ملوك الروايات)",
+  "url": "https://kolnovel.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "KomBatch.ts",
+  "id": "kombatch",
+  "name": "KomBatch",
+  "url": "https://kombatch.cc",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "KomikIndoId.ts",
+  "id": "komikindoid",
+  "name": "KomikIndoId",
+  "url": "https://komikindo.ch",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "KomikIndoMe.ts",
+  "id": "komikindome",
+  "name": "KomikIndoMe",
+  "url": "https://komikindo.click",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Komiko.ts",
+  "id": "meianplus",
+  "name": "Komiko",
+  "url": "https://www.komiko.io",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "MeianBase",
+  "custom": false
+ },
+ {
+  "file": "KomikRealm.ts",
+  "id": "komikrealm",
+  "name": "KomikRealm",
+  "url": "https://komikrealm.org",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "QwikMangas",
+  "custom": false
+ },
+ {
+  "file": "KomikStation.ts",
+  "id": "komikstation",
+  "name": "KomikStation",
+  "url": "https://komikstation.org",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "KomikTap.ts",
+  "id": "komiktap",
+  "name": "KomikTap",
+  "url": "https://komiktap.info",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Komiku.ts",
+  "id": "komiku",
+  "name": "Komiku",
+  "url": "https://komiku.org",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "KomikuCOM.ts",
+  "id": "komikucom",
+  "name": "Komiku.COM",
+  "url": "https://01.komiku.asia",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "KoreliManga.ts",
+  "id": "korelimanga",
+  "name": "KoreliManga",
+  "url": "https://korelimanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "KSGroupScans.ts",
+  "id": "ksgroupscans",
+  "name": "KSGroupScans",
+  "url": "https://ksgroupscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Kuaikanmanhua.ts",
+  "id": "kuaikanmanhua",
+  "name": "Kuaikanmanhua",
+  "url": "https://www.kuaikanmanhua.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "kuimh.ts",
+  "id": "kuimh",
+  "name": "酷爱漫画 (Kuimh)",
+  "url": "https://www.woimh.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "MH",
+  "custom": false
+ },
+ {
+  "file": "KuManga.ts",
+  "id": "kumanga",
+  "name": "KuManga",
+  "url": "https://www.kumanga.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "KurageBunch.ts",
+  "id": "kuragebunch",
+  "name": "くらげバンチ (KurageBunch)",
+  "url": "https://kuragebunch.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "KuroiManga.ts",
+  "id": "kuroimanga",
+  "name": "KuroiManga",
+  "url": "https://www.kuroimanga.site",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "KuroToon.ts",
+  "id": "kurotoon",
+  "name": "KuroToon",
+  "url": "https://kurotoon.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "LagoonScans.ts",
+  "id": "lagoonscans",
+  "name": "Lagoon Scans",
+  "url": "https://lagoonscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Laimanhua8.ts",
+  "id": "laimanhua8",
+  "name": "Laimanhua8",
+  "url": "https://www.laimanhua88.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "LaviniaFansub.ts",
+  "id": "laviniafansub",
+  "name": "Lavinia Fansub",
+  "url": "https://laviniafansub.shop",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "LectorJPG.ts",
+  "id": "lectorjpg",
+  "name": "VisorJPG",
+  "url": "https://visorjpg.lat",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "LectorMangaLat.ts",
+  "id": "lectormangalat",
+  "name": "LectorManga (.Lat)",
+  "url": "https://lector-mangas.lat",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "LectorXD.ts",
+  "id": "lectorxd",
+  "name": "LectorXD",
+  "url": "https://lectorxd.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "LeerCapitulo.ts",
+  "id": "leercapitulo",
+  "name": "LeerCapitulo",
+  "url": "https://www.leercapitulo.co",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "LeerManhwas.ts",
+  "id": "leermanhwas",
+  "name": "LeerManhwas",
+  "url": "https://leermanhwas.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "LegionScans.ts",
+  "id": "legionscans",
+  "name": "Legion Scans",
+  "url": "https://legionscans.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "LeituraManga.ts",
+  "id": "leituramanga",
+  "name": "LeituraManga",
+  "url": "https://leituramanga.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "LELManga.ts",
+  "id": "lelmanga",
+  "name": "LELManga",
+  "url": "https://www.lelmanga.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "LELScan.ts",
+  "id": "lelscan",
+  "name": "LELScan",
+  "url": "https://lelscans.net",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "LELScanVF.ts",
+  "id": "lelscanvf",
+  "name": "LELSCAN-VF",
+  "url": "https://www.lelscanfr.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "FuzzyDoodle",
+  "custom": false
+ },
+ {
+  "file": "LerHentais.ts",
+  "id": "lerhentais",
+  "name": "LerHentais",
+  "url": "https://lerhentais.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "HiperManga",
+  "custom": false
+ },
+ {
+  "file": "LerMangas.ts",
+  "id": "lermangas",
+  "name": "LerMangas",
+  "url": "https://lermangas.me",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "LewdManhwa.ts",
+  "id": "lewdmanhwa",
+  "name": "LewdManhwa",
+  "url": "https://lewdmanhwa.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "LezhinDE.ts",
+  "id": "delitoonde",
+  "name": "Lezhin (German)",
+  "url": "https://www.lezhinde.com",
+  "langs": [
+   "German"
+  ],
+  "adult": false,
+  "family": "DelitoonBase",
+  "custom": false
+ },
+ {
+  "file": "LezhinES.ts",
+  "id": "lezhin-es",
+  "name": "Lezhin (Spanish)",
+  "url": "https://www.lezhin.es",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "DelitoonBase",
+  "custom": false
+ },
+ {
+  "file": "LezhinFR.ts",
+  "id": "delitoon",
+  "name": "Lezhin (French)",
+  "url": "https://www.lezhinfr.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "DelitoonBase",
+  "custom": false
+ },
+ {
+  "file": "LezhinJA.ts",
+  "id": "lezhin-ja",
+  "name": "Lezhin (Japanese)",
+  "url": "https://lezhin.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "LezhinTH.ts",
+  "id": "boomtoon",
+  "name": "Lezhin (Thai)",
+  "url": "https://www.lezhinth.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "DelitoonBase",
+  "custom": false
+ },
+ {
+  "file": "LHTranslation.ts",
+  "id": "lhtranslation",
+  "name": "LHTranslation",
+  "url": "https://lhtranslation.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "LianScans.ts",
+  "id": "lianscans",
+  "name": "LIAN",
+  "url": "https://www.lianscans.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "LilyManga.ts",
+  "id": "lilymanga",
+  "name": "Lily Manga",
+  "url": "https://lilymanga.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "LimonManga.ts",
+  "id": "limonmanga",
+  "name": "Limon Manga",
+  "url": "https://limonmanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "TurkMangaBase",
+  "custom": false
+ },
+ {
+  "file": "LineWebtoon.ts",
+  "id": "linewebtoon",
+  "name": "Line Webtoon",
+  "url": "https://www.webtoons.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "LineWebtoonBase",
+  "custom": false
+ },
+ {
+  "file": "LoversToon.ts",
+  "id": "loverstoon",
+  "name": "Lovers Toon",
+  "url": "https://loverstoon.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "LuaScans.ts",
+  "id": "luascans",
+  "name": "Lua Scans",
+  "url": "https://luacomic.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "HeanCMS",
+  "custom": false
+ },
+ {
+  "file": "LumosKomik.ts",
+  "id": "lumoskomik",
+  "name": "LumosKomik",
+  "url": "https://03.lumosgg.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "LunarAnimes.ts",
+  "id": "lunaranimes",
+  "name": "Lunar Animes",
+  "url": "https://lunarx.to",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "LunaScans.ts",
+  "id": "lunascans",
+  "name": "Luna Scans",
+  "url": "https://tuhafscans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "LupiTeam.ts",
+  "id": "lupiteam",
+  "name": "LupiTeam",
+  "url": "https://lupiteam.net",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "Luscious.ts",
+  "id": "luscious",
+  "name": "Luscious",
+  "url": "https://www.luscious.net",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Luvyaa.ts",
+  "id": "luvyaa",
+  "name": "Luvyaa",
+  "url": "https://v5.luvyaa.co",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "LxHentai.ts",
+  "id": "lxhentai",
+  "name": "LxHentai (Hentai LXX)",
+  "url": "https://lxmanga.space",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Lycantoons.ts",
+  "id": "lycantoons",
+  "name": "Lycantoons",
+  "url": "https://lycantoons.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MadaraDex.ts",
+  "id": "madaradex",
+  "name": "MadaraDex",
+  "url": "https://madaradex.org",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MadaraScans.ts",
+  "id": "madarascans",
+  "name": "Madara Scans",
+  "url": "https://madarascans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "MagComi.ts",
+  "id": "magcomi",
+  "name": "MAGCOMI",
+  "url": "https://magcomi.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "MagicalTranslators.ts",
+  "id": "magicaltranslators",
+  "name": "Magical Translators",
+  "url": "https://mahoushoujobu.com",
+  "langs": [
+   "English",
+   "Spanish",
+   "Polish"
+  ],
+  "adult": false,
+  "family": "Guya",
+  "custom": false
+ },
+ {
+  "file": "MagKan.ts",
+  "id": "magkan",
+  "name": "MagKan",
+  "url": "https://kansai.mag-garden.co.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "MagusManga.ts",
+  "id": "magusmanga",
+  "name": "MagusManga",
+  "url": "https://magustoon.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "VTheme",
+  "custom": false
+ },
+ {
+  "file": "MaID.ts",
+  "id": "maid",
+  "name": "MAID",
+  "url": "https://www.maid.my.id",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "ZManga",
+  "custom": false
+ },
+ {
+  "file": "MaidScan.ts",
+  "id": "maidscan",
+  "name": "Maid Scan",
+  "url": "https://empreguetes.wtf",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Manga168.ts",
+  "id": "manga168",
+  "name": "Manga168",
+  "url": "https://manga168x.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Manga18FX.ts",
+  "id": "manga18fx",
+  "name": "Manga18fx",
+  "url": "https://manga18fx.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaBahcesi.ts",
+  "id": "mangaship",
+  "name": "Manga Bahçesi",
+  "url": "https://mangabahcesi.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaBall.ts",
+  "id": "mangaball",
+  "name": "MangaBall",
+  "url": "https://mangaball.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaBANG.ts",
+  "id": "mangabang",
+  "name": "MangaBANG Comics (マンガBANG コミックス)",
+  "url": "https://comics.manga-bang.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "MangaBat.ts",
+  "id": "mangabat",
+  "name": "MangaBat",
+  "url": "https://www.mangabats.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaNel",
+  "custom": false
+ },
+ {
+  "file": "Mangabox.ts",
+  "id": "mangabox",
+  "name": "Mangabox",
+  "url": "https://www.mangabox.me",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaBuff.ts",
+  "id": "mangabuff",
+  "name": "MangaBuff",
+  "url": "https://mangabuff.ru",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaBz.ts",
+  "id": "mangabz",
+  "name": "MangaBz",
+  "url": "https://mangabz.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaCanBlog.ts",
+  "id": "mangacanblog",
+  "name": "MangaCan Blog",
+  "url": "https://mangacanblog.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "MangaChan.ts",
+  "id": "mangachan",
+  "name": "Манга-тян (Manga-chan)",
+  "url": "https://im.manga-chan.me",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Mangacix.ts",
+  "id": "mangacix",
+  "name": "Mangacix",
+  "url": "https://mangacix.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaCloud.ts",
+  "id": "mangacloud",
+  "name": "MangaCloud",
+  "url": "https://mangacloud.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaCrab.ts",
+  "id": "mangacrab",
+  "name": "Manga Crab",
+  "url": "https://es.mangacrab.org",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaDemon.ts",
+  "id": "mangademon",
+  "name": "MangaDemon",
+  "url": "https://demonicscans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaDenizi.ts",
+  "id": "mangadenizi",
+  "name": "Manga Denizi",
+  "url": "https://mangadenizi.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaDex.ts",
+  "id": "mangadex",
+  "name": "MangaDex",
+  "url": "https://mangadex.org",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": true
+ },
+ {
+  "file": "MangaDistrict.ts",
+  "id": "mangadistrict",
+  "name": "MangaDistrict",
+  "url": "https://mangadistrict.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaDiyari.ts",
+  "id": "mangadiyari",
+  "name": "MangaDiyari",
+  "url": "https://mangadiyari.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaDNA.ts",
+  "id": "mangadna",
+  "name": "MangaDNA",
+  "url": "https://mangadna.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaDotNet.ts",
+  "id": "mangadotnet",
+  "name": "MangaDotNet",
+  "url": "https://mangadot.net",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaDusleri.ts",
+  "id": "mangadusleri",
+  "name": "MangaDusleri",
+  "url": "https://mangadusleri.mom",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaEclipse.ts",
+  "id": "mangaeclipse",
+  "name": "Manga Eclipse",
+  "url": "https://mangaeclipse.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaEighteenClub.ts",
+  "id": "manga18-club",
+  "name": "Manga18.club",
+  "url": "https://manga18.club",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaFire.ts",
+  "id": "mangafire",
+  "name": "MangaFire",
+  "url": "https://mangafire.to",
+  "langs": [
+   "English",
+   "French",
+   "Japanese",
+   "Portuguese",
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaForFree.ts",
+  "id": "mangaforfree",
+  "name": "MangaForFree",
+  "url": "https://mangaforfree.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaFox.ts",
+  "id": "mangafox",
+  "name": "MangaFox",
+  "url": "https://fanfox.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "DM5",
+  "custom": true
+ },
+ {
+  "file": "MangaFoxFun.ts",
+  "id": "mangafoxfun",
+  "name": "MangaFoxFun",
+  "url": "https://mangafox.fun",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaHubBase",
+  "custom": false
+ },
+ {
+  "file": "MangaFreak.ts",
+  "id": "mangafreak",
+  "name": "MangaFreak",
+  "url": "https://ww3.mangafreak.me",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaGeko.ts",
+  "id": "mangageko",
+  "name": "MangaGeko",
+  "url": "https://www.mgeko.cc",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaGG.ts",
+  "id": "mangagg",
+  "name": "MangaGG",
+  "url": "https://mangagg.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaGo.ts",
+  "id": "mangago",
+  "name": "MangaGo",
+  "url": "https://www.mangago.me",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaHere.ts",
+  "id": "mangahere",
+  "name": "MangaHere",
+  "url": "https://www.mangahere.cc",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "DM5",
+  "custom": true
+ },
+ {
+  "file": "MangaHereFun.ts",
+  "id": "mangaherefun",
+  "name": "MangaHereFun",
+  "url": "https://mangahere.onl",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaHubBase",
+  "custom": false
+ },
+ {
+  "file": "MangaHot.ts",
+  "id": "mangahot",
+  "name": "マンガほっと (Manga Hot)",
+  "url": "https://web.mangahot.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaHub.ts",
+  "id": "mangahub",
+  "name": "MangaHub",
+  "url": "https://mangahub.io",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaHubBase",
+  "custom": false
+ },
+ {
+  "file": "MangaHubFR.ts",
+  "id": "mangahubfr",
+  "name": "MangaHubFR",
+  "url": "https://mangahub.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MangaHubRU.ts",
+  "id": "mangahubru",
+  "name": "MangaHub.ru",
+  "url": "https://mangahub.ru",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaIsekaiThai.ts",
+  "id": "mangaisekaithai",
+  "name": "MangaIsekaiThai",
+  "url": "https://www.mangaisekaithai.net",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MangaKakalot.ts",
+  "id": "mangakakalot",
+  "name": "MangaKakalot",
+  "url": "https://www.kakamanga.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaNel",
+  "custom": false
+ },
+ {
+  "file": "MangaKakalotFun.ts",
+  "id": "mangakakalotfun",
+  "name": "MangaKakalotFun",
+  "url": "https://mangakakalot.fun",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaHubBase",
+  "custom": false
+ },
+ {
+  "file": "MangaKatana.ts",
+  "id": "mangakatana",
+  "name": "MangaKatana",
+  "url": "https://mangakatana.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaKawaii.ts",
+  "id": "mangakawaii",
+  "name": "MangaKawaii",
+  "url": "https://www.mangakawaii.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaKimi.ts",
+  "id": "mangakimi",
+  "name": "MangaKimi",
+  "url": "https://www.mangakimi.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "MangaKio.ts",
+  "id": "mangakio",
+  "name": "MangaKio",
+  "url": "https://mangak.io",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangakBase",
+  "custom": false
+ },
+ {
+  "file": "MangaKoma.ts",
+  "id": "mangakoma",
+  "name": "Manga Koma",
+  "url": "https://raw1001.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Liliana",
+  "custom": false
+ },
+ {
+  "file": "MangaLC.ts",
+  "id": "mangalc",
+  "name": "MangaLC",
+  "url": "https://manga-lc.net",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Mangalek.ts",
+  "id": "mangalek",
+  "name": "مانجا ليك (Mangalek)",
+  "url": "https://mangalik.net",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MangaLib.ts",
+  "id": "mangalib",
+  "name": "MangaLib",
+  "url": "https://mangalib.org",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "LibGroup",
+  "custom": false
+ },
+ {
+  "file": "MangaLink.ts",
+  "id": "mangalink",
+  "name": "MangaLink",
+  "url": "https://link-manga.net",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MangaLivre.ts",
+  "id": "mangalivre",
+  "name": "ToonLivre",
+  "url": "https://toonlivre.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaLivreBlog.ts",
+  "id": "mangalivreblog",
+  "name": "MangaLivre (.blog)",
+  "url": "https://mangalivre.blog",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaLivreTo.ts",
+  "id": "mangalivreto",
+  "name": "MangaLivre (.to)",
+  "url": "https://mangalivre.to",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaLover.ts",
+  "id": "mangalover",
+  "name": "3asq (مانجا العاشق)",
+  "url": "https://3asq.online",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaMana.ts",
+  "id": "mangamana",
+  "name": "Manga Mana",
+  "url": "https://www.manga-mana.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaMillion.ts",
+  "id": "mangamillion",
+  "name": "Manga Million",
+  "url": "https://mangamillion.shueisha.co.jp",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaNato.ts",
+  "id": "manganato",
+  "name": "Manganato",
+  "url": "https://www.manganato.gg",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaNel",
+  "custom": false
+ },
+ {
+  "file": "MangaNeko.ts",
+  "id": "manganeko",
+  "name": "Manga-Neko",
+  "url": "https://manga-neko.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "MangaNight.ts",
+  "id": "manganight",
+  "name": "Manga Night",
+  "url": "https://manganight.com.br",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaNo.ts",
+  "id": "mangano",
+  "name": "マンガノ (MangaNo)",
+  "url": "https://manga-no.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": true
+ },
+ {
+  "file": "MangaOneJp.ts",
+  "id": "mangaonejp",
+  "name": "Manga One (Japan)",
+  "url": "https://manga-one.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaOni.ts",
+  "id": "mangaoni",
+  "name": "MangaOni",
+  "url": "https://manga-oni.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaOnlineBlog.ts",
+  "id": "mangaonlineblog",
+  "name": "Manga Online Blog",
+  "url": "https://mangaonline.red",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaOnlineFun.ts",
+  "id": "mangaonlinefun",
+  "name": "MangaOnlineFun",
+  "url": "https://mangaonline.fun",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaHubBase",
+  "custom": false
+ },
+ {
+  "file": "MangaOrigin.ts",
+  "id": "mangaorigin",
+  "name": "Manga Origin",
+  "url": "https://mangaoriginread.blogspot.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": false
+ },
+ {
+  "file": "MangaOwlio.ts",
+  "id": "mangaowlio",
+  "name": "MangaOwl.io",
+  "url": "https://mangaowl.io",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaParkPublisher.ts",
+  "id": "manga-park",
+  "name": "マンガPark (Manga-Park)",
+  "url": "https://manga-park.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaPill.ts",
+  "id": "mangapill",
+  "name": "MangaPill",
+  "url": "https://mangapill.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaPlusCreators.ts",
+  "id": "mangapluscreators",
+  "name": "Manga Plus Creators",
+  "url": "https://mangaplus-creators.jp",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaplusTV.ts",
+  "id": "mangaplustv",
+  "name": "MangaPlus.tv",
+  "url": "https://mangaplus.shueisha.tv",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaPoisk.ts",
+  "id": "mangapoisk",
+  "name": "MangaPoisk",
+  "url": "https://mangapoisk.me",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaPortali.ts",
+  "id": "mangaportali",
+  "name": "Manga Portalı",
+  "url": "https://www.mangaportali.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaPro.ts",
+  "id": "mangapro",
+  "name": "ProChan",
+  "url": "https://prochan.net",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaRaw1001.ts",
+  "id": "mangaraw1001",
+  "name": "MangaRaw1001",
+  "url": "https://mangaraw1001.cc",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "MojoPortalComic",
+  "custom": false
+ },
+ {
+  "file": "MangaRaw18.ts",
+  "id": "mangaraw18",
+  "name": "MangaRaw18",
+  "url": "https://mangaraw18.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": true,
+  "family": "MojoPortalComic",
+  "custom": false
+ },
+ {
+  "file": "MangaRawAC.ts",
+  "id": "mangarawac",
+  "name": "MangaRawAC",
+  "url": "https://mangaraw.ai",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaRawBest.ts",
+  "id": "mangarawbest",
+  "name": "MangaRaw(.best)",
+  "url": "https://mangaraw.best",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaRead.ts",
+  "id": "mangaread",
+  "name": "MangaRead",
+  "url": "https://www.mangaread.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaReaderSite.ts",
+  "id": "mangareadersite",
+  "name": "MangaReaderSite",
+  "url": "https://mangareader.site",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaHubBase",
+  "custom": false
+ },
+ {
+  "file": "MangaRuhu.ts",
+  "id": "mangaruhu",
+  "name": "MangaRuhu",
+  "url": "https://mangaruhu.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "MangAs.ts",
+  "id": "mangas",
+  "name": "MangAs",
+  "url": "https://m440.in",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "MangaReaderCMS",
+  "custom": true
+ },
+ {
+  "file": "MangasBrasuka.ts",
+  "id": "mangasbrasuka",
+  "name": "Mangas Brasuka",
+  "url": "https://mangasbrasuka.org",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaScantrad.ts",
+  "id": "manga-scantrad",
+  "name": "Manga-Scantrad",
+  "url": "https://manga-scantrad.io",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaSehriNet.ts",
+  "id": "mangasehrinet",
+  "name": "Manga Şehri (.NET)",
+  "url": "https://manga-sehri.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangasNoSekai.ts",
+  "id": "mangasnosekai",
+  "name": "Mangas No Sekai",
+  "url": "https://mangasnosekai.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MangasOrigines.ts",
+  "id": "mangasorigines",
+  "name": "Mangas Origines",
+  "url": "https://mangas-origines.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaSpark.ts",
+  "id": "mangaspark",
+  "name": "مانجا سبارك (MangaSpark)",
+  "url": "https://sparkmanga.net",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MangaStarz.ts",
+  "id": "mangastarz",
+  "name": "مانجا ستارز (Mangastarz)",
+  "url": "https://starzmanga.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "MangaStep.ts",
+  "id": "mangastep",
+  "name": "MangaStep",
+  "url": "https://mangastep.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "MangasTop.ts",
+  "id": "mangastop",
+  "name": "Mangas Top",
+  "url": "https://mangastop.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaSushi.ts",
+  "id": "mangasushi",
+  "name": "Mangasushi",
+  "url": "https://mangasushi.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaSusuku.ts",
+  "id": "mangasusuku",
+  "name": "MangaSusuku",
+  "url": "https://mangasusuku.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "MangaSwat.ts",
+  "id": "mangaswat",
+  "name": "MangaSwat",
+  "url": "https://meshmanga.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaTales.ts",
+  "id": "mangatales",
+  "name": "MangaTales",
+  "url": "https://mangatales.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaTaro.ts",
+  "id": "mangataro",
+  "name": "MangaTaro",
+  "url": "https://mangataro.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaPeakBase",
+  "custom": false
+ },
+ {
+  "file": "MangaTek.ts",
+  "id": "mangatek",
+  "name": "MangaTek",
+  "url": "https://mangatek.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Mangatellers.ts",
+  "id": "mangatellers",
+  "name": "Mangatellers",
+  "url": "https://reader.mangatellers.gr",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "MangaTepesi.ts",
+  "id": "mangatepesi",
+  "name": "MangaTepesi",
+  "url": "https://mangatepesi.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaTH.ts",
+  "id": "mangath",
+  "name": "MangaTH",
+  "url": "https://manga-th.net",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaTilkisi.ts",
+  "id": "mangatilkisi",
+  "name": "Tilki Scans",
+  "url": "https://www.tilkiscans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaTime.ts",
+  "id": "mangatime",
+  "name": "MangaTime",
+  "url": "https://mangatime.org",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaToonAR.ts",
+  "id": "mangatoon-ar",
+  "name": "MangaToon (Arabic)",
+  "url": "https://ar.mangatoon.mobi",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonDE.ts",
+  "id": "mangatoon-de",
+  "name": "MangaToon (German)",
+  "url": "https://de.mangatoon.mobi",
+  "langs": [
+   "German"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonEN.ts",
+  "id": "mangatoon-en",
+  "name": "MangaToon (English)",
+  "url": "https://mangatoon.mobi",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonES.ts",
+  "id": "mangatoon-es",
+  "name": "MangaToon (Spanish)",
+  "url": "https://mangatoon.mobi/es",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonFR.ts",
+  "id": "mangatoon-fr",
+  "name": "MangaToon (French)",
+  "url": "https://fr.mangatoon.mobi",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonID.ts",
+  "id": "mangatoon-id",
+  "name": "MangaToon (Indonesian)",
+  "url": "https://mangatoon.mobi/id",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonIT.ts",
+  "id": "mangatoon-it",
+  "name": "MangaToon (Italian)",
+  "url": "https://it.mangatoon.mobi",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonPT.ts",
+  "id": "mangatoon-pt",
+  "name": "MangaToon (Portuguese)",
+  "url": "https://mangatoon.mobi/pt",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonTH.ts",
+  "id": "mangatoon-th",
+  "name": "MangaToon (Thai)",
+  "url": "https://mangatoon.mobi/th",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaToonVI.ts",
+  "id": "mangatoon-vi",
+  "name": "MangaToon (Vietnamese)",
+  "url": "https://mangatooncom.vn/vi",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "MangaToonBase",
+  "custom": false
+ },
+ {
+  "file": "MangaTown.ts",
+  "id": "mangatown",
+  "name": "MangaTown",
+  "url": "https://www.mangatown.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaTR.ts",
+  "id": "mangatr",
+  "name": "Manga-TR",
+  "url": "https://manga-tr.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaTube.ts",
+  "id": "mangatube",
+  "name": "MangaTube",
+  "url": "https://manga-tube.me",
+  "langs": [
+   "German"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaTV.ts",
+  "id": "mangatv",
+  "name": "MangaTV",
+  "url": "https://mangatv.net",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "MangaUpGlobal.ts",
+  "id": "mangaupglobal",
+  "name": "MangaUp (Global)",
+  "url": "https://global.manga-up.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaUpJapan.ts",
+  "id": "mangaupjapan",
+  "name": "MangaUp (マンガアップ!)",
+  "url": "https://www.manga-up.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaWorld.ts",
+  "id": "mangaworld",
+  "name": "Manga World",
+  "url": "https://www.mangaworld.mx",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaWorldAdult.ts",
+  "id": "mangaworldadult",
+  "name": "Manga World Adult",
+  "url": "https://www.mangaworldadult.net",
+  "langs": [
+   "Italian"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaWOW.ts",
+  "id": "mangawow",
+  "name": "MangaWOW",
+  "url": "https://mangawow.org",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MangaWT.ts",
+  "id": "mangawt",
+  "name": "MangaWT",
+  "url": "https://mangawt.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Mangayi.ts",
+  "id": "mangayi",
+  "name": "Mangayi",
+  "url": "https://mangayi.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Mangaz.ts",
+  "id": "mangaz",
+  "name": "Manga Library Z (マンガ図書館Z)",
+  "url": "https://www.mangaz.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MangaZegra.ts",
+  "id": "mangazegra",
+  "name": "Manga Zegra",
+  "url": "https://manga-zegra.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MangaZizi.ts",
+  "id": "mangazizi",
+  "name": "MangaZizi",
+  "url": "https://mangazizi.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Mangazure.ts",
+  "id": "mangazure",
+  "name": "Mangazure",
+  "url": "https://mangazure.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Mangitto.ts",
+  "id": "mangitto",
+  "name": "Mangitto",
+  "url": "https://mangtto.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ManHastro.ts",
+  "id": "manhastro",
+  "name": "ManHastro",
+  "url": "https://manhastro.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ManHatic.ts",
+  "id": "manhatic",
+  "name": "HentaiLek",
+  "url": "https://hentailek.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ManhuaBuddy.ts",
+  "id": "manhuabuddy",
+  "name": "Manhua Buddy",
+  "url": "https://manhuabuddy.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ManHuaGui.ts",
+  "id": "manhuagui",
+  "name": "看漫画 (ManHuaGui)",
+  "url": "https://www.manhuagui.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "SinMH",
+  "custom": false
+ },
+ {
+  "file": "ManhuaHot.ts",
+  "id": "manhuahot",
+  "name": "ManhuaHot",
+  "url": "https://manhuahot.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ManhuaPlus.ts",
+  "id": "manhuaplus",
+  "name": "ManhuaPlus",
+  "url": "https://manhuaplus.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Liliana",
+  "custom": false
+ },
+ {
+  "file": "Manhuaren.ts",
+  "id": "manhuaren",
+  "name": "Manhuaren 漫画人",
+  "url": "https://manhuaren.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "DM5",
+  "custom": true
+ },
+ {
+  "file": "ManhuaUs.ts",
+  "id": "manhuaus",
+  "name": "Manhua Us",
+  "url": "https://manhuaus.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Manhwa18.ts",
+  "id": "manhwa18",
+  "name": "Manhwa 18 (.com)",
+  "url": "https://manhwa18.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "FlatManga",
+  "custom": false
+ },
+ {
+  "file": "Manhwa18cc.ts",
+  "id": "manhwa18cc",
+  "name": "Manhwa 18 (.cc)",
+  "url": "https://manhwa18.cc",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ManhwaBuddy.ts",
+  "id": "manhwabuddy",
+  "name": "ManhwaBuddy",
+  "url": "https://manhwabuddy.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ManhwaClub.ts",
+  "id": "manhwaclub",
+  "name": "ManhwaClub",
+  "url": "https://manhwaclub.net",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ManhwaDashRaw.ts",
+  "id": "manhwadashraw",
+  "name": "Manhwa-Raw",
+  "url": "https://manhwa-raw.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ManhwaDesu.ts",
+  "id": "manhwadesu",
+  "name": "ManhwaDesu",
+  "url": "https://manhwadesu.rest",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ManhwaEighteen.ts",
+  "id": "manhwa18-int",
+  "name": "Manhwa 18 (.net)",
+  "url": "https://manhwa18.net",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ManhwaIndo.ts",
+  "id": "manhwaindo",
+  "name": "ManhwaIndo",
+  "url": "https://www.manhwaindo.my",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ManhwaLatino.ts",
+  "id": "manhwalatino",
+  "name": "Manhwa-Latino",
+  "url": "https://manhwa-es.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ManhwaNex.ts",
+  "id": "manhwanex",
+  "name": "ManhwaNex",
+  "url": "https://manhwanex.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ManhwaRead.ts",
+  "id": "manhwaread",
+  "name": "ManhwaRead",
+  "url": "https://manhwaread.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ManhwaTop.ts",
+  "id": "manhwatop",
+  "name": "ManhwaTop",
+  "url": "https://manhwatop.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ManhwaWeb.ts",
+  "id": "manhwaweb",
+  "name": "ManhwaWeb",
+  "url": "https://manhwaweb.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ManmanApp.ts",
+  "id": "manmanapp",
+  "name": "Manman Comic 漫漫漫画",
+  "url": "https://www.manmanapp.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MaviManga.ts",
+  "id": "mavimanga",
+  "name": "Mavi Manga",
+  "url": "https://mavimanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MechaComic.ts",
+  "id": "mechacomic",
+  "name": "MechaComic",
+  "url": "https://mechacomic.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MenudoFansub.ts",
+  "id": "menudofansub",
+  "name": "MenudoFansub",
+  "url": "https://www.menudo-fansub.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "MerlinScans.ts",
+  "id": "merlinscans",
+  "name": "MerlinToon",
+  "url": "https://merlintoon.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "MerlinShoujo.ts",
+  "id": "merlinshoujo",
+  "name": "Merlin Shoujo",
+  "url": "https://merlinshoujo.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Mgkomik.ts",
+  "id": "mgkomik",
+  "name": "MGKOMIK",
+  "url": "https://web1.mgkomik.cc",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Mgread.ts",
+  "id": "mgread",
+  "name": "Mgread",
+  "url": "https://mgread.io",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "MHScans.ts",
+  "id": "mhscans",
+  "name": "MHScans",
+  "url": "https://mhscans.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MiauScan.ts",
+  "id": "miauscan",
+  "name": "Miau Scan",
+  "url": "https://leer.lectovela.com",
+  "langs": [
+   "Spanish",
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Mikoroku.ts",
+  "id": "mikoroku",
+  "name": "Mikoroku",
+  "url": "https://mikoroku.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": true
+ },
+ {
+  "file": "MilaSub.ts",
+  "id": "milasub",
+  "name": "Mila Sub",
+  "url": "https://millascan.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MilfToon.ts",
+  "id": "milftoon",
+  "name": "Milftoon Comics",
+  "url": "https://milftoon.xxx",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MimiHentai.ts",
+  "id": "mimihentai",
+  "name": "MimiHentai",
+  "url": "https://mimihentai.net",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MindaFanSub.ts",
+  "id": "mindafansub",
+  "name": "Minda Fansub",
+  "url": "https://mindafansub.nl",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MiniTwoScan.ts",
+  "id": "minitwoscan",
+  "name": "MiniTwo Scan",
+  "url": "https://minitwoscan.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MintManga.ts",
+  "id": "mintmanga",
+  "name": "MintManga",
+  "url": "https://2.mintmanga.one",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": true
+ },
+ {
+  "file": "MirrorKomik.ts",
+  "id": "mirrorkomik",
+  "name": "MirrorKomik",
+  "url": "https://mirrorkomik.info",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "MistScans.ts",
+  "id": "mistscans",
+  "name": "Mist Scans",
+  "url": "https://mistscans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "mkzhan.ts",
+  "id": "mkzhan",
+  "name": "mkzhan",
+  "url": "https://www.mkzhan.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Mojoin.ts",
+  "id": "mojoin",
+  "name": "Mojoin",
+  "url": "https://mojoin.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MonochromeScans.ts",
+  "id": "monochromescans",
+  "name": "Monochrome Scans",
+  "url": "https://manga.d34d.one",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MonteTai.ts",
+  "id": "montetai",
+  "name": "MonteTai",
+  "url": "https://montetaiscanlator.xyz",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "MoonDaisyScans.ts",
+  "id": "moondaisyscans",
+  "name": "Moon Daisy Scans",
+  "url": "https://moondaisyscans.pro",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "MugiwaraNoStreaming.ts",
+  "id": "mugiwaranostreaming",
+  "name": "Mugiwara no Streaming",
+  "url": "https://www.mugiwara-no-streaming.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MugiwarasOficial.ts",
+  "id": "mugiwarasoficial",
+  "name": "Mugiwaras Oficial",
+  "url": "https://mugiwarasoficial.org",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MultPorn.ts",
+  "id": "multporn",
+  "name": "MultPorn",
+  "url": "https://multporn.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MundoManhwa.ts",
+  "id": "mundomanhwa",
+  "name": "Mundo Manhwa",
+  "url": "https://mundomanhwa.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Mwku.ts",
+  "id": "mwku",
+  "name": "Mwku",
+  "url": "https://manwadz.cc",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MyAnimeListManga.ts",
+  "id": "myanimelistmanga",
+  "name": "MyAnimeList (Manga)",
+  "url": "https://myanimelist.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MyComic.ts",
+  "id": "mycomic",
+  "name": "MyComic",
+  "url": "https://mycomic.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MyHentaiGallery.ts",
+  "id": "myhentaigallery",
+  "name": "MyHentaiGallery",
+  "url": "https://myhentaigallery.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "MyMangaList.ts",
+  "id": "mymangalist",
+  "name": "MyMangaList",
+  "url": "https://www5.mymangalist.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "MyReadingManga.ts",
+  "id": "myreadingmanga",
+  "name": "MyReadingManga",
+  "url": "https://myreadingmanga.info",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NabiManga.ts",
+  "id": "nabimanga",
+  "name": "NabiManga",
+  "url": "https://www.nabicix.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "NamiComi.ts",
+  "id": "namicomi",
+  "name": "NamiComi",
+  "url": "https://namicomi.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NatsuID.ts",
+  "id": "natsuid",
+  "name": "NatsuID",
+  "url": "https://natsu.one",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "KiruBase",
+  "custom": false
+ },
+ {
+  "file": "Naver.ts",
+  "id": "naver",
+  "name": "네이버 웹툰 (Naver Webtoon)",
+  "url": "https://comic.naver.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "NaverBase",
+  "custom": false
+ },
+ {
+  "file": "NaverMobile.ts",
+  "id": "navermobile",
+  "name": "네이버 웹툰 (Naver Webtoon Mobile)",
+  "url": "https://m.comic.naver.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "NaverBase",
+  "custom": false
+ },
+ {
+  "file": "NekoPost.ts",
+  "id": "nekopost",
+  "name": "NekoPost",
+  "url": "https://www.nekopost.net",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NemesisScans.ts",
+  "id": "nemesisscans",
+  "name": "Nemesis Scans",
+  "url": "https://www.nemesisscans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NetTruyenAR.ts",
+  "id": "nettruyenar",
+  "name": "NetTruyenAR",
+  "url": "https://nettruyenar.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "NetTruyenGG.ts",
+  "id": "nettruyengg",
+  "name": "NetTruyen GG",
+  "url": "https://hinettruyen.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "NetTruyenOK.ts",
+  "id": "nettruyen#A4F21DC2",
+  "name": "NetTruyen OK",
+  "url": "https://nettruyen12s.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "MojoPortalComic",
+  "custom": false
+ },
+ {
+  "file": "NetTruyenViet.ts",
+  "id": "nettruyen#BFBB5C98",
+  "name": "NetTruyen Viet/WW",
+  "url": "https://nettruyenviet10.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "NeuManga.ts",
+  "id": "neumanga",
+  "name": "NeuManga",
+  "url": "https://neumanga.id",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "NewXToon.ts",
+  "id": "newxtoon",
+  "name": "NewXToon",
+  "url": "https://newxtoon5.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NexusScans.ts",
+  "id": "nexusscans",
+  "name": "Nexus Scans",
+  "url": "https://nexusscanlation.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NexusToons.ts",
+  "id": "nexustoons",
+  "name": "Nexus Toons",
+  "url": "https://nexustoons.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Ngomik.ts",
+  "id": "ngomik",
+  "name": "Ngomik",
+  "url": "https://02.ngomik.cc",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "NhatTruyen.ts",
+  "id": "nhattruyen",
+  "name": "NhatTruyen",
+  "url": "https://nhattruyenqq.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "MojoPortalComic",
+  "custom": false
+ },
+ {
+  "file": "NHentai.ts",
+  "id": "nhentai",
+  "name": "NHentai",
+  "url": "https://nhentai.net",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "NHentaiCom.ts",
+  "id": "nhentaicom",
+  "name": "NHentaiCom",
+  "url": "https://nhentai.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NiaddBR.ts",
+  "id": "ninemanga-br",
+  "name": "Niadd (Portuguese)",
+  "url": "https://br.niadd.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NiaddDE.ts",
+  "id": "ninemanga-de",
+  "name": "Niadd (German)",
+  "url": "https://de.niadd.com",
+  "langs": [
+   "German"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NiaddEN.ts",
+  "id": "ninemanga-en",
+  "name": "Niadd (English)",
+  "url": "https://www.niadd.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NiaddES.ts",
+  "id": "ninemanga-es",
+  "name": "Niadd (Spanish)",
+  "url": "https://es.niadd.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NiaddFR.ts",
+  "id": "ninemanga-fr",
+  "name": "Niadd (French)",
+  "url": "https://fr.niadd.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NiaddIT.ts",
+  "id": "ninemanga-it",
+  "name": "Niadd (Italian)",
+  "url": "https://it.niadd.com",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NiaddRU.ts",
+  "id": "ninemanga-ru",
+  "name": "Niadd (Russian)",
+  "url": "https://ru.niadd.com",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NiceOppai.ts",
+  "id": "niceoppai",
+  "name": "NiceOppai",
+  "url": "https://www.niceoppai.net",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NicoManga.ts",
+  "id": "nicomanga",
+  "name": "NicoManga",
+  "url": "https://nicomanga.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "FlatManga",
+  "custom": true
+ },
+ {
+  "file": "NicoNicoSeiga.ts",
+  "id": "niconicoseiga",
+  "name": "ニコニコ静画 (niconico seiga)",
+  "url": "https://manga.nicovideo.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NihonKuni.ts",
+  "id": "mangagun",
+  "name": "NihonKuni",
+  "url": "https://nihonkuni.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "FlatManga",
+  "custom": true
+ },
+ {
+  "file": "NijiTranslations.ts",
+  "id": "nijitranslations",
+  "name": "مدونة نيجي (Niji Translations)",
+  "url": "https://niji-translations.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "NinjaScans.ts",
+  "id": "ninjascans",
+  "name": "Ninja Scans",
+  "url": "https://ninjacomics.xyz",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "NirvanaManga.ts",
+  "id": "nirvanamanga",
+  "name": "NirvanaManga",
+  "url": "https://nirvanamanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "NiveraFansub.ts",
+  "id": "niverafansub",
+  "name": "Nivera Fansub",
+  "url": "https://niverafansub.dev",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "NocturneSummer.ts",
+  "id": "nocturnesummer",
+  "name": "Nocturne Summer",
+  "url": "https://nocfsb.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "NonaFansub.ts",
+  "id": "nonafansub",
+  "name": "Nona Fansub",
+  "url": "https://nonafansub.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "NoraNoFansub.ts",
+  "id": "noranofansub",
+  "name": "NoraNoFansub",
+  "url": "https://www.noranofansub.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "Noromax.ts",
+  "id": "noromax",
+  "name": "Noromax",
+  "url": "https://noromax02.my.id",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "NovaFansub.ts",
+  "id": "novafansub",
+  "name": "Nova Fansub",
+  "url": "https://novafansub2.site",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "NovelcoolBR.ts",
+  "id": "novelcool-br",
+  "name": "Novel Cool (Portuguese)",
+  "url": "https://br.novelcool.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NovelcoolDE.ts",
+  "id": "novelcool-de",
+  "name": "Novel Cool (German)",
+  "url": "https://de.novelcool.com",
+  "langs": [
+   "German"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NovelcoolEN.ts",
+  "id": "novelcool-en",
+  "name": "Novel Cool (English)",
+  "url": "https://www.novelcool.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NovelcoolES.ts",
+  "id": "novelcool-es",
+  "name": "Novel Cool (Spanish)",
+  "url": "https://es.novelcool.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NovelcoolFR.ts",
+  "id": "novelcool-fr",
+  "name": "Novel Cool (French)",
+  "url": "https://fr.novelcool.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NovelcoolIT.ts",
+  "id": "novelcool-it",
+  "name": "Novel Cool (Italian)",
+  "url": "https://it.novelcool.com",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NovelcoolRU.ts",
+  "id": "novelcool-ru",
+  "name": "Novel Cool (Russian)",
+  "url": "https://ru.novelcool.com",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "NiaddBase",
+  "custom": false
+ },
+ {
+  "file": "NoxManga.ts",
+  "id": "noxmanga",
+  "name": "NoxManga",
+  "url": "https://noxmangas.org",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "NyxScans.ts",
+  "id": "nyxscans",
+  "name": "Nyx Scans",
+  "url": "https://nyxscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "VTheme",
+  "custom": false
+ },
+ {
+  "file": "Okutoon.ts",
+  "id": "okutoon",
+  "name": "Okutoon",
+  "url": "https://okutoon.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "OlympusScanlation.ts",
+  "id": "olympusscanlation",
+  "name": "Olympus Scanlation",
+  "url": "https://olympusxyz.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "OmegaScans.ts",
+  "id": "omegascans",
+  "name": "OmegaScans",
+  "url": "https://omegascans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "HeanCMS",
+  "custom": false
+ },
+ {
+  "file": "OnePieceTube.ts",
+  "id": "onepiecetube",
+  "name": "One Piece Tube",
+  "url": "https://onepiece.tube",
+  "langs": [
+   "German"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Onisaga.ts",
+  "id": "onisaga",
+  "name": "Onisaga",
+  "url": "https://onisaga.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": true
+ },
+ {
+  "file": "OnMangaMe.ts",
+  "id": "on-manga",
+  "name": "مانجا اون لاين (On-Manga)",
+  "url": "https://www.onma.top",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "MangaReaderCMS",
+  "custom": false
+ },
+ {
+  "file": "Opiatoon.ts",
+  "id": "opiatoon",
+  "name": "Opiatoon (Opia&Shipperland)",
+  "url": "https://opiatoon.shop",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "OrckuMangas.ts",
+  "id": "orckumangas",
+  "name": "OrckuMangas",
+  "url": "https://orckumangas.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Oremanga.ts",
+  "id": "oremanga",
+  "name": "Oremanga",
+  "url": "https://www.oremanga.net",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "ZManga",
+  "custom": false
+ },
+ {
+  "file": "Orimanga.ts",
+  "id": "orimanga",
+  "name": "OriManga",
+  "url": "https://orimanga.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "OurFeel.ts",
+  "id": "ourfeel",
+  "name": "OurFeel",
+  "url": "https://ourfeel.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "ParadoxScans.ts",
+  "id": "paradoxscans",
+  "name": "Paradox Scans",
+  "url": "https://paradoxscans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "PatiManga.ts",
+  "id": "patimanga",
+  "name": "PatiManga",
+  "url": "https://www.patimanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "PelaTeam.ts",
+  "id": "pelateam",
+  "name": "Pela Team",
+  "url": "https://pelateam.org",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "PhiliaScans.ts",
+  "id": "philiascans",
+  "name": "Philia Scans",
+  "url": "https://philiascans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "PhoenixScansIT.ts",
+  "id": "phoenixscans-it",
+  "name": "Phoenix Scans",
+  "url": "https://www.phoenixscans.com",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "Piccoma.ts",
+  "id": "piccoma",
+  "name": "Piccoma",
+  "url": "https://piccoma.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "PieScans.ts",
+  "id": "piescans",
+  "name": "PieScans",
+  "url": "https://piescans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "PinkSeaUnicorn.ts",
+  "id": "pinkseaunicorn",
+  "name": "Pink Sea Unicorn",
+  "url": "https://psunicorn.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "PixHentai.ts",
+  "id": "pixhentai",
+  "name": "PixHentai",
+  "url": "https://pixhentai.com",
+  "langs": [
+   "English",
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Pixiv.ts",
+  "id": "pixiv",
+  "name": "Pixiv",
+  "url": "https://www.pixiv.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "PixivComics.ts",
+  "id": "pixivcomics",
+  "name": "pixivコミック",
+  "url": "https://comic.pixiv.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "PlotTwistNoFansub.ts",
+  "id": "plottwistnofansub",
+  "name": "Plot Twist No Fansub",
+  "url": "https://plotnofansub.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "PornhwaPro.ts",
+  "id": "pornhwapro",
+  "name": "Pornhwa (.pro)",
+  "url": "https://pornhwa.pro",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "QwikMangas",
+  "custom": false
+ },
+ {
+  "file": "PortalYaoi.ts",
+  "id": "portalyaoi",
+  "name": "Portal Yaoi",
+  "url": "https://portalyaoi.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "PoseidonScans.ts",
+  "id": "poseidonscans",
+  "name": "Poseidon Scans",
+  "url": "https://poseidon-scans.net",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ProjectSuki.ts",
+  "id": "projectsuki",
+  "name": "Project Suki",
+  "url": "https://projectsuki.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "PunkRecords.ts",
+  "id": "littlegarden",
+  "name": "Punk Records",
+  "url": "https://punkrecordz.com",
+  "langs": [
+   "English",
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Pururin.ts",
+  "id": "pururin",
+  "name": "Pururin",
+  "url": "https://pururin.me",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Pzykosis666HFansub.ts",
+  "id": "pzykosis666hfansub",
+  "name": "Pzykosis666HFansub",
+  "url": "https://lector.pzykosis666hfansub.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "Qimeitj.ts",
+  "id": "qimeitj",
+  "name": "Qimeitj",
+  "url": "https://hxy4.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "MH",
+  "custom": true
+ },
+ {
+  "file": "QiScans.ts",
+  "id": "quantumscans",
+  "name": "Qi Scans",
+  "url": "https://qimanga.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "EzMangaBase",
+  "custom": false
+ },
+ {
+  "file": "Rackus.ts",
+  "id": "rackus",
+  "name": "Rackus",
+  "url": "https://rackusreads.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "RageScans.ts",
+  "id": "ragescans",
+  "name": "RageScans",
+  "url": "https://ragescans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "RagnarScans.ts",
+  "id": "ragnarscans",
+  "name": "Ragnar Scans",
+  "url": "https://ragnarscans2.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "InitManga",
+  "custom": false
+ },
+ {
+  "file": "RainDropFansub.ts",
+  "id": "raindropfansub",
+  "name": "Rain Drop Fansub",
+  "url": "https://www.raindropteamfan.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": true
+ },
+ {
+  "file": "RankerManga.ts",
+  "id": "rankermanga",
+  "name": "Ranker-Manga",
+  "url": "https://www.ranker-manga.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RavenScans.ts",
+  "id": "ravenscans",
+  "name": "Raven Scans",
+  "url": "https://ravenscans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "RavenSeries.ts",
+  "id": "ravenseries",
+  "name": "RavenSeries",
+  "url": "https://raventard.xyz",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Raw18.ts",
+  "id": "haremu18",
+  "name": "Raw18",
+  "url": "https://raw18.chat",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RawDevart.ts",
+  "id": "rawdevart",
+  "name": "RawDevart",
+  "url": "https://rawdevart.art",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RawFree.ts",
+  "id": "rawfree",
+  "name": "Raw FREE",
+  "url": "https://rawfree.date",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Zing92Base",
+  "custom": false
+ },
+ {
+  "file": "RawInu.ts",
+  "id": "rawinu",
+  "name": "RawInu",
+  "url": "https://rawinu.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "FlatManga",
+  "custom": true
+ },
+ {
+  "file": "Rawkuma.ts",
+  "id": "rawkuma",
+  "name": "Rawkuma",
+  "url": "https://rawkuma.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "KiruBase",
+  "custom": false
+ },
+ {
+  "file": "RawLazy.ts",
+  "id": "rawlazy",
+  "name": "RawLazy",
+  "url": "https://rawlazy.io",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Zing92Base",
+  "custom": true
+ },
+ {
+  "file": "RawNaver.ts",
+  "id": "rawxz",
+  "name": "RawNaver",
+  "url": "https://rawnaver.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RawOtaku.ts",
+  "id": "rawotaku",
+  "name": "RawOtaku",
+  "url": "https://rawotaku.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Liliana",
+  "custom": false
+ },
+ {
+  "file": "RawSenManga.ts",
+  "id": "rawsenmanga",
+  "name": "RawSenManga",
+  "url": "https://raw.senmanga.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ReadComicsOnline.ts",
+  "id": "readcomicsonline",
+  "name": "Read Comics Online",
+  "url": "https://readcomicsonline.ru",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ReadKomik.ts",
+  "id": "readkomik",
+  "name": "ReadKomik",
+  "url": "https://novelstreams.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ReadManga.ts",
+  "id": "readmanga",
+  "name": "ReadManga",
+  "url": "https://a.zazaza.me",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": false
+ },
+ {
+  "file": "ReadToon.ts",
+  "id": "readtoon",
+  "name": "ReadToon",
+  "url": "https://readtoon.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Remanga.ts",
+  "id": "remanga",
+  "name": "Remanga",
+  "url": "https://remanga.org",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RenaScans.ts",
+  "id": "renascans",
+  "name": "RenaScans",
+  "url": "https://renascans.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Reyume.ts",
+  "id": "reyume",
+  "name": "Reyume",
+  "url": "https://www.re-yume.my.id",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": true
+ },
+ {
+  "file": "RfDragonScan.ts",
+  "id": "rfdragonscan",
+  "name": "RF Dragon Scan",
+  "url": "https://rfdragonscan.net",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "YomuVerseBase",
+  "custom": false
+ },
+ {
+  "file": "RidiBooks.ts",
+  "id": "ridibooks",
+  "name": "RidiBooks",
+  "url": "https://ridibooks.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RimacomiPlus.ts",
+  "id": "rimacomiplus",
+  "name": "RimacomiPlus (リマコミ＋)",
+  "url": "https://rimacomiplus.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "RimuScans.ts",
+  "id": "rimuscans",
+  "name": "RimuScans",
+  "url": "https://rimuscan.fr",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RinkoComics.ts",
+  "id": "rinkocomics",
+  "name": "Rinko Comics",
+  "url": "https://rinkocomics.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RisenToons.ts",
+  "id": "risentoons",
+  "name": "RisenToons",
+  "url": "https://risentoons.xyz",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RitharScans.ts",
+  "id": "ritharscans",
+  "name": "Rithar Scans",
+  "url": "https://ritharscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "KeyoApp",
+  "custom": false
+ },
+ {
+  "file": "Ritto.ts",
+  "id": "ritto",
+  "name": "Ritto",
+  "url": "https://ritto.cc",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RizzComics.ts",
+  "id": "rizzcomics",
+  "name": "Rizz Comics",
+  "url": "https://rizzfables.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "RNCalation.ts",
+  "id": "traduccionesamistosas",
+  "name": "RNCalation",
+  "url": "https://rncalation.online",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RokariComics.ts",
+  "id": "rokaricomics",
+  "name": "Rokari Comics",
+  "url": "https://rokaricomics.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "RokuHentai.ts",
+  "id": "rokuhentai",
+  "name": "RokuHentai",
+  "url": "https://rokuhentai.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "RoliaScan.ts",
+  "id": "roliascan",
+  "name": "Rolia Scan",
+  "url": "https://roliascan.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaPeakBase",
+  "custom": false
+ },
+ {
+  "file": "Roxinha.ts",
+  "id": "roxinha",
+  "name": "Roxinha",
+  "url": "https://roxinha.online",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RuManhua.ts",
+  "id": "rumanhua",
+  "name": "RuManhua",
+  "url": "https://www.rumanhua.org",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "RuyaManga.ts",
+  "id": "ruyamanga",
+  "name": "Rüya Manga",
+  "url": "https://www.ruyamanga2.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "S2Manga.ts",
+  "id": "s2manga",
+  "name": "S2Manga",
+  "url": "https://s2read.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Sacguzellik.ts",
+  "id": "sacguzellik",
+  "name": "Saç Güzellik",
+  "url": "https://www.sacguzellik.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Sadscans.ts",
+  "id": "sadscans",
+  "name": "Sadscans",
+  "url": "https://sadscans.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SafiCizgi.ts",
+  "id": "saficizgi",
+  "name": "Safi Çizgi",
+  "url": "https://saficizgi.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SafireScan.ts",
+  "id": "safirescan",
+  "name": "Safire Scan",
+  "url": "https://www.safirescan.site",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "ZeistManga",
+  "custom": false
+ },
+ {
+  "file": "SakuraManga.ts",
+  "id": "sakuramanga",
+  "name": "Sakura Manga",
+  "url": "https://mangasakura.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Sany.ts",
+  "id": "sany",
+  "name": "Sany",
+  "url": "https://teamsany.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ScanManga.ts",
+  "id": "scanmanga",
+  "name": "ScanManga",
+  "url": "https://www.scan-manga.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ScansGG.ts",
+  "id": "scansgg",
+  "name": "Scans.GG",
+  "url": "https://scans.gg",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ScantradUnion.ts",
+  "id": "scantradunion",
+  "name": "Scantrad Union",
+  "url": "https://scantrad-union.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ScanVF.ts",
+  "id": "scanvf",
+  "name": "Scan VF",
+  "url": "https://www.scan-vf.net",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "MangaReaderCMS",
+  "custom": false
+ },
+ {
+  "file": "ScytheScans.ts",
+  "id": "scythescans",
+  "name": "Scythe Scans",
+  "url": "https://scythescans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "SeiManga.ts",
+  "id": "seimanga",
+  "name": "SeiManga",
+  "url": "https://1.seimanga.me",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": false
+ },
+ {
+  "file": "SeinagiAdultoFansub.ts",
+  "id": "seinagiadultofansub",
+  "name": "SeinagiAdultoFansub",
+  "url": "https://adulto.seinagi.org.es",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "SeinagiFansubEN.ts",
+  "id": "seinagifansub-en",
+  "name": "SeinagiFansub (EN)",
+  "url": "https://reader.seinagi.org.es",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "SeinagiFansubES.ts",
+  "id": "seinagifansub-es",
+  "name": "SeinagiFansub (ES)",
+  "url": "https://online.seinagi.org.es",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "FoolSlide",
+  "custom": false
+ },
+ {
+  "file": "Seitoon.ts",
+  "id": "seitoon",
+  "name": "Seitoon",
+  "url": "https://seitoon.com.tr",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SekaiKomik.ts",
+  "id": "sekaikomik",
+  "name": "ManhwaLand (SekaiKomik)",
+  "url": "https://05c.manhwaland.land",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SekteKomik.ts",
+  "id": "sektekomik",
+  "name": "SEKTEKOMIK.XYZ",
+  "url": "https://01.sektekomik.id",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "SelfManga.ts",
+  "id": "selfmanga",
+  "name": "SelfManga",
+  "url": "https://1.selfmanga.live",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": false
+ },
+ {
+  "file": "Senkuro.ts",
+  "id": "senkuro",
+  "name": "Senkuro",
+  "url": "https://senkuro.com",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SenManga.ts",
+  "id": "senmanga",
+  "name": "SenManga",
+  "url": "https://www.senmanga.com",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SereinScan.ts",
+  "id": "sereinscan",
+  "name": "Serein Scan",
+  "url": "https://sereinscan.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "SetsuScans.ts",
+  "id": "setsuscans",
+  "name": "SetsuScans",
+  "url": "https://manga.saytsu.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Seven8te.ts",
+  "id": "78te",
+  "name": "78te (特漫网)",
+  "url": "https://www.70te.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "MH",
+  "custom": false
+ },
+ {
+  "file": "ShadowMangas.ts",
+  "id": "shadowmangas",
+  "name": "ShadowMangas",
+  "url": "https://shademanga.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ShijieScans.ts",
+  "id": "shijiescans",
+  "name": "Shijie Scans",
+  "url": "https://shijiescans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ShinigamiID.ts",
+  "id": "shinigamiid",
+  "name": "Shinigami ID",
+  "url": "https://11.shinigami.asia",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ShinobiScans.ts",
+  "id": "shinobiscans",
+  "name": "ShinobiScans",
+  "url": "https://shinobiscans.com",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ShonenJumpPlus.ts",
+  "id": "shonenjumpplus",
+  "name": "少年ジャンプ＋ (Shonen Jump +)",
+  "url": "https://shonenjumpplus.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": true
+ },
+ {
+  "file": "ShonenJumpRookie.ts",
+  "id": "shonenjumprookie",
+  "name": "ジャンプルーキー (Jump Rookie)",
+  "url": "https://rookie.shonenjump.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ShonenMagazine.ts",
+  "id": "shonenmagazine",
+  "name": "週刊少年マガジ (Weekly Shonen Magazine & Pocket Magazine)",
+  "url": "https://pocket.shonenmagazine.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Shqqaa.ts",
+  "id": "shqqaa",
+  "name": "موقع شقاع (Shqqaa)",
+  "url": "https://www.shqqaa.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ShueishaMangaPlus.ts",
+  "id": "shueishamangaplus",
+  "name": "MANGA Plus by Shueisha",
+  "url": "https://mangaplus.shueisha.co.jp",
+  "langs": [
+   "Spanish",
+   "French",
+   "Indonesian",
+   "Portuguese",
+   "Russian",
+   "Thai",
+   "Vietnamese",
+   "German"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SiiManga.ts",
+  "id": "siimanga",
+  "name": "SiiManga",
+  "url": "https://siikomik.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SlashLib.ts",
+  "id": "slashlib",
+  "name": "SlashLib",
+  "url": "https://v2.shlib.life",
+  "langs": [
+   "Russian"
+  ],
+  "adult": true,
+  "family": "LibGroup",
+  "custom": false
+ },
+ {
+  "file": "SleptManga.ts",
+  "id": "sleptmanga",
+  "name": "Slept Manga",
+  "url": "https://sleptmanga.com.tr",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SoftKomik.ts",
+  "id": "softkomik",
+  "name": "Softkomik",
+  "url": "https://softkomik.app",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SoraRaw.DRM.ts",
+  "id": "SoraRaw.DRM",
+  "name": "",
+  "url": "",
+  "langs": [],
+  "family": "unparsed",
+  "custom": true,
+  "adult": false
+ },
+ {
+  "file": "SoraRaw.ts",
+  "id": "soraraw",
+  "name": "SoraRaw",
+  "url": "https://soraraw.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": true,
+  "family": "Grouple",
+  "custom": true
+ },
+ {
+  "file": "SoulScans.ts",
+  "id": "soulscans",
+  "name": "Soul Scans",
+  "url": "https://v1.soulscans.asia",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "SpeedManga.ts",
+  "id": "speedmanga",
+  "name": "Speed Manga",
+  "url": "https://speed-manga.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "SpoilerPlus.ts",
+  "id": "spoilerplus",
+  "name": "SpoilerPlus",
+  "url": "https://spoilerplus.sc",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "StellarSaber.ts",
+  "id": "stellarsaber",
+  "name": "Stellar Saber",
+  "url": "https://stellarsaber.pro",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "StoneScape.ts",
+  "id": "stonescape",
+  "name": "StoneScape",
+  "url": "https://stonescape.sayki.fr",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "StrayFansub.ts",
+  "id": "strayfansub",
+  "name": "Stray Fansub",
+  "url": "https://strayfansub.buzz",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "SubManhwa.ts",
+  "id": "submanhwa",
+  "name": "SubManhwa",
+  "url": "https://submanhwa.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Summertoon.ts",
+  "id": "summertoon",
+  "name": "Summertoon",
+  "url": "https://summertoons.org",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "SundayWebry.ts",
+  "id": "sundaywebry",
+  "name": "サンデーうぇぶり (Sunday Webry)",
+  "url": "https://www.sunday-webry.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "SushiScans.ts",
+  "id": "sushiscans",
+  "name": "Sushi Scans (NET)",
+  "url": "https://sushiscan.net",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "SushiScansFR.ts",
+  "id": "sushiscansfr",
+  "name": "Sushi Scans (.FR)",
+  "url": "https://sushiscan.io",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Syosetu.ts",
+  "id": "syosetu",
+  "name": "Syosetu",
+  "url": "https://syosetu.town",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "Zing92Base",
+  "custom": false
+ },
+ {
+  "file": "Taiyo.ts",
+  "id": "taiyo",
+  "name": "Taiyō",
+  "url": "https://taiyo.moe",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TakeComic.ts",
+  "id": "takecomic",
+  "name": "TakeComic",
+  "url": "https://takecomic.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "Tapas.ts",
+  "id": "tapas",
+  "name": "Tapas",
+  "url": "https://tapas.io",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TappyToon.ts",
+  "id": "tappytoon",
+  "name": "TappyToon",
+  "url": "https://www.tappytoon.com",
+  "langs": [
+   "English",
+   "French",
+   "German"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Tapread.ts",
+  "id": "tapread",
+  "name": "Tapread",
+  "url": "https://www.tapread.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TarotScans.ts",
+  "id": "tarotscans",
+  "name": "Tarot Scans",
+  "url": "https://www.tarotscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "TaurusManga.ts",
+  "id": "taurusmanga",
+  "name": "Taurus Manga",
+  "url": "https://lectortaurus.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "TCBScans.ts",
+  "id": "tcbscans",
+  "name": "TCB Scans",
+  "url": "https://tcbonepiecechapters.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Team1x1.ts",
+  "id": "team1x1",
+  "name": "Team X",
+  "url": "https://olympustaff.com",
+  "langs": [
+   "Arabic"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "TempestScans.ts",
+  "id": "tempestscans",
+  "name": "Tempest Scans",
+  "url": "https://juratempe.st",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TempleScan.ts",
+  "id": "templescan",
+  "name": "TempleScan",
+  "url": "https://templetoons.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "TempleScanEsp.ts",
+  "id": "templescanesp",
+  "name": "Temple Scan (ESP)",
+  "url": "https://aedexnox.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "Kosaku",
+  "custom": false
+ },
+ {
+  "file": "TencentComic.ts",
+  "id": "tencentcomic",
+  "name": "Tencent (Comic)",
+  "url": "https://ac.qq.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TenshiManga.ts",
+  "id": "tenshimanga",
+  "name": "Tenshi Manga",
+  "url": "https://tenshimanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "TurkMangaBase",
+  "custom": false
+ },
+ {
+  "file": "TheBlank.ts",
+  "id": "theblank",
+  "name": "TheBlank",
+  "url": "https://theblank.net",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "TheBullyProject.ts",
+  "id": "thebullyproject",
+  "name": "The Bully Project",
+  "url": "https://bully-manga.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ThreeHentai.ts",
+  "id": "3hentai",
+  "name": "3Hentai",
+  "url": "https://3hentai.net",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ThunderScans.ts",
+  "id": "thunderscans",
+  "name": "ThunderScans",
+  "url": "https://en-thunderscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "TiaManhwa.ts",
+  "id": "tiamanhwa",
+  "name": "TiaManhwa",
+  "url": "https://tiamanhwa.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Tibiu.ts",
+  "id": "tibiu",
+  "name": "Tibiu",
+  "url": "https://comic.tibiu.net",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TimelessToons.ts",
+  "id": "timelesstoons",
+  "name": "Timeless Toons",
+  "url": "https://timelesstoons.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "KeyoApp",
+  "custom": false
+ },
+ {
+  "file": "ToCoronaEx.ts",
+  "id": "to-corona-ex",
+  "name": "コロナ (to-corona-ex)",
+  "url": "https://to-corona-ex.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TonariNoYoungJump.ts",
+  "id": "tonarinoyoungjump",
+  "name": "となりのヤングジャンプ (Tonari no Young Jump)",
+  "url": "https://tonarinoyj.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "CoreView",
+  "custom": false
+ },
+ {
+  "file": "TonizuToon.ts",
+  "id": "tonizutoon",
+  "name": "Tonizu Toon",
+  "url": "https://tonizu.top",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ToomTam.ts",
+  "id": "toomtam",
+  "name": "ToomTam",
+  "url": "https://toomtam-manga.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "Toondex.ts",
+  "id": "toondex",
+  "name": "Toondex",
+  "url": "https://toondex.xyz",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "ToonFR.ts",
+  "id": "toonfr",
+  "name": "ToonFR",
+  "url": "https://toonfr.com",
+  "langs": [
+   "French"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "ToonGod.ts",
+  "id": "toongod",
+  "name": "ToonGod",
+  "url": "https://www.toongod.org",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Toonhey.ts",
+  "id": "toonhey",
+  "name": "Toonhey",
+  "url": "https://toonhey.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Toonily.ts",
+  "id": "toonily",
+  "name": "Toonily",
+  "url": "https://toonily.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "ToonJai.ts",
+  "id": "toonjai",
+  "name": "ToonJai",
+  "url": "https://toonjai.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Toonkor.ts",
+  "id": "toonkor",
+  "name": "Toonkor",
+  "url": "https://007.toonkor.net",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ToonTop.ts",
+  "id": "toontop",
+  "name": "ToonTop",
+  "url": "https://toontop.io",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "MangakBase",
+  "custom": false
+ },
+ {
+  "file": "TopComicPorno.ts",
+  "id": "topcomicporno",
+  "name": "Top Comic Porno",
+  "url": "https://topcomicporno.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "TopManhua.ts",
+  "id": "topmanhua",
+  "name": "Top Manhua",
+  "url": "https://manhuatop.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TopManhuaNet.ts",
+  "id": "topmanhuanet",
+  "name": "Top ManhuaNET",
+  "url": "https://topmanhua.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "TopToon.ts",
+  "id": "toptoon",
+  "name": "TOPTOON (탑툰)",
+  "url": "https://toptoon.com",
+  "langs": [
+   "Korean"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TopToonGlobal.ts",
+  "id": "toptoonglobal",
+  "name": "Toptoon (Global)",
+  "url": "https://global.toptoon.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TopToonJP.ts",
+  "id": "toptoonjp",
+  "name": "TOPTOON (Japanese)",
+  "url": "https://www.toptoon.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TortugaCeviri.ts",
+  "id": "tortugaceviri",
+  "name": "Tortuga Çeviri",
+  "url": "https://tortugaceviri.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Toti.ts",
+  "id": "toti",
+  "name": "To-Ti",
+  "url": "https://to-ti.in",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "TraduccionesMoonlight.ts",
+  "id": "traduccionesmoonlight",
+  "name": "Traducciones Moonlight",
+  "url": "https://traduccionesmoonlight.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TritiniaScans.ts",
+  "id": "tritiniascans",
+  "name": "Tritinia Scans",
+  "url": "https://tritinia.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "TruyenQQ.ts",
+  "id": "truyenqq",
+  "name": "TruyenQQ",
+  "url": "https://truyenqqko.com",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "TruyenTranhDammy.ts",
+  "id": "truyentranhdammy",
+  "name": "Truyện Nhà Meo",
+  "url": "https://truyentranhdammyy.site",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "TruyenTranhtuan.ts",
+  "id": "truyentranhtuan",
+  "name": "TruyenTranhtuan",
+  "url": "https://truyentranhtuan.me",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "TRWebtoon.ts",
+  "id": "trwebtoon",
+  "name": "TR Webtoon",
+  "url": "https://trmanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "TurkceMangaOku.ts",
+  "id": "turkcemangaoku",
+  "name": "Türkçe Manga Oku",
+  "url": "https://trmangaoku.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Tuttoanimemanga.ts",
+  "id": "tuttoanimemanga",
+  "name": "Tuttoanimemanga",
+  "url": "https://tuttoanimemanga.net",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "PizzaReader",
+  "custom": false
+ },
+ {
+  "file": "TwoAnimx.ts",
+  "id": "2animx",
+  "name": "2Animx",
+  "url": "https://www.2animx.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "UchuujinProjects.ts",
+  "id": "uchuujinprojects",
+  "name": "Uchuujin Projects",
+  "url": "https://uchuujinmangas.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "UlasComic.ts",
+  "id": "ulascomic",
+  "name": "Ulas Comic",
+  "url": "https://www.ulascomic01.xyz",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "UngTyComic.ts",
+  "id": "ungtycomic",
+  "name": "Ung Ty Comic",
+  "url": "https://ungtycomics.net",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Usagi.ts",
+  "id": "usagi",
+  "name": "Usagi",
+  "url": "https://web.usagi.one",
+  "langs": [
+   "Russian"
+  ],
+  "adult": false,
+  "family": "Grouple",
+  "custom": false
+ },
+ {
+  "file": "UzayManga.ts",
+  "id": "uzaymanga",
+  "name": "Uzay Manga",
+  "url": "https://uzaymanga.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "TurkMangaBase",
+  "custom": false
+ },
+ {
+  "file": "ValirScans.ts",
+  "id": "valirscans",
+  "name": "Valir Scans",
+  "url": "https://valirscans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "NovelDexTheme",
+  "custom": false
+ },
+ {
+  "file": "Vegitoons.ts",
+  "id": "vegitoons",
+  "name": "Vegitoons",
+  "url": "https://vegitoons.black",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "VerComicsPorno.ts",
+  "id": "vercomicsporno",
+  "name": "VerComicsPorno",
+  "url": "https://vercomicsporno.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "VerMangasPorno.ts",
+  "id": "vermangasporno",
+  "name": "VerMangasPorno",
+  "url": "https://vermangasporno.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "VerManhwa.ts",
+  "id": "vermanhwa",
+  "name": "VerManhwa",
+  "url": "https://vermanhwa.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ViHentai.ts",
+  "id": "vihentai",
+  "name": "Vi-Hentai",
+  "url": "https://vi-hentai.moe",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "VioletScans.ts",
+  "id": "violetscans",
+  "name": "Violet Scans",
+  "url": "https://violetmanga.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "VisorManga.ts",
+  "id": "visormanga",
+  "name": "Visor Manga",
+  "url": "https://visormanga.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "VizShonenJump.ts",
+  "id": "vizshonenjump",
+  "name": "Viz - Shonen Jump",
+  "url": "https://www.viz.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "VNSharing.ts",
+  "id": "vnsharing",
+  "name": "VNSharing",
+  "url": "https://truyen.vnsharing.site",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Voratoon.ts",
+  "id": "komikcast",
+  "name": "Voratoon",
+  "url": "https://13.voratoon.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "VortexScans.ts",
+  "id": "vortexscans",
+  "name": "Vortex Scans",
+  "url": "https://vortexscans.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "VTheme",
+  "custom": true
+ },
+ {
+  "file": "Voyce.ts",
+  "id": "voyce",
+  "name": "Voyce",
+  "url": "https://www.voyce.me",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "VyManga.ts",
+  "id": "vymanga",
+  "name": "VyManga",
+  "url": "https://mangavyvy.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "WanPaMan.ts",
+  "id": "wanpaman",
+  "name": "Wan-Pa Man",
+  "url": "http://galaxyheavyblow.web.fc2.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "WebComicsAppEN.ts",
+  "id": "webcomicsapp-en",
+  "name": "WebComicsApp (English)",
+  "url": "https://www.webcomicsapp.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "WebComicsAppBase",
+  "custom": false
+ },
+ {
+  "file": "WebComicsAppES.ts",
+  "id": "webcomicsapp-es",
+  "name": "WebComicsApp (Spanish)",
+  "url": "https://www.webcomicsapp.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "WebComicsAppBase",
+  "custom": false
+ },
+ {
+  "file": "WebComicsAppFR.ts",
+  "id": "webcomicsapp-fr",
+  "name": "WebComicsApp (French)",
+  "url": "https://www.webcomicsapp.com",
+  "langs": [
+   "French"
+  ],
+  "adult": false,
+  "family": "WebComicsAppBase",
+  "custom": false
+ },
+ {
+  "file": "WebComicsAppID.ts",
+  "id": "webcomicsapp-id",
+  "name": "WebComicsApp (Indonesian)",
+  "url": "https://www.webcomicsapp.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "WebComicsAppBase",
+  "custom": false
+ },
+ {
+  "file": "WebComicsAppPT.ts",
+  "id": "webcomicsapp-pt",
+  "name": "WebComicsApp (Portuguese)",
+  "url": "https://www.webcomicsapp.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "WebComicsAppBase",
+  "custom": false
+ },
+ {
+  "file": "WebDexScans.ts",
+  "id": "webdexscans",
+  "name": "WebDex Scans",
+  "url": "https://webdexscans.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "WebNovel.ts",
+  "id": "webnovel",
+  "name": "Webnovel Comics",
+  "url": "https://www.webnovel.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "WebtoonHatti.ts",
+  "id": "webtoonhatti",
+  "name": "Webtoon Hatti",
+  "url": "https://webtoonhatti.club",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "Webtoonia.ts",
+  "id": "webtoonia",
+  "name": "Webtoonia",
+  "url": "https://webtoonia.fun",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "WebtoonScan.ts",
+  "id": "webtoonscan",
+  "name": "WebtoonScan",
+  "url": "https://webtoonscan.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "WebtoonTR.ts",
+  "id": "webtoontr",
+  "name": "WebtoonTR",
+  "url": "https://webtoontr.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "WeebCentral.ts",
+  "id": "weebcentral",
+  "name": "WeebCentral",
+  "url": "https://weebcentral.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "WeLoMa.ts",
+  "id": "weloma",
+  "name": "WeLoMa",
+  "url": "https://weloma.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "FlatManga",
+  "custom": false
+ },
+ {
+  "file": "WeLoveManga.ts",
+  "id": "welovemanga",
+  "name": "WeloveManga",
+  "url": "https://love4u.net",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "FlatManga",
+  "custom": true
+ },
+ {
+  "file": "WestManga.ts",
+  "id": "westmanga",
+  "name": "WestManga",
+  "url": "https://v1.westmanga.my",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "WhyToon.ts",
+  "id": "whytoon",
+  "name": "WhyToon",
+  "url": "https://whytoon.com",
+  "langs": [
+   "Thai"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "Wnacg.ts",
+  "id": "wnacg",
+  "name": "Wnacg",
+  "url": "https://www.wnacg.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "WritersScans.ts",
+  "id": "WritersScans",
+  "name": "",
+  "url": "",
+  "langs": [],
+  "family": "unparsed",
+  "custom": true,
+  "adult": false
+ },
+ {
+  "file": "Wurmz.ts",
+  "id": "wurmz",
+  "name": "Wurmz",
+  "url": "https://wurmz.net",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "XComic.ts",
+  "id": "xcomic",
+  "name": "XComic",
+  "url": "https://xcomic.me",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "XlecX.ts",
+  "id": "xlecx",
+  "name": "XlecX",
+  "url": "https://xlecx.one",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "XManga.ts",
+  "id": "xmanga",
+  "name": "XManga",
+  "url": "https://x-manga.org",
+  "langs": [
+   "French"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "XManhwa.ts",
+  "id": "xmanhwa",
+  "name": "XManhwa",
+  "url": "https://www.manhwaden.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "XoManga.ts",
+  "id": "xomanga",
+  "name": "XoManga",
+  "url": "https://xomanga.site",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "XoxoComics.ts",
+  "id": "xoxocomics",
+  "name": "XoxoComics",
+  "url": "https://xoxocomic.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "XXXYaoi.ts",
+  "id": "xxxyaoi",
+  "name": "XXXYaoi",
+  "url": "https://3xyaoi.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "YakshaComics.ts",
+  "id": "yakshacomics",
+  "name": "Yaksha Comics",
+  "url": "https://yakshacomics.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "YaoiChan.ts",
+  "id": "yaoichan",
+  "name": "Яой-тян (Yaoi-chan)",
+  "url": "https://v1.yaoi-chan.me",
+  "langs": [
+   "Russian"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "YaoiHavenReborn.ts",
+  "id": "yaoihavenreborn",
+  "name": "Yaoi Haven Reborn",
+  "url": "https://www.yaoihavenreborn.com/",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "YaoiMangaOku.ts",
+  "id": "yaoimangaoku",
+  "name": "YaoiMangaOku",
+  "url": "https://yaoimangaoku.net",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "YaoiMe.ts",
+  "id": "yaoime",
+  "name": "Yaoi.me",
+  "url": "https://yaoi.me",
+  "langs": [
+   "Multilingual"
+  ],
+  "adult": true,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "YaoiScan.ts",
+  "id": "yaoiscan",
+  "name": "YaoiScan",
+  "url": "https://yaoiscan.com",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "YawarakaSpirits.ts",
+  "id": "yawarakaspirits",
+  "name": "やわらかスピリッツ (Yawaraka Spirits)",
+  "url": "https://yawaspi.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Ynjn.ts",
+  "id": "ynjn",
+  "name": "ヤンジャン！(ynjn)",
+  "url": "https://ynjn.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "YomuComics.ts",
+  "id": "yomucomics",
+  "name": "Yomu Comics",
+  "url": "https://yomu.com.br",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "YomuMangas.ts",
+  "id": "yomumangas",
+  "name": "Yomu Mangas",
+  "url": "https://yomumangas.com",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "YoungAnimal.ts",
+  "id": "younganimal",
+  "name": "Young Animal",
+  "url": "https://younganimal.com",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "ComiciViewer",
+  "custom": false
+ },
+ {
+  "file": "YoungChampion.ts",
+  "id": "youngchampion",
+  "name": "Young Champion",
+  "url": "https://youngchampion.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Yukomik.ts",
+  "id": "yukomik",
+  "name": "Yukomik",
+  "url": "https://v1.yukomik.com",
+  "langs": [
+   "Indonesian"
+  ],
+  "adult": false,
+  "family": "QwikMangas",
+  "custom": false
+ },
+ {
+  "file": "YupManga.ts",
+  "id": "yupmanga",
+  "name": "YupManga",
+  "url": "https://www.yupmanga.com",
+  "langs": [
+   "Spanish"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "YuriGarden.ts",
+  "id": "yurigarden",
+  "name": "YuriGarden",
+  "url": "https://yurigarden.moe",
+  "langs": [
+   "Vietnamese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "YuriOnline.ts",
+  "id": "yurionline",
+  "name": "Yuri Online",
+  "url": "https://yuri-online.com",
+  "langs": [
+   "English"
+  ],
+  "adult": true,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "YuriVerso.ts",
+  "id": "yuriverso",
+  "name": "Yuri On Air",
+  "url": "https://yurionair.top",
+  "langs": [
+   "Portuguese"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "Zebrack.ts",
+  "id": "zebrack",
+  "name": "Zebrack(ゼブラック)",
+  "url": "https://zebrack-comic.shueisha.co.jp",
+  "langs": [
+   "Japanese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ZenithScans.ts",
+  "id": "zenithscans",
+  "name": "Zenith Scans",
+  "url": "https://zenithscans.com",
+  "langs": [
+   "Turkish"
+  ],
+  "adult": false,
+  "family": "MangaStream",
+  "custom": false
+ },
+ {
+  "file": "ZeurelScan.ts",
+  "id": "zeurelscan",
+  "name": "ZeurelScan",
+  "url": "https://www.zeurelscan.com",
+  "langs": [
+   "Italian"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": false
+ },
+ {
+  "file": "Zhuzhumh.ts",
+  "id": "zhuzhumh",
+  "name": "Zhuzhumh",
+  "url": "https://cn.zhuzhumh.com",
+  "langs": [
+   "Chinese"
+  ],
+  "adult": false,
+  "family": "custom",
+  "custom": true
+ },
+ {
+  "file": "ZinManga.ts",
+  "id": "zinmanga",
+  "name": "ZinManga",
+  "url": "https://mangazin.org",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": false
+ },
+ {
+  "file": "ZinMangaNet.ts",
+  "id": "zinmanganet",
+  "name": "ZinManga(.net)",
+  "url": "https://www.zinmanga.net",
+  "langs": [
+   "English"
+  ],
+  "adult": false,
+  "family": "Madara",
+  "custom": true
+ },
+ {
+  "file": "_index.ts",
+  "id": "_index",
+  "name": "",
+  "url": "",
+  "langs": [],
+  "family": "unparsed",
+  "custom": true,
+  "adult": false
+ }
+]

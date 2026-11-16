@@ -13,6 +13,7 @@ import Featured from './Featured'
 import GenreProgress from './GenreProgress'
 import { Icon } from './Icon'
 import { BecauseYouRead } from './Similar'
+import { notYetAdded } from '../siteDirectory'
 
 const PAGE = 60
 
@@ -148,6 +149,7 @@ export default function Browse({
   const [adding, setAdding] = useState(false)
   const [stage, setStage] = useState('')
   const [addError, setAddError] = useState('')
+  const [dirOpen, setDirOpen] = useState(false)
   const [progress, setProgress] = useState<Record<string, CrawlProgress>>({})
   const asked = useRef(new Set<string>())
   // Resting the mouse on a cover for a moment starts reading that series in the background.
@@ -538,18 +540,20 @@ export default function Browse({
     })
   }, [hits])
 
-  const addSite = async (): Promise<void> => {
-    if (!siteUrl.trim()) return
+  /** Adds the pasted address, or `picked` when a site from the Popular sites list was chosen. */
+  const addSite = async (picked?: string): Promise<void> => {
+    const url = picked ?? siteUrl
+    if (!url.trim()) return
     setAdding(true)
     setAddError('')
     setStage('Starting…')
     const off = window.api.onDetect(setStage)
-    const res = await window.api.addSite(siteUrl)
+    const res = await window.api.addSite(url)
     off()
     setStage('')
     setAdding(false)
     if (!res.ok) return setAddError(res.error)
-    setSiteUrl('')
+    if (!picked) setSiteUrl('')
     choose(null) // show everything, so the new site is visible
     refreshSources()
   }
@@ -564,6 +568,8 @@ export default function Browse({
     refreshSources()
     runSearch()
   }
+
+  const ready = notYetAdded(sources) // Popular sites you haven't added yet
 
   return (
     <div className="browse" ref={scrollerRef} onWheel={onWheel}>
@@ -609,11 +615,44 @@ export default function Browse({
                 onChange={(e) => setSiteUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addSite()}
               />
-              <button onClick={addSite} disabled={adding}>
+              <button onClick={() => void addSite()} disabled={adding}>
                 {adding ? 'Detecting…' : '+ Add'}
               </button>
             </span>
           </div>
+          {ready.length > 0 && (
+            <div className="sitedir">
+              <button
+                className="mini"
+                onClick={() => setDirOpen((o) => !o)}
+                title="Sites tested with Yomi: add one with a click"
+              >
+                {dirOpen ? '▾' : '▸'} Popular sites
+              </button>
+              <span className="sub">{ready.length} ready to add</span>
+              {dirOpen &&
+                (['ar', 'en'] as const).map((lang) => {
+                  const group = ready.filter((s) => s.lang === lang)
+                  if (group.length === 0) return null
+                  return (
+                    <div key={lang} className="sitedirgroup">
+                      <span className="sitedirlang">{lang === 'ar' ? 'العربية' : 'English'}</span>
+                      {group.map((s) => (
+                        <button
+                          key={s.url}
+                          className="sitepick"
+                          disabled={adding}
+                          title={s.url}
+                          onClick={() => void addSite(s.url)}
+                        >
+                          + {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })}
+            </div>
+          )}
           <div className="sitesbar">
             <button
               className="mini big"
