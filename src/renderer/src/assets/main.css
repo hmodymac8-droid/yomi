@@ -701,13 +701,15 @@ select { cursor: pointer; }
 .addsite .add input { height: 48px; font-size: 15px; padding: 0 16px; }
 .addsite .add button { height: 48px; padding: 0 24px; font-size: 15px; font-weight: 600; }
 /* Discover: Popular sites (tested sites, one click to add) */
-.sitedir { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 4px 0 14px; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
-.sitedir .mini { margin-left: 0; }
-.sitedir .sub { font-size: 12px; color: var(--muted-foreground); }
-.sitedirgroup { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.sitedirlang { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary-text); min-width: 64px; }
-.sitepick { background: var(--paper); border: 1px solid var(--border); color: var(--foreground); padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-.sitepick:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-text); }
+.sitedir { display: flex; flex-direction: column; gap: 14px; padding: 22px 24px; margin: 4px 0 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--paper); }
+.sitedirhead { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.sitedirhead b { display: block; font-size: 16px; font-weight: 600; color: var(--foreground); margin-bottom: 4px; }
+.sitedirhead span { font-size: 13px; color: var(--muted-foreground); }
+.sitedirhead .mini { margin-left: 0; flex: none; }
+.sitedirgroup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sitedirlang { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary-text); flex-basis: 100%; margin-top: 4px; }
+.sitepick { background: var(--background); border: 1px solid var(--border); color: var(--foreground); padding: 9px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.sitepick:hover:not(:disabled) { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
 .sitepick:disabled { opacity: 0.5; cursor: default; }
 /* Following: per-series auto-download switch */
 .autodl { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); cursor: pointer; margin-top: 4px; }

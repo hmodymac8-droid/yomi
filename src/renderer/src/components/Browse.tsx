@@ -149,7 +149,23 @@ export default function Browse({
   const [adding, setAdding] = useState(false)
   const [stage, setStage] = useState('')
   const [addError, setAddError] = useState('')
-  const [dirOpen, setDirOpen] = useState(false)
+  // Popular sites start open; hiding them is remembered on this computer
+  const [dirOpen, setDirOpen] = useState(() => {
+    try {
+      return localStorage.getItem('popularSitesHidden') !== '1'
+    } catch {
+      return true
+    }
+  })
+  const toggleDir = (): void =>
+    setDirOpen((o) => {
+      try {
+        localStorage.setItem('popularSitesHidden', o ? '1' : '0')
+      } catch {
+        /* not remembered */
+      }
+      return !o
+    })
   const [progress, setProgress] = useState<Record<string, CrawlProgress>>({})
   const asked = useRef(new Set<string>())
   // Resting the mouse on a cover for a moment starts reading that series in the background.
@@ -622,14 +638,17 @@ export default function Browse({
           </div>
           {ready.length > 0 && (
             <div className="sitedir">
-              <button
-                className="mini"
-                onClick={() => setDirOpen((o) => !o)}
-                title="Sites tested with Yomi: add one with a click"
-              >
-                {dirOpen ? '▾' : '▸'} Popular sites
-              </button>
-              <span className="sub">{ready.length} ready to add</span>
+              <div className="sitedirhead">
+                <div>
+                  <b>Popular sites</b>
+                  <span>
+                    {ready.length} sites tested with Yomi — click one to add it to your catalog.
+                  </span>
+                </div>
+                <button className="mini" onClick={toggleDir}>
+                  {dirOpen ? 'Hide' : 'Show'}
+                </button>
+              </div>
               {dirOpen &&
                 (['ar', 'en'] as const).map((lang) => {
                   const group = ready.filter((s) => s.lang === lang)
