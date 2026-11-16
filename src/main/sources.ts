@@ -46,6 +46,16 @@ export const BUILTIN_SOURCES: SourceDef[] = [
     seriesRe: '^https://www\\.fastestmanga\\.com/(?:ar|en)/manga/[^/?#]+/?$',
     chapterRe: '/manga/[^/]+/(?:fsl|chapter)-[^/]+/?$',
     maxPages: 100
+  },
+  {
+    // series live under /read-1/<slug>/ and chapters are …/<slug>-chap-12/
+    id: 'mangaowl-io',
+    name: 'MangaOwl',
+    baseUrl: 'https://mangaowl.io/',
+    listTemplate: 'https://mangaowl.io/manga-list/page/{n}/',
+    seriesRe: '^https://mangaowl\\.io/read-1/[^/?#]+/?$',
+    chapterRe: '/read-1/[^/]+/[^/]+-chap-[^/]+/?$',
+    maxPages: 60
   }
 ]
 
