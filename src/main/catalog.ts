@@ -1859,7 +1859,7 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
   const base = location.pathname.replace(/\\/$/, '');
   const underBase = (h) => { try { const u = new URL(h); return !!base && u.origin === location.origin && u.pathname.startsWith(base + '/') && /(chapter|chap|episode|ep|ch)[-_ ]?\\d|vol[-_ ]?\\d/i.test(u.pathname.slice(base.length)); } catch (e) { return false; } };
   // "Start Reading", "Read first", "Latest" buttons point at chapters but are not chapters themselves.
-  const junk = (t) => /^(start|read|continue|first|last|latest|new)\\b/i.test(t) && !/\\d/.test(t);
+  const junk = (t) => /^(start|read|continue|first|last|latest|new)\\b|^(اقرأ|إقرأ|قراءة|ابدأ|إبدأ|تابع|متابعة|الأول|الأخير|الأحدث|أحدث|آخر)(\\s|$)/i.test(t) && !/\\d/.test(t);
   // Sites that number chapters by address only: …/reader/<series-slug>/138 (no "chapter" word anywhere).
   const lastSeg = decodeURIComponent(base.split('/').pop() || '').replace(/[.*+?^$()|[\\]{}\\\\]/g, '\\\\$&');
   const slugNumRe = lastSeg ? new RegExp('/' + lastSeg + '/(\\\\d+(?:[._-]\\\\d+)?)/?$', 'i') : null;

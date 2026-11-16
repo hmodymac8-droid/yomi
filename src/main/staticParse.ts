@@ -146,7 +146,7 @@ export function parseSeries(
       return false
     }
   }
-  const junk = (t: string): boolean => /^(start|read|continue|first|last|latest|new)\b/i.test(t) && !/\d/.test(t)
+  const junk = (t: string): boolean => /^(start|read|continue|first|last|latest|new)\b|^(اقرأ|إقرأ|قراءة|ابدأ|إبدأ|تابع|متابعة|الأول|الأخير|الأحدث|أحدث|آخر)(\s|$)/i.test(t) && !/\d/.test(t)
   // Sites that number chapters by address only: …/reader/<series-slug>/138 (no "chapter" word anywhere).
   const lastSeg = decodeURIComponent(basePath.split('/').pop() || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const slugNumRe = lastSeg ? new RegExp('/' + lastSeg + '/(\\d+(?:[._-]\\d+)?)/?$', 'i') : null

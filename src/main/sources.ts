@@ -32,6 +32,20 @@ export const BUILTIN_SOURCES: SourceDef[] = [
     seriesRe: '^https://baetoon\\.com/title-detail/[^/?#]+$',
     chapterRe: '/chapter-detail/',
     maxPages: 600
+  },
+  {
+    // Arabic and English sections side by side; chapters are named …/fsl-99/ rather than …/chapter-99/
+    id: 'fastestmanga',
+    name: 'Fastest Manga',
+    baseUrl: 'https://www.fastestmanga.com/',
+    listTemplate: 'https://www.fastestmanga.com/ar/page/{n}/',
+    listTemplates: [
+      'https://www.fastestmanga.com/ar/page/{n}/',
+      'https://www.fastestmanga.com/en/page/{n}/'
+    ],
+    seriesRe: '^https://www\\.fastestmanga\\.com/(?:ar|en)/manga/[^/?#]+/?$',
+    chapterRe: '/manga/[^/]+/(?:fsl|chapter)-[^/]+/?$',
+    maxPages: 100
   }
 ]
 
