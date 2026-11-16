@@ -18,6 +18,7 @@ import {
   normalizeTitle,
   noteCandidate,
   orderSourceIds,
+  pageAddress,
   probeDelay,
   PROBE_BACKOFF_MS,
   rankAlternatives,
@@ -565,4 +566,29 @@ test('a folded Arabic query token is found inside the folded title key', () => {
 
 test('normalizeTitle lines up Arabic-Indic digits with 0-9', () => {
   assert.equal(normalizeTitle('الفصل ١٢'), normalizeTitle('الفصل 12'))
+})
+
+test('a chapter page that names the home page as its canonical is not taken for a bounce home', () => {
+  const html =
+    '<link rel="canonical" href="https://rizzfables.com/"><meta property="og:url" content="https://rizzfables.com/">'
+  const url = 'https://rizzfables.com/chapter/r2311170-a-bad-person-chapter-1'
+  assert.equal(pageAddress(html, url, 'A Bad Person Chapter 1'), url)
+  assert.equal(pageAddress(html, url, 'الفصل 12'), url)
+})
+
+test('a real bounce to the home page is still seen as one', () => {
+  const html = '<link rel="canonical" href="https://site.com/">'
+  assert.equal(
+    pageAddress(html, 'https://site.com/manga/x/chapter-9/', 'Site - Read manga online'),
+    'https://site.com/'
+  )
+})
+
+test('a canonical that is not the home page is kept', () => {
+  const html = '<link rel="canonical" href="https://site.com/manga/x/chapter-9/">'
+  assert.equal(
+    pageAddress(html, 'https://site.com/manga/x/chapter-9/?style=list', 'X Chapter 9'),
+    'https://site.com/manga/x/chapter-9/'
+  )
+  assert.equal(pageAddress('<p>no tags</p>', 'https://site.com/a', 'A'), 'https://site.com/a')
 })

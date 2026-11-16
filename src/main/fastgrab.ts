@@ -10,7 +10,13 @@ import { fetchHtml } from './http'
 import { feedChapter, feedFor } from './feedapi'
 import { parseChapterImages } from './staticParse'
 import { getMode, setMode } from './hostmode'
-import { classifyFailure, interpretChapter, outageError, type FailureKind } from './repair'
+import {
+  classifyFailure,
+  interpretChapter,
+  outageError,
+  pageAddress,
+  type FailureKind
+} from './repair'
 
 const TTL = 20 * 60 * 1000
 const cache = new Map<string, { at: number; res: GrabResult }>()
@@ -69,7 +75,7 @@ async function viaHttp(url: string): Promise<GrabResult | null> {
     }
     if (r.status !== 200) return null
     const p = parseChapterImages(r.html, url)
-    return { url, title: p.title, pages: p.pages, landed: pageAddress(r.html, r.finalUrl) }
+    return { url, title: p.title, pages: p.pages, landed: pageAddress(r.html, r.finalUrl, p.title) }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     rememberFault(url, classifyFailure(message), message)
@@ -81,19 +87,6 @@ async function viaHttp(url: string): Promise<GrabResult | null> {
  * The address a page says it is (its canonical link or og:url), else the one it was fetched from. A redirect isn't
  * always visible in the response, but a site's home page still names itself as the home page.
  */
-function pageAddress(html: string, fetched: string): string {
-  const m =
-    html.match(/<link[^>]+rel=["']?canonical["']?[^>]*href=["']([^"']+)["']/i) ??
-    html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["']?canonical/i) ??
-    html.match(/<meta[^>]+property=["']og:url["'][^>]*content=["']([^"']+)["']/i)
-  if (!m) return fetched
-  try {
-    return new URL(m[1], fetched).href
-  } catch {
-    return fetched
-  }
-}
-
 async function viaLight(url: string): Promise<GrabResult | null> {
   try {
     return await grabChapterLight(url)

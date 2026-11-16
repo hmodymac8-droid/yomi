@@ -642,3 +642,27 @@ export function rewriteDetailUrls<
     }))
   }
 }
+
+const isHomePath = (p: string): boolean => /^\/?(index\.(php|html?))?$|^\/home\/?$/i.test(p)
+
+/**
+ * The address a fetched chapter page says it is (its canonical link or og:url), else where the request ended up.
+ * Some sites put their home page as the canonical of every page (Rizz Comics): when the page's own title plainly
+ * names a chapter, that label is ignored, or the chapter would look like a bounce back to the home page.
+ */
+export function pageAddress(html: string, fetched: string, title = ''): string {
+  const m =
+    html.match(/<link[^>]+rel=["']?canonical["']?[^>]*href=["']([^"']+)["']/i) ??
+    html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["']?canonical/i) ??
+    html.match(/<meta[^>]+property=["']og:url["'][^>]*content=["']([^"']+)["']/i)
+  if (!m) return fetched
+  try {
+    const said = new URL(m[1], fetched)
+    const chapterTitle = /(?:chapter|chap|ch\.|episode|ep\.|الفصل|فصل|الحلقة)\s*\d/i.test(title)
+    if (chapterTitle && isHomePath(said.pathname) && !isHomePath(new URL(fetched).pathname))
+      return fetched
+    return said.href
+  } catch {
+    return fetched
+  }
+}
