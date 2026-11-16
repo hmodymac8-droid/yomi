@@ -2,6 +2,7 @@ import { Tags } from './Tags'
 import { Icon } from './Icon'
 import { useEffect, useRef, useState } from 'react'
 import type { DownloadItem, DownloadRequest, FollowInfo, ProgressRecord, SeriesDetail, SiteSpeed } from '../../../preload/index.d'
+import { createShareLink, type ShareInfo } from '../shareCard'
 import { OpenChapter, OpenSeries, chapterKey, chapterNumber as numberInTitle, fallbackCover, pageSrc, coverSrc } from '../lib'
 import AniListLinkPanel from './AniListLink'
 import { SimilarRow } from './Similar'
@@ -105,6 +106,15 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
   }, [storyKey, hasDetail, entries.length])
   const [dls, setDls] = useState<Record<string, DownloadItem>>({})
   const [follow, setFollowInfo] = useState<FollowInfo | null>(null)
+  const [shareNote, setShareNote] = useState('')
+  const shareInfo = (): ShareInfo => ({
+    title: detail?.title || series.title,
+    cover: series.cover || detail?.cover || '',
+    coverReferer: series.coverReferer,
+    tags: [...(detail?.type ? [detail.type[0].toUpperCase() + detail.type.slice(1)] : []), ...(detail?.genres ?? [])],
+    chapters: detail?.chapters.length ?? 0,
+    reading: progress?.chapterTitle
+  })
 
   // Following state + which chapters are new, kept live while the background checker runs.
   useEffect(() => {
@@ -537,6 +547,23 @@ export default function Series({ series, onBack, onRead, onOpen, backLabel }: Pr
               <button className={`mini big${follow?.following ? ' on' : ''}`} onClick={toggleFollow} title="Follow to be told about new chapters">
                 {follow?.following ? '✓ Following' : '☆ Follow'}
               </button>
+              <button
+                className="mini big"
+                title="Copy a link to this series with where you are. Paste it in Discord, Telegram or WhatsApp and it shows a clickable card"
+                onClick={async () => {
+                  setShareNote('Making link…')
+                  try {
+                    await navigator.clipboard.writeText(await createShareLink(shareInfo()))
+                    setShareNote('✓ Link copied. Paste it in any chat')
+                  } catch {
+                    setShareNote("Couldn't make the link. Check your internet and try again")
+                  }
+                  setTimeout(() => setShareNote(''), 4000)
+                }}
+              >
+                ↗ Share
+              </button>
+              {shareNote && <span className="count">{shareNote}</span>}
               {follow && follow.unread > 0 && <span className="count">{follow.unread} new</span>}
             </div>
           )}

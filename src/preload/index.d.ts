@@ -397,6 +397,8 @@ export interface MangaApi {
   onDetect: (cb: (msg: string) => void) => () => void
   /** Fills in the real title / cover for series that only have a URL-derived title. Returns what it found. */
   enrich: (urls: string[]) => Promise<EnrichedEntry[]>
+  shareCreate: (meta: { t: string; r: string; n: number; g: string }, image: Uint8Array) => Promise<string>
+  coverBytes: (url: string, referer: string) => Promise<{ type: string; data: Uint8Array } | null>
   followList: () => Promise<FollowInfo[]>
   followGet: (seriesUrl: string) => Promise<FollowInfo | null>
   followSet: (meta: FollowMeta, following: boolean) => Promise<void>

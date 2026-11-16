@@ -1,0 +1,9 @@
+name = "yomi"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+[[kv_namespaces]]
+binding = "SHARES"
+id = "264f12d966734c39b52eeb9ed2e76093"

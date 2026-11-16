@@ -13,6 +13,7 @@ files:
   - '!docs/**'
   - '!.claude/**'
   - '!.github/**'
+  - '!share-worker/**'
   - '!*.zip'
 asarUnpack:
   - resources/**
