@@ -119,7 +119,7 @@ export default function Reader({
   const [openByType, setOpenByType] = useState(
     () => saved('openByType', ['on', 'off'] as const, 'off') === 'on'
   )
-  const [fit, setFit] = useState<'width' | 'height'>(() =>
+  const [fit, setFitRaw] = useState<'width' | 'height'>(() =>
     saved('fit', ['width', 'height'] as const, 'width')
   )
   const [bg, setBg] = useState<Bg>(() => saved('bg', ['dark', 'black', 'sepia'] as const, 'dark'))
@@ -138,7 +138,7 @@ export default function Reader({
   // Making the pages narrower or wider changes how tall the chapter is. So that you stay where you are, note which page
   // is in the middle of the screen (and how far down it) before the change, and put that spot back in the middle after.
   const zoomAnchor = useRef<{ i: number; f: number } | null>(null)
-  const setZoom: typeof setZoomRaw = (u) => {
+  const markPlace = (): void => {
     const el = scroller.current
     zoomAnchor.current = null
     if (el && el.scrollHeight > el.clientHeight) {
@@ -152,7 +152,14 @@ export default function Reader({
         }
       }
     }
+  }
+  const setZoom: typeof setZoomRaw = (u) => {
+    markPlace()
     setZoomRaw(u)
+  }
+  const setFit: typeof setFitRaw = (u) => {
+    markPlace()
+    setFitRaw(u)
   }
   useLayoutEffect(() => {
     const a = zoomAnchor.current
@@ -163,7 +170,7 @@ export default function Reader({
     if (!b) return
     const r = b.getBoundingClientRect()
     el.scrollTop += r.top + a.f * r.height - (el.getBoundingClientRect().top + el.clientHeight / 2)
-  }, [zoom])
+  }, [zoom, fit])
   const root = useRef<HTMLDivElement>(null)
   // Pages can come from another site when this one fails (see fromOtherSites): they need that site as Referer.
   const [pageRef, setPageRef] = useState(chapter.referer)

@@ -657,7 +657,7 @@ app.whenReady().then(async () => {
     const form = new FormData()
     form.set('meta', JSON.stringify(meta))
     form.set('img', new Blob([image as BlobPart], { type: 'image/jpeg' }), 'card.jpg')
-    const res = await fetch('https://yomi.yomi-reader.workers.dev/new', { method: 'POST', body: form, signal: AbortSignal.timeout(20000) })
+    const res = await fetch('https://yomi.yomi-reader.workers.dev/new', { method: 'POST', body: form, headers: { 'x-yomi': 'app' }, signal: AbortSignal.timeout(20000) })
     if (!res.ok) throw new Error('share failed ' + res.status)
     return String(((await res.json()) as { url: string }).url)
   })

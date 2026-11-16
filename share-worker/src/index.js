@@ -15,7 +15,25 @@ function newId() {
   return [...b].map((x) => ALPHABET[x % ALPHABET.length]).join('')
 }
 
+// Keeps the free storage safe: a few links per person per hour, and a daily cap for everyone.
+const PER_IP_HOUR = 12
+const PER_DAY = 200
+async function tooMany(req, env) {
+  const ip = req.headers.get('cf-connecting-ip') || 'x'
+  const now = Date.now()
+  const hk = `r:${ip}:${Math.floor(now / 3600000)}`
+  const dk = `d:${Math.floor(now / 86400000)}`
+  const [h, d] = await Promise.all([env.SHARES.get(hk), env.SHARES.get(dk)])
+  if ((parseInt(h, 10) || 0) >= PER_IP_HOUR || (parseInt(d, 10) || 0) >= PER_DAY) return true
+  await Promise.all([
+    env.SHARES.put(hk, String((parseInt(h, 10) || 0) + 1), { expirationTtl: 7200 }),
+    env.SHARES.put(dk, String((parseInt(d, 10) || 0) + 1), { expirationTtl: 172800 })
+  ])
+  return false
+}
+
 async function create(req, env) {
+  if (req.headers.get('x-yomi') !== 'app') return new Response('forbidden', { status: 403 })
   let form
   try {
     form = await req.formData()
@@ -23,6 +41,7 @@ async function create(req, env) {
     return new Response('bad request', { status: 400 })
   }
   const img = form.get('img')
+  if (String(form.get('meta') || '').length > 2000) return new Response('bad request', { status: 400 })
   let meta
   try {
     meta = JSON.parse(String(form.get('meta') || '{}'))
@@ -30,6 +49,9 @@ async function create(req, env) {
     return new Response('bad request', { status: 400 })
   }
   if (!img || typeof img === 'string' || img.size === 0 || img.size > MAX_IMG || img.type !== 'image/jpeg') return new Response('bad image', { status: 400 })
+  const head = new Uint8Array(await img.slice(0, 3).arrayBuffer())
+  if (head[0] !== 0xff || head[1] !== 0xd8) return new Response('bad image', { status: 400 })
+  if (await tooMany(req, env)) return new Response('slow down', { status: 429 })
   const clean = {
     t: clip(meta.t, 120) || 'a series',
     r: clip(meta.r, 60),
