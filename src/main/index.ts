@@ -1090,6 +1090,46 @@ app.whenReady().then(async () => {
     return
   }
 
+  // Dev helper: MR_CHTEST=<site url>,<series url> times each way of reading that series' newest chapter on its own
+  // (plain HTTP, light window, full browser), to see which one is slow or stuck.
+  if (process.env['MR_CHTEST']) {
+    ;(async () => {
+      const [site, seriesUrl] = process.env['MR_CHTEST']!.split(',')
+      const { grabChapter, grabChapterLight } = await import('./grabber')
+      const { parseChapterImages } = await import('./staticParse')
+      warmUp()
+      const def = await detectSource(site)
+      def.id = 'ch-test'
+      def.maxPages = 0
+      addSource(def)
+      const d = await getSeries(def.id, seriesUrl)
+      const ch = d.chapters[0]?.url
+      console.log('CHTEST chapters ' + d.chapters.length + ' newest ' + ch)
+      if (!ch) return
+      const time = async (name: string, fn: () => Promise<string[]>): Promise<void> => {
+        const t0 = Date.now()
+        try {
+          const pages = await Promise.race([
+            fn(),
+            new Promise<string[]>((_, rej) => setTimeout(() => rej(new Error('still going after 120 s')), 120000))
+          ])
+          console.log(`CHTEST ${name} ${Date.now() - t0}ms ${pages.length} pages ${pages.slice(0, 2).join(' ')}`)
+        } catch (e) {
+          console.log(`CHTEST ${name} ${Date.now() - t0}ms ERROR ${e instanceof Error ? e.message : String(e)}`)
+        }
+      }
+      await time('http', async () => {
+        const r = await fetchHtml(ch)
+        return r.status === 200 ? parseChapterImages(r.html, ch).pages : Promise.reject(new Error('status ' + r.status))
+      })
+      await time('light', async () => (await grabChapterLight(ch)).pages)
+      await time('browser', async () => (await grabChapter(ch)).pages)
+    })()
+      .catch((e) => console.log('CHTEST_ERROR ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => app.quit())
+    return
+  }
+
   // Dev helper: MR_FTEST=<image url>,<referer> tries several ways of fetching an image.
   if (process.env['MR_FTEST']) {
     ;(async () => {
@@ -1627,7 +1667,7 @@ app.whenReady().then(async () => {
               if (k > 0) o.lockedNewest = k
               break
             } catch (e) {
-              if (!/locked on the site/.test(e instanceof Error ? e.message : '')) throw e
+              if (!/locked on the site|needs an account/.test(e instanceof Error ? e.message : '')) throw e
             }
           }
           if (process.env['MR_PIPEDEBUG'])
@@ -3039,6 +3079,7 @@ app.on('window-all-closed', () => {
     process.env['MR_BODY'] ||
     process.env['MR_IMGTEST'] ||
     process.env['MR_UPDTEST'] ||
+    process.env['MR_CHTEST'] ||
     process.env['MR_SITEMAP'] ||
     process.env['MR_META'] ||
     process.env['MR_DISCOVER'] ||

@@ -72,3 +72,33 @@ test('the reader area wins even when every page sits in its own folder (Top Manh
     `</div><aside>${thumbs}</aside>`
   assert.deepEqual(parseChapterImages(html, page).pages, real)
 })
+
+test("Madara's protected page list (chapter_data) is decrypted (Gourmet)", async () => {
+  const { createCipheriv, createHash, randomBytes } = await import('node:crypto')
+  const pass = '92415cbc18'
+  const real = ['https://example.com/WP-manga/data/m/1.jpg', 'https://example.com/WP-manga/data/m/2.jpg']
+  const salt = randomBytes(8)
+  let prev = Buffer.alloc(0)
+  let kd = Buffer.alloc(0)
+  while (kd.length < 48) {
+    prev = createHash('md5').update(Buffer.concat([prev, Buffer.from(pass), salt])).digest()
+    kd = Buffer.concat([kd, prev])
+  }
+  const c = createCipheriv('aes-256-cbc', kd.subarray(0, 32), kd.subarray(32, 48))
+  const ct = Buffer.concat([c.update(JSON.stringify(JSON.stringify(real))), c.final()]).toString('base64')
+  const data = JSON.stringify({ ct, iv: kd.subarray(32, 48).toString('hex'), s: salt.toString('hex') }).replace(/\//g, '\/')
+  const html = `<script>var wpmangaprotectornonce='${pass}';var chapter_data='${data}';</script>
+    <div class="reading-content"><div class="page-break"></div><div class="page-break"></div></div>`
+  assert.deepEqual(parseChapterImages(html, 'https://example.com/m/chapter-1/').pages, real)
+})
+
+test("entries of a Madara chapter list are chapters even without 'chapter' in the address (Manga Eclipse)", () => {
+  const page = 'https://mangaeclipse.com/manga/peculiar-tales/'
+  const html = `<ul class="main">
+    <li class="wp-manga-chapter"><a href="${page}chapter-14/">Chapter 14</a></li>
+    <li class="wp-manga-chapter"><a href="${page}12-slap/">12 - Slap</a></li>
+    <li class="wp-manga-chapter"><a href="${page}11-the-duel/">11 - The Duel</a></li></ul>
+    <a href="https://mangaeclipse.com/manga/other-series/">Other series</a>`
+  const { chapters } = parseSeries(html, page, '(?:chapter|chap|ch|episode|ep|read)[-_/ ]?\d')
+  assert.deepEqual(chapters.map((c) => c.url), [`${page}chapter-14/`, `${page}12-slap/`, `${page}11-the-duel/`])
+})

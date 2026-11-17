@@ -306,7 +306,17 @@ export function loadPageReady(win: BrowserWindow, url: string, timeoutMs = 20000
       else resolve()
     }
     const onReady = (): void => finish()
-    const timer = setTimeout(() => finish(new Error('Page load timed out')), timeoutMs)
+    // Time's up: a slow site (Scythe Scans runs 67 scripts before "ready") may still have drawn its whole page by
+    // now. If it has, read that; links and cards are all that's needed.
+    const timer = setTimeout(() => {
+      if (done || win.isDestroyed()) return finish(new Error('Page load timed out'))
+      Promise.race([
+        wc.executeJavaScript('document.body ? document.links.length : 0') as Promise<number>,
+        new Promise<number>((r) => setTimeout(() => r(0), 3000))
+      ])
+        .catch(() => 0)
+        .then((links) => finish(links >= 30 ? undefined : new Error('Page load timed out')))
+    }, timeoutMs)
     wc.once('dom-ready', onReady)
     win.loadURL(url).catch((e) => {
       const msg = e instanceof Error ? e.message : String(e)
@@ -475,15 +485,50 @@ const LIGHT_SCRIPT = `
 })()
 `
 
+/** What a chapter that only members may read says (Asura Scans sends its newest chapters to /login?return=…). */
+export const NEEDS_ACCOUNT =
+  'This chapter needs an account on the site: it only shows it to members who are logged in there.'
+
+const onLoginPage = (win: BrowserWindow): boolean => {
+  try {
+    return !win.isDestroyed() && /\/(login|log-in|signin|sign-in)(\/|$)/i.test(new URL(win.webContents.getURL()).pathname)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Runs a reading script in the chapter's window. If the site moves to its login page meanwhile, the script is gone and
+ * would never answer: notice that (and any other hang) instead of waiting forever.
+ */
+async function runReader<T>(win: BrowserWindow, script: string, ms = 60000): Promise<T> {
+  if (onLoginPage(win)) throw new Error(NEEDS_ACCOUNT)
+  let poll: NodeJS.Timeout | undefined
+  try {
+    return await Promise.race([
+      win.webContents.executeJavaScript(script) as Promise<T>,
+      new Promise<T>((_, rej) => {
+        const t0 = Date.now()
+        poll = setInterval(() => {
+          if (onLoginPage(win)) rej(new Error(NEEDS_ACCOUNT))
+          else if (win.isDestroyed() || Date.now() - t0 > ms) rej(new Error('Reading the chapter page took too long'))
+        }, 500)
+      })
+    ])
+  } finally {
+    clearInterval(poll)
+  }
+}
+
 export async function grabChapterLight(url: string): Promise<GrabResult> {
   const win = hiddenWindow({ light: true })
   try {
     await loadPage(win, url, 30000)
-    const r = (await win.webContents.executeJavaScript(LIGHT_SCRIPT)) as {
+    const r = await runReader<{
       title: string
       imgs: { src: string; w: number; h: number; reader?: boolean }[]
       mds?: string[]
-    }
+    }>(win, LIGHT_SCRIPT)
     if (r.mds?.length) return { url, title: r.title, pages: r.mds, landed: win.webContents.getURL() }
     const urls = r.imgs.filter((i) => !((i.w && i.w < 200) || (i.h && i.h < 200))).map((i) => i.src)
     // the site's reader area holds exactly the pages, in order (see parseChapterImages)
@@ -518,11 +563,11 @@ export async function grabChapter(url: string): Promise<GrabResult> {
       win.loadURL(url),
       new Promise((_, rej) => setTimeout(() => rej(new Error('Page load timed out')), 45000))
     ])
-    const result = (await win.webContents.executeJavaScript(PAGE_SCRIPT)) as {
+    const result = await runReader<{
       title: string
       imgs: RawImg[]
       mds?: string[]
-    }
+    }>(win, PAGE_SCRIPT, 120000)
     if (result.mds?.length) return { url, title: result.title, pages: result.mds, landed: win.webContents.getURL() }
     return { url, title: result.title, pages: pickPages(result.imgs), landed: win.webContents.getURL() }
   } finally {

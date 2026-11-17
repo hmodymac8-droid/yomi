@@ -3,6 +3,7 @@ import {
   ensureSession,
   grabChapter,
   grabChapterLight,
+  NEEDS_ACCOUNT,
   refererHints,
   type GrabResult
 } from './grabber'
@@ -93,6 +94,10 @@ async function viaLight(url: string): Promise<GrabResult | null> {
     return await grabChapterLight(url)
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
+    if (message === NEEDS_ACCOUNT) {
+      lockedNotes.set(url, message) // members only: say so, like a chapter the site sells
+      return null
+    }
     rememberFault(url, classifyFailure(message), message)
     return null
   }
@@ -135,7 +140,10 @@ async function grab(url: string): Promise<GrabResult> {
   }
 }
 
-/** Chapters the site sells (see lockedChapterNote): what to tell the reader instead of showing its coin pictures. */
+/**
+ * Chapters the site sells (see lockedChapterNote) or shows only to logged-in members (NEEDS_ACCOUNT): what to tell the
+ * reader instead of showing coin pictures or waiting for pages that never come.
+ */
 const lockedNotes = new Map<string, string>()
 function stopIfLocked(url: string): void {
   const note = lockedNotes.get(url)
@@ -153,6 +161,7 @@ async function grabInner(url: string): Promise<GrabResult> {
   }
   if (mode === 'static' || mode === 'light') {
     const l = await viaLight(url)
+    stopIfLocked(url)
     if (usable(l)) return l
   }
   if (mode === 'browser') return grabChapter(url)
@@ -198,6 +207,7 @@ async function grabInner(url: string): Promise<GrabResult> {
       return s
     }
     const l = await lP
+    stopIfLocked(url) // members only (the site sent the light window to its login page)
     if (healthy(l)) {
       track(verify())
       return l

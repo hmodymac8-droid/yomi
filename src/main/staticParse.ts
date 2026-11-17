@@ -1,7 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as cheerio from 'cheerio'
+import { createDecipheriv, createHash } from 'crypto'
 
 // Parsers that work on raw HTML (no browser). They mirror what the in-page scripts do in catalog.ts / grabber.ts.
+
+/**
+ * Madara's "chapter images protection" plugin (Gourmet Scans): the page list is in chapter_data, encrypted with
+ * CryptoJS AES using the page's wpmangaprotectornonce as the passphrase, and the page's script decrypts it. Same here
+ * (OpenSSL key derivation: MD5 over passphrase + salt). Returns [] when the page has no such list.
+ */
+export function protectedChapterImages(html: string): string[] {
+  try {
+    const pass = /wpmangaprotectornonce\s*=\s*['"]([^'"]+)['"]/.exec(html)?.[1]
+    const raw = /chapter_data\s*=\s*'([^']+)'/.exec(html)?.[1]
+    if (!pass || !raw) return []
+    const d = JSON.parse(raw.split('\\/').join('/')) as { ct: string; s: string }
+    const salt = Buffer.from(d.s, 'hex')
+    let prev = Buffer.alloc(0)
+    let kd = Buffer.alloc(0)
+    while (kd.length < 48) {
+      prev = createHash('md5').update(Buffer.concat([prev, Buffer.from(pass), salt])).digest()
+      kd = Buffer.concat([kd, prev])
+    }
+    const dec = createDecipheriv('aes-256-cbc', kd.subarray(0, 32), kd.subarray(32, 48))
+    let list: unknown = JSON.parse(
+      Buffer.concat([dec.update(Buffer.from(d.ct, 'base64')), dec.final()]).toString('utf8')
+    )
+    if (typeof list === 'string') list = JSON.parse(list) // (it is a JSON string holding the JSON list)
+    return Array.isArray(list) ? list.filter((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u)) : []
+  } catch {
+    return []
+  }
+}
 
 const IMG_ATTRS = ['data-src', 'data-lazy-src', 'data-original', 'data-cfsrc', 'src']
 
@@ -170,7 +200,10 @@ export function parseSeries(
     } catch {
       /* keep going */
     }
-    if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t)) return
+    // An entry of the site's own chapter list (Madara's li.wp-manga-chapter, MangaStream's #chapterlist / .eplister)
+    // is a chapter whatever its address says: Manga Eclipse has …/12-slap/ next to …/chapter-14/.
+    const listed = $(a).closest('li.wp-manga-chapter, #chapterlist li, .eplister li').length > 0
+    if ((!listed && !re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t)) return
     if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.')
     seen.add(href)
     chapters.push({ title: t, url: href })
@@ -282,6 +315,8 @@ export function parseChapterImages(
     if (/^https?:\/\//.test(u)) encoded.push(u)
   })
   if (encoded.length > 0) return { title: $('title').first().text().trim(), pages: encoded }
+  const decrypted = protectedChapterImages(html)
+  if (decrypted.length > 0) return { title: $('title').first().text().trim(), pages: decrypted }
   const dom: string[] = []
   const rejected = new Set<string>() // small pictures: not pages here, and not in the script search below either
   $('img').each((_, el) => {
