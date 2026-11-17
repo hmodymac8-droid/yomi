@@ -375,6 +375,10 @@ interface RawImg {
 function pickPages(imgs: RawImg[]): string[] {
   // Keep big, tall-ish images. Manga pages are large; icons/banners/avatars are not.
   const big = imgs.filter((i) => {
+    // Drawn small on the page = a comment sticker or emoji, however big its file is (Gourmet: 181 stickers at 40px).
+    // (Pages not laid out yet measure 0 and are kept.)
+    if (i.rw > 0 && i.rw < 150) return false
+    if (/\/wp-content\/plugins\//i.test(i.src)) return false // a plugin's own pictures (coins popups...)
     const w = Math.max(i.w, i.rw)
     const h = Math.max(i.h, i.rh)
     return w >= 400 && h >= 400
@@ -441,7 +445,11 @@ const LIGHT_SCRIPT = `
       if (!src) src = img.currentSrc || '';
       if (!src) continue;
       try { src = new URL(src, location.href).href; } catch { continue; }
-      out.push({ src, w: Number(img.getAttribute('width')) || 0, h: Number(img.getAttribute('height')) || 0 });
+      // comment stickers / emoji: drawn small by their style or named so by their class (Gourmet)
+      const sw = /(?:^|;)\\s*(?:max-)?width:\\s*(\\d+)px/i.exec(img.getAttribute('style') || '');
+      if ((sw && Number(sw[1]) < 200) || /\\b(sticker|emoji|emoticon|avatar)\\b/i.test(img.className || '')) continue;
+      const reader = !!img.closest('.reading-content, #readerarea') || img.classList.contains('wp-manga-chapter-img');
+      out.push({ src, w: Number(img.getAttribute('width')) || 0, h: Number(img.getAttribute('height')) || 0, reader });
     }
     return out;
   };
@@ -473,12 +481,17 @@ export async function grabChapterLight(url: string): Promise<GrabResult> {
     await loadPage(win, url, 30000)
     const r = (await win.webContents.executeJavaScript(LIGHT_SCRIPT)) as {
       title: string
-      imgs: { src: string; w: number; h: number }[]
+      imgs: { src: string; w: number; h: number; reader?: boolean }[]
       mds?: string[]
     }
     if (r.mds?.length) return { url, title: r.title, pages: r.mds, landed: win.webContents.getURL() }
     const urls = r.imgs.filter((i) => !((i.w && i.w < 200) || (i.h && i.h < 200))).map((i) => i.src)
-    return { url, title: r.title, pages: pickPageGroup(urls), landed: win.webContents.getURL() }
+    // the site's reader area holds exactly the pages, in order (see parseChapterImages)
+    const reader = [
+      ...new Set(r.imgs.filter((i) => i.reader).map((i) => i.src))
+    ].filter((u) => pickPageGroup([u]).length === 1) // (not a logo / icon / plugin picture)
+    const pages = reader.length >= 2 ? reader : pickPageGroup(urls)
+    return { url, title: r.title, pages, landed: win.webContents.getURL() }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }

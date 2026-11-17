@@ -401,5 +401,9 @@ export function startUpdateScheduler(): void {
 /** Dev/test helper: pretend the newest `n` chapters of a series were never seen. */
 export function debugForget(seriesUrl: string, n: number): void {
   const rec = load().follows[seriesUrl]
-  if (rec) rec.known = rec.known.slice(n)
+  if (!rec) return
+  // A chapter is known by its name AND its address (see checkAll), so both have to go for it to count as new again.
+  const newest = (getSeriesCached(seriesUrl)?.chapters ?? []).slice(0, n)
+  const drop = new Set(newest.flatMap((c) => [keyOf(c), c.url]))
+  rec.known = drop.size ? rec.known.filter((k) => !drop.has(k)) : rec.known.slice(n)
 }

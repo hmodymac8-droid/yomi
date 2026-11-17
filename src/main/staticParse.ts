@@ -227,7 +227,24 @@ export function parseSeries(
 
 // Site furniture, not manga pages: logos, favicons, "apple-touch-icon", avatars, sprites... (the name may START with
 // something else: apple-touch-icon-152x152.png, site-logo.png)
-const NOT_PAGE = /\/[^/]*(?:^|[-_.])?(logo|favicon|icon|avatar|sprite|emoji|apple-touch)[^/]*\.(png|jpe?g|webp|gif|avif|ico|svg)(?:\?|$)|\/(banner|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)/i
+// Also: anything a WordPress plugin ships (Violet / ThunderScans show a coins popup: treasure-chest.png, coin.png), and
+// WordPress's small resized copies such as …-32x32.png / -192x192.png, which are the site icon (Eva Scans).
+const NOT_PAGE = /\/[^/]*(?:^|[-_.])?(logo|favicon|icon|avatar|sprite|emoji|apple-touch)[^/]*\.(png|jpe?g|webp|gif|avif|ico|svg)(?:\?|$)|\/(banner|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)|\/wp-content\/plugins\/|-(?:[1-9]\d|[12]\d\d|300)x(?:[1-9]\d|[12]\d\d|300)\.(png|jpe?g|webp|gif|avif)(?:\?|$)/i
+
+/**
+ * A chapter the site sells (its "lock chapters" plugin: "This chapter is locked. Please purchase it to read the full
+ * content. Free in 2027-05-24"). Returns what to tell the reader, or '' when the chapter is open.
+ */
+export function lockedChapterNote($: cheerio.CheerioAPI): string {
+  const box = $('.lock-container, .lock-title, .lock-status').first()
+  const text = (box.closest('.lock-container').text() || box.text()).replace(/\s+/g, ' ')
+  if (!box.length || !/locked|purchase|unlock/i.test(text)) return ''
+  const free = /free (?:in|on|from)\s*(\d{4}-\d{2}-\d{2})/i.exec(text)?.[1]
+  return (
+    'This chapter is locked on the site: it has to be bought there.' +
+    (free ? ` The site says it becomes free on ${free}.` : '')
+  )
+}
 
 /** Manga pages sit in one folder of one CDN host: take the biggest such group (covers/ads are scattered). */
 export function pickPageGroup(urls: string[]): string[] {
@@ -250,8 +267,13 @@ export function pickPageGroup(urls: string[]): string[] {
   return best
 }
 
-export function parseChapterImages(html: string, pageUrl: string): { title: string; pages: string[] } {
+export function parseChapterImages(
+  html: string,
+  pageUrl: string
+): { title: string; pages: string[]; locked?: string } {
   const $ = cheerio.load(html)
+  const locked = lockedChapterNote($)
+  if (locked) return { title: $('title').first().text().trim(), pages: [], locked }
   // Some readers (Mangadar) put each page's address in data-mds, base64-encoded, and only show it as you scroll:
   // read them straight from there, in order.
   const encoded: string[] = []
@@ -261,23 +283,46 @@ export function parseChapterImages(html: string, pageUrl: string): { title: stri
   })
   if (encoded.length > 0) return { title: $('title').first().text().trim(), pages: encoded }
   const dom: string[] = []
+  const rejected = new Set<string>() // small pictures: not pages here, and not in the script search below either
   $('img').each((_, el) => {
     const u = imgUrl($(el), pageUrl)
     if (!u) return
     const w = Number($(el).attr('width'))
     const h = Number($(el).attr('height'))
-    if ((w && w < 200) || (h && h < 200)) return
+    // Comment stickers and emoji are drawn small by their style (Gourmet: 181 "wpdem-editor-sticker"s at 40px)
+    const styled = /(?:^|;)\s*(?:max-)?width:\s*(\d+)px/i.exec($(el).attr('style') ?? '')
+    if (
+      (w && w < 200) ||
+      (h && h < 200) ||
+      (styled && Number(styled[1]) < 200) ||
+      /\b(sticker|emoji|emoticon|avatar)\b/i.test($(el).attr('class') ?? '')
+    ) {
+      rejected.add(u)
+      return
+    }
     dom.push(u)
   })
-  let pages = pickPageGroup(dom)
+  // The reader area of Madara / MangaStream sites holds exactly the chapter's pages, in order. Read it first: guessing by
+  // folder fails on sites that keep every page in its own folder (Top Manhua: …/media/421256/…, …/media/421258/…),
+  // where the sidebar's cover thumbnails then look like the biggest group.
+  const reader: string[] = []
+  $('.reading-content img, #readerarea img, img.wp-manga-chapter-img').each((_, el) => {
+    const u = imgUrl($(el), pageUrl)
+    if (u && !rejected.has(u) && !NOT_PAGE.test(u) && !reader.includes(u)) reader.push(u)
+  })
+  let pages = reader.length >= 2 ? reader : pickPageGroup(dom)
   if (pages.length < 3) {
     // Some sites ship the page list as JSON inside a script tag and only render the first <img>s.
     // (Only consulted when the <img> tags gave almost nothing: scripts also mention covers and thumbnails.)
     const text = html.replace(/\\\//g, '/')
     const found = text.match(/https?:\/\/[^"'\s<>)\\]+?\.(?:jpe?g|png|webp|avif|gif)(?:\?[^"'\s<>)\\]*)?/gi) ?? []
-    const fromScripts = pickPageGroup(found)
+    const fromScripts = pickPageGroup(found.filter((u) => !rejected.has(u)))
     if (fromScripts.length > pages.length) pages = fromScripts
   }
+  // Madara readers that fill their page boxes with JavaScript (Gourmet: 19 empty "chapter-img-N" boxes): more boxes
+  // than pictures means the pictures aren't in this HTML. Give nothing, so the hidden browser reads the chapter.
+  const boxes = $('.reading-content .page-break, [id^="chapter-img-"]').length
+  if (boxes >= 3 && boxes > pages.length + 1) pages = []
   // Readers that fill in each page's picture only as you scroll to it (Mangatek, Mangasid) still number every page
   // in the HTML ("Page 20" / "صفحة 20"). More numbered pages than pictures means this list is only the start of the
   // chapter: give nothing, so a way that scrolls through the page (the hidden browser) is used instead.

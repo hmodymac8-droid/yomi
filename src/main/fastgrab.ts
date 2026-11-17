@@ -75,6 +75,7 @@ async function viaHttp(url: string): Promise<GrabResult | null> {
     }
     if (r.status !== 200) return null
     const p = parseChapterImages(r.html, url)
+    if (p.locked) lockedNotes.set(url, p.locked)
     return { url, title: p.title, pages: p.pages, landed: pageAddress(r.html, r.finalUrl, p.title) }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
@@ -129,7 +130,16 @@ async function grab(url: string): Promise<GrabResult> {
   } catch (e) {
     faults.delete(url)
     throw e
+  } finally {
+    lockedNotes.delete(url)
   }
+}
+
+/** Chapters the site sells (see lockedChapterNote): what to tell the reader instead of showing its coin pictures. */
+const lockedNotes = new Map<string, string>()
+function stopIfLocked(url: string): void {
+  const note = lockedNotes.get(url)
+  if (note) throw new Error(note)
 }
 
 async function grabInner(url: string): Promise<GrabResult> {
@@ -138,6 +148,7 @@ async function grabInner(url: string): Promise<GrabResult> {
 
   if (mode === 'static') {
     const s = await viaHttp(url)
+    stopIfLocked(url)
     if (usable(s)) return s
   }
   if (mode === 'static' || mode === 'light') {
@@ -175,6 +186,13 @@ async function grabInner(url: string): Promise<GrabResult> {
 
     // Answer as soon as the cheapest healthy result is in; the slower checks carry on in the background.
     const s = await sP
+    // A sold chapter says nothing about how this site's chapters load: stop here, without settling a way for the site
+    // (the other two ways finish on their own and are ignored).
+    if (lockedNotes.has(url)) {
+      void fullP
+      lP.catch(() => null)
+      stopIfLocked(url)
+    }
     if (healthy(s)) {
       track(verify())
       return s

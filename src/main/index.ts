@@ -1619,7 +1619,17 @@ app.whenReady().then(async () => {
           o.seriesTried = tried
           lap('chaptersMs')
           if (chapters.length === 0) throw new Error('no chapters found')
-          const g = await grabChapterFast(chapters[0].url)
+          // A site that sells its newest chapters (they open later for free): read the newest one that is open.
+          let g = { pages: [] as string[] }
+          for (let k = 0; k < Math.min(chapters.length, 8); k++) {
+            try {
+              g = await grabChapterFast(chapters[k].url)
+              if (k > 0) o.lockedNewest = k
+              break
+            } catch (e) {
+              if (!/locked on the site/.test(e instanceof Error ? e.message : '')) throw e
+            }
+          }
           if (process.env['MR_PIPEDEBUG'])
             console.log(
               'PIPECH',
@@ -1645,12 +1655,44 @@ app.whenReady().then(async () => {
           const solid =
             chapters.length >= 8 && !incomplete && g.pages.length >= 4 && g.pages.length <= 80
           o.result = !imageOk ? 'IMAGE-FAILED' : solid ? 'WORKS' : 'CHECK' // CHECK: passes, but the numbers look thin or odd
+
+          // Updates, not just the first import. (1) New chapters: follow the series, pretend its newest 2 chapters were
+          // never seen, and the update check must announce exactly those.
+          const meta = { seriesUrl, sourceId: def.id, title: 'Test', cover: '', coverReferer: it.url }
+          setAutoDownload(false)
+          setFollow(meta, true)
+          await checkAll(true)
+          debugForget(seriesUrl, 2)
+          await checkAll(true)
+          o.newChapters = getFollow(seriesUrl)?.unread ?? 0
+          setFollow(meta, false)
+          // (2) New titles: a rescan reads the list from page 1 and stops at the first page with nothing new, so the
+          // list must show the newest first. A sitemap is re-read in full each time and covers an A-Z list.
+          o.tpl = def.listTemplate
+          try {
+            const first = await fetchHtml(def.listTemplate.replace('{n}', '1'), 15000)
+            const sre = new RegExp(def.seriesRe)
+            const slugs = [
+              ...new Set(
+                [...first.html.matchAll(/href=["']([^"']+)["']/g)]
+                  .map((m) => m[1])
+                  .filter((h) => sre.test(h))
+                  .map((h) => decodeURIComponent(h.replace(/\/$/, '').split('/').pop() ?? '').toLowerCase())
+              )
+            ]
+            const sorted = slugs.length >= 8 && slugs.every((x, i) => i === 0 || slugs[i - 1] <= x)
+            o.listOrder = slugs.length < 8 ? 'unknown' : sorted ? 'a-z' : 'newest-first'
+          } catch {
+            o.listOrder = 'unknown'
+          }
+          o.newTitles = o.listOrder === 'newest-first' || (def.sitemaps?.length ?? 0) > 0 ? 'ok' : 'AT-RISK'
+          if (o.result === 'WORKS' && (o.newChapters !== 2 || o.newTitles !== 'ok')) o.result = 'UPDATES-FAILED'
         }
         try {
           await Promise.race([
             run(),
             new Promise((_, rej) =>
-              setTimeout(() => rej(new Error('timed out after 100 s')), 100000)
+              setTimeout(() => rej(new Error('timed out after 200 s')), 200000)
             )
           ])
         } catch (e) {
