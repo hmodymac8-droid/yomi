@@ -553,6 +553,8 @@ export interface MangaApi {
   listSources: () => Promise<SourceInfo[]>
   /** True while the library could not be read from disk (it is tried again by itself). */
   catalogTrouble: () => Promise<boolean>
+  /** Why the screen crashed just before this start ('oom' = out of memory), once; null if it didn't. */
+  screenCrash: () => Promise<string | null>
   restartApp: () => Promise<boolean>
   catalogDiagnose: () => Promise<string>
   /** A line from the screen into data-log.txt. */

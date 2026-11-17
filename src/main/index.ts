@@ -202,6 +202,8 @@ registerImageScheme()
 
 /** The one Yomi window (the others are hidden helper windows for reading pages). */
 let mainWin: BrowserWindow | null = null
+// why the screen last crashed ('oom' = the PC ran out of memory); the restarted screen asks once and explains it
+let screenCrash: string | null = null
 /** Pid-tagged line in data-log.txt: how Yomi started, was closed, and why, so an odd start can be traced. */
 function log(m: string): void {
   dataLog(join(app.getPath('userData'), 'catalog.json'), '[' + process.pid + '] ' + m)
@@ -248,6 +250,7 @@ function createWindow(): void {
   const logFile = join(app.getPath('userData'), 'catalog.json')
   mainWindow.webContents.on('render-process-gone', (_e, d) => {
     dataLog(logFile, 'screen process gone: ' + d.reason + ' (code ' + d.exitCode + ')')
+    if (d.reason !== 'clean-exit') screenCrash = d.reason
     if (d.reason !== 'clean-exit' && !mainWindow.isDestroyed()) mainWindow.webContents.reload()
   })
   mainWindow.webContents.on('did-fail-load', (_e, code, desc, url) => {
@@ -574,6 +577,11 @@ app.whenReady().then(async () => {
     }
   }
   ipcMain.handle('catalog-trouble', () => catalogTrouble())
+  ipcMain.handle('screen-crash', () => {
+    const r = screenCrash
+    screenCrash = null
+    return r
+  })
   ipcMain.handle('catalog-diagnose', () => catalogDiagnose())
   // The library still can't be read after a while: start Yomi over once (a fresh start has always read it fine).
   ipcMain.handle('restart-app', () => {

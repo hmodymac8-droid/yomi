@@ -114,6 +114,7 @@ const api = {
   catalogDiagnose: () => ipcRenderer.invoke('catalog-diagnose') as Promise<string>,
   restartApp: () => ipcRenderer.invoke('restart-app') as Promise<boolean>,
   catalogTrouble: () => ipcRenderer.invoke('catalog-trouble') as Promise<boolean>,
+  screenCrash: () => ipcRenderer.invoke('screen-crash') as Promise<string | null>,
   addSite: (url: string) => ipcRenderer.invoke('add-site', url),
   removeSite: (id: string) => ipcRenderer.invoke('remove-site', id),
   getSettings: () => ipcRenderer.invoke('settings-get'),

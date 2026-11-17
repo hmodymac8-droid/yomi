@@ -143,6 +143,12 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
       /* storage unavailable: nothing to restore later */
     }
   }, [mini, view])
+  // If the screen just restarted after a crash, say why (and offer the chapter in the browser) instead of failing silently.
+  const [crash, setCrash] = useState<string | null>(null)
+  useEffect(() => {
+    if (mini) return
+    void window.api.screenCrash().then(setCrash, () => {})
+  }, [mini])
   const lastSession = useRef<MiniSession | null>(null)
   // In the mini window, start on the chapter the main window handed over, and follow later hand-overs.
   useEffect(() => {
@@ -353,6 +359,30 @@ function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
   return (
     <div className={mini ? 'miniapp' : 'app'}>
       {mini ? <MiniTitleBar onReturn={() => void returnToMain()} /> : <TitleBar />}
+      {crash && (
+        <div className="datatrouble" role="alert">
+          {crash === 'oom' ? (
+            <span>
+              <strong>Yomi&apos;s screen restarted because your PC ran out of memory.</strong> Close
+              some other apps (or turn Windows&apos; page file back on) to stop it happening again.
+              Your progress is saved.
+            </span>
+          ) : (
+            <span>
+              <strong>Yomi&apos;s screen crashed and restarted</strong> ({crash}). Your progress is
+              saved.
+            </span>
+          )}
+          {view.name === 'reader' && /^https?:/.test(view.chapter.url) && (
+            <button className="mini" onClick={() => window.open(view.chapter.url)}>
+              Keep reading in your browser
+            </button>
+          )}
+          <button className="mini" onClick={() => setCrash(null)}>
+            OK
+          </button>
+        </div>
+      )}
       {trouble && (
         <div className="datatrouble" role="alert">
           <strong>Your library is still loading from disk.</strong> Your sites and progress are safe
