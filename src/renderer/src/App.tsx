@@ -122,7 +122,27 @@ function MiniTitleBar({ onReturn }: { onReturn: () => void }): React.JSX.Element
 }
 
 function AppInner({ mini }: { mini: boolean }): React.JSX.Element {
-  const [view, setView] = useState<View>({ name: 'browse' })
+  // The open screen is kept in this window's session storage, so if the screen ever restarts (a crash, low memory)
+  // you land back on the chapter or series you had open instead of Discover.
+  const [view, setView] = useState<View>(() => {
+    if (mini) return { name: 'browse' }
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('view') ?? 'null') as View | null
+      if (saved && (saved.name === 'reader' || saved.name === 'series')) return saved
+    } catch {
+      /* nothing saved, or storage unavailable */
+    }
+    return { name: 'browse' }
+  })
+  useEffect(() => {
+    if (mini) return
+    try {
+      if (view.name === 'reader' || view.name === 'series') sessionStorage.setItem('view', JSON.stringify(view))
+      else sessionStorage.removeItem('view')
+    } catch {
+      /* storage unavailable: nothing to restore later */
+    }
+  }, [mini, view])
   const lastSession = useRef<MiniSession | null>(null)
   // In the mini window, start on the chapter the main window handed over, and follow later hand-overs.
   useEffect(() => {
