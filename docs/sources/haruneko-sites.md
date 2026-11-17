@@ -4,6 +4,36 @@ Survey of the site connectors in [HaruNeko](https://github.com/manga-download/ha
 
 **Batch 1 (sections 1–2), 2026-11-17:** 28 of 39 work and are in the app's Popular sites list ([x]). [-] = not added, with the reason after the row. Fixes this needed in Yomi: robots.txt Crawl-delay grouping, chapter pages whose canonical is the home page (Rizz), Arabic "read first / last" buttons, recipes for Fastest Manga and MangaOwl.
 
+**Full test of batch 1, 2026-11-17 (commits 2c09417, baf91c3, b7cad11):** every [x] site was run end to end with `MR_SITEPIPE`: import the list, open a series, read a chapter's pages, see new chapters on a followed series (`newChapters === 2` after forgetting the newest two), and find new titles on a rescan (the list is newest-first or the site has a sitemap).
+
+- **23 of 28 pass.** ManhwaNex shows few chapters per series and S2Manga has 96-page chapters; both are fine.
+- **Image problems on the site's side, not in Yomi:**
+  - 3asq and ZinManga: some older series have missing images on the site itself.
+  - Top Manhua: the image server answers with error 526.
+- **Still failing:**
+  - Scythe Scans: pages give "Page load timed out", even after the slow-page change in `loadPageReady`. Where the timeout comes from is still unknown.
+  - Lagoon Scans: the site is so slow that the test runs out of time at 200s. Many older series have no chapters left on the site.
+- **Fixes this needed in Yomi:**
+  - A series' "chapter 2" link was taken for the list's page 2. Saved sites (3asq, olympustaff) are repaired on startup.
+  - Sold and members-only chapters are reported as such.
+  - Madara's protected chapter lists are decrypted.
+  - Chapter pages come from the reader area first; stickers, icons and plugin art are skipped.
+  - Madara chapter rows with odd addresses are now counted.
+  - `debugForget` forgets chapter addresses too.
+
+### To do
+
+1. [ ] Scythe Scans: find where "Page load timed out" comes from (`MR_CHTEST`, `MR_TRACE`), then fix it or remove the site from `siteDirectory.ts`.
+2. [ ] Lagoon Scans: make it work within the time limit, or remove it.
+3. [ ] Section 3: the 20 sites behind Cloudflare.
+4. [ ] Section 4: the 89 sites on other engines or custom code.
+5. [ ] Section 5: the 5 adult sites.
+6. [ ] Section 6: the 67 sites that didn't answer.
+7. [ ] Recheck the [-] "list not found yet" sites (e.g. Armageddon) now that the page-2 fix is in.
+8. [ ] Survey other languages (`haruneko-connectors.json`).
+
+Every new site must pass the full `MR_SITEPIPE` run, new chapters and new titles included, not just the first import.
+
 Work through the sections in order. Tick a site once it is added to Yomi and tested, or strike it out if it does not work.
 
 ## 1. Template sites, no special code (32)
