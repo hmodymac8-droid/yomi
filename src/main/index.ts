@@ -71,7 +71,8 @@ import {
   scanDue,
   search,
   searchAsync,
-  sourcesWithChapterTitles
+  sourcesWithChapterTitles,
+  sourcesWithSeriesAsList
 } from './catalog'
 import { allHealth, dropHealth, flushHealth, healthOf, recordCheck, recordOpen, recordOpenSpeed } from './health'
 import { classifyFailure } from './repair'
@@ -2879,6 +2880,23 @@ app.whenReady().then(async () => {
   }
   // Sites saved with chapter links as titles (older detection) are rebuilt from scratch in the background.
   setTimeout(async () => {
+    // Sites whose list address is one series' chapters: detect the list again, keeping the titles they have.
+    for (const id of sourcesWithSeriesAsList()) {
+      try {
+        const old = getSource(id)
+        if (!old) continue
+        console.log('HEAL relisting', id, old.listTemplate)
+        const def = await detectSource(old.baseUrl)
+        def.id = id
+        def.name = old.name
+        if (def.lang === undefined && old.lang !== undefined) def.lang = old.lang
+        if (def.listTemplate === old.listTemplate) continue // still the same: leave it alone
+        addSource(def) // keeps the titles; a new list address restarts the scan
+        void crawlSource(id, emit)
+      } catch (e) {
+        console.log('HEAL relist failed', id, e instanceof Error ? e.message : String(e))
+      }
+    }
     for (const id of sourcesWithChapterTitles()) {
       try {
         const old = getSource(id)

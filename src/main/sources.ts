@@ -249,15 +249,28 @@ async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
           .fill('[^/?#]+')
           .join('/')}/?$`
 
-  // Pagination: look for a link to "page 2" and turn the 2 into {n}.
-  const next = snap.all.find((h) => {
-    try {
-      const p = new URL(h)
-      return p.hostname === host && isPage2(p)
-    } catch {
-      return false
-    }
-  })
+  // Pagination: look for a link to "page 2" and turn the 2 into {n}. A bare …/2 under a series page is that
+  // series' chapter 2, not page 2 of the list (3asq: /manga/noisering/2/ came before /manga/page/2/), so those are
+  // skipped, and the unmistakable forms (?page=2, /page/2) are preferred over a bare …/2.
+  const seriesTest = new RegExp(seriesRe)
+  const next = snap.all
+    .map((h) => {
+      try {
+        const p = new URL(h)
+        if (p.hostname !== host || !isPage2(p)) return null
+        if (/[?&](page|p|paged)=2(?:&|$)/.test(p.search) || /\/page\/2\/?$/.test(p.pathname))
+          return { h, rank: 2 }
+        const parent = p.origin + p.pathname.replace(/\/?2\/?$/, '')
+        // (series at the top level, /<name>, look just like list pages such as /latest: only known cards count there)
+        if ((count > 1 && seriesTest.test(parent)) || best[1].has(parent) || best[1].has(parent + '/'))
+          return null
+        return { h, rank: 1 }
+      } catch {
+        return null
+      }
+    })
+    .filter((x): x is { h: string; rank: number } => !!x)
+    .sort((a, b) => b.rank - a.rank)[0]?.h
   let listTemplate = pageUrl
   if (next) {
     const p = new URL(next)

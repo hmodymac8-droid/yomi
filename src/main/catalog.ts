@@ -864,6 +864,30 @@ export function sourcesWithChapterTitles(): string[] {
 }
 
 /**
+ * Sites whose saved list address is really one series' chapter pages (3asq got /manga/noisering/{n}/ because an
+ * older detection took a "chapter 2" link for "page 2"). Their titles are fine; only the list address needs redoing.
+ */
+export function sourcesWithSeriesAsList(): string[] {
+  const s = load()
+  return s.sources
+    .filter((src) => {
+      if (!src.listTemplate?.includes('{n}') || !src.seriesRe) return false
+      try {
+        const parent = src.listTemplate.replace(/\/?\{n\}\/?$/, '')
+        // (/manga/page/{n}/ is a real list: "page" only looks like a series name)
+        return (
+          parent !== src.listTemplate &&
+          !/\/page$/i.test(parent) &&
+          new RegExp(src.seriesRe).test(parent)
+        )
+      } catch {
+        return false
+      }
+    })
+    .map((src) => src.id)
+}
+
+/**
  * Is it time for an automatic background scan of this site? A site whose last scan did not reach the end of its list is
  * tried again after 30 minutes (it resumes where it stopped); a finished one is refreshed every 12 hours for new titles.
  */
