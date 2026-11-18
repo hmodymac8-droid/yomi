@@ -15,6 +15,7 @@ import { getProgress, recentProgress } from './progress'
 import { isUnreadable, readJson, writeAtomic } from './safefile'
 import { mapHost } from './repair'
 import { coverBytes } from './imageProxy'
+import { dropOtherSeries } from './chapterText'
 
 const ICON_W = 192
 
@@ -72,7 +73,17 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 function load(): State {
   if (state && !isUnreadable(file())) return state
   state = readJson<State>(file(), state ? 1 : 8) ?? state
-  return (state ??= { follows: {}, autoDownload: true, lastChecked: 0 })
+  state ??= { follows: {}, autoDownload: true, lastChecked: 0 }
+  // "New chapters" that were really other series' chapters from the site's sidebar: drop them, and forget what was
+  // learned from that sidebar so the next check takes a fresh look (a first look never reports anything as new).
+  for (const rec of Object.values(state.follows)) {
+    const kept = dropOtherSeries(rec.newChapters, rec.seriesUrl)
+    if (kept.length === rec.newChapters.length) continue
+    rec.newChapters = kept
+    rec.known = []
+    saveSoon()
+  }
+  return state
 }
 
 function saveSoon(): void {

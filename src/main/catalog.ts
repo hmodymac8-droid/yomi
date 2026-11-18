@@ -1,5 +1,5 @@
 import { app, BrowserWindow, powerMonitor } from 'electron'
-import { unglueNumber } from './chapterText'
+import { dropOtherSeries, unglueNumber } from './chapterText'
 import { join } from 'path'
 import { existsSync, statSync } from 'fs'
 import type {
@@ -2105,10 +2105,15 @@ function sortChapters(list: Ch[]): Ch[] {
 }
 
 /** Drop other series' chapters, merge providers, sort. */
-function finalizeChapters(list: { title: string; url: string }[], slug: string): Ch[] {
+function finalizeChapters(
+  list: { title: string; url: string }[],
+  slug: string,
+  seriesUrl: string
+): Ch[] {
   const flat = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
   const own = slug ? list.filter((c) => flat(c.url).includes(slug)) : []
-  return sortChapters(mergeProviders(own.length > 0 ? own : list))
+  // nothing names this series: keep the links, except other series' chapters from a sidebar
+  return sortChapters(mergeProviders(own.length > 0 ? own : dropOtherSeries(list, seriesUrl)))
 }
 
 /**
@@ -2339,7 +2344,7 @@ async function browserSeries(
         partialEmitter({
           ...out,
           url,
-          chapters: finalizeChapters([...acc.values()], slug),
+          chapters: finalizeChapters([...acc.values()], slug, url),
           expected: declared > acc.size ? declared : undefined
         })
       const wantMore = declared > 0 && acc.size < declared * 0.98
@@ -2437,7 +2442,7 @@ async function browserSeries(
       !firstPageOnly &&
       depth === 0 &&
       !pagingTried &&
-      looksIncomplete(finalizeChapters([...acc.values()], slug))
+      looksIncomplete(finalizeChapters([...acc.values()], slug, url))
     ) {
       await queryPaging(src, url, slug, acc, 100000)
     }
@@ -2466,7 +2471,7 @@ async function browserSeries(
     const listed = [...acc.values()]
     // chapters the page keeps in its data without drawing them as links
     const extra = dataChapters(html, url, listed)
-    const chapters = finalizeChapters([...listed, ...extra], slug)
+    const chapters = finalizeChapters([...listed, ...extra], slug, url)
     const short = declaredEnd >= 10 && chapters.length < declaredEnd * 0.9
     return {
       ...out,
@@ -2548,7 +2553,7 @@ async function staticSeries(
     if (r.status !== 200) return null
     const madara = await madaraChapters(r.html, url, src.chapterRe)
     if (madara) {
-      const chapters = finalizeChapters(madara, slug)
+      const chapters = finalizeChapters(madara, slug, url)
       if (chapters.length > 0) {
         const p0 = parseSeries(r.html, url, src.chapterRe)
         return {
@@ -2586,7 +2591,8 @@ async function staticSeries(
     if (slug && !p.chapters.some((c) => flat(c.url).includes(slug))) return null
     const chapters = finalizeChapters(
       [...p.chapters, ...dataChapters(r.html, url, p.chapters)],
-      slug
+      slug,
+      url
     )
     // The page handed over only a slice (the rest is added by JavaScript after load): not a usable answer.
     if (looksIncomplete(chapters)) return null
@@ -2630,6 +2636,20 @@ function loadSeriesCache(): Record<string, SeriesCacheEntry> {
     // Chapter lists saved before the fixes may be half-loaded (2 chapters instead of 90): start clean.
     for (const k of Object.keys(rec)) delete rec[k]
     rec['__v'] = SERIES_CACHE_VERSION
+    seriesTimer = setTimeout(flushSeriesCache, 1500)
+  }
+  // Lists saved before other series' sidebar chapters were dropped: clean them (a list left empty is forgotten).
+  let cleaned = false
+  for (const [k, row] of Object.entries(seriesCache)) {
+    if (k === '__v' || !row?.detail?.chapters) continue
+    const kept = dropOtherSeries(row.detail.chapters, row.detail.url || k)
+    if (kept.length === row.detail.chapters.length) continue
+    cleaned = true
+    if (kept.length === 0) delete seriesCache[k]
+    else row.detail = { ...row.detail, chapters: kept }
+  }
+  if (cleaned) {
+    if (seriesTimer) clearTimeout(seriesTimer)
     seriesTimer = setTimeout(flushSeriesCache, 1500)
   }
   return seriesCache
