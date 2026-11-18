@@ -563,14 +563,24 @@ export default function Reader({
           for (const c of [nextCh, prevCh]) {
             if (!c) continue
             const ref = refererFor(c)
-            window.api.prefetchChapter(c.url).then((first) => {
-              first.forEach((p) => {
-                const img = new Image() // warms the image cache for the first pages
-                img.src = pageSrc(p, ref)
+            // A downloaded chapter opens from disk, so its preview shows the saved pages too: when it takes over, the
+            // pages on screen stay the same pictures (website copies would be swapped for the saved ones, lose their
+            // size for a moment, and the screen would slide past them into page 4).
+            window.api
+              .downloadGet(c.url)
+              .then((dl) =>
+                dl && dl.files.length > 0
+                  ? dl.files.slice(0, 3).map((f) => localPage(dl, f))
+                  : window.api.prefetchChapter(c.url)
+              )
+              .then((first) => {
+                first.forEach((p) => {
+                  const img = new Image() // warms the image cache for the first pages
+                  img.src = pageSrc(p, ref)
+                })
+                if (!cancelled && c === nextCh && first.length > 0)
+                  setPreview({ url: c.url, title: c.title, pages: first, referer: ref })
               })
-              if (!cancelled && c === nextCh && first.length > 0)
-                setPreview({ url: c.url, title: c.title, pages: first, referer: ref })
-            })
           }
         }, 600)
         if (startPos > 0.02) {
@@ -955,7 +965,10 @@ export default function Reader({
           : {}
     const sized = fit === 'width' || !!arShown
     const imgStyle = {
-      ...(fit === 'width' ? { width: '100%' } : { height: h }),
+      // a page whose shape is known keeps its height while its picture is (re)loading, so nothing under it moves
+      ...(fit === 'width'
+        ? { width: '100%', ...(arShown ? { aspectRatio: `1 / ${arShown}` } : {}) }
+        : { height: h }),
       ...(crop
         ? {
             objectViewBox: `inset(${crop.t * 100}% ${crop.r * 100}% ${crop.b * 100}% ${crop.l * 100}%)`
