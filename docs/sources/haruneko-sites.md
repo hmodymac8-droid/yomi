@@ -17,7 +17,7 @@ Survey of the site connectors in [HaruNeko](https://github.com/manga-download/ha
 - **Retest of all 28, 2026-11-20:** 19 WORKS (Violet after its fix below), 3 CHECK that are fine (Lagoon, MangaRead, ManhwaNex), 3 site-side image problems as before, and 3 sites that had trouble on their side that day (below).
   - AquaManga now shows a Cloudflare "verify you are human" check. It needs one human check in the app; the automatic test can't pass it.
   - S2Manga did not answer at all during the test (plain requests time out too).
-  - Gourmet Scans started refusing all requests partway through the testing (probably rate limiting). Its protected chapters still decode: 17 pages from a saved copy of chapter 9.
+  - Gourmet Scans started refusing all requests partway through the testing (probably rate limiting). Still open: the plain-page path decodes its protected chapters (17 pages from a saved copy of chapter 9), but the browser path, which the site's own script decodes, is not checked yet against the new early stop.
   - Violet Scans' newest chapter is sold. A site read through the browser never looked for the lock box, so it reported "no pages": it now checks the plain page for one.
   - The test tool gave every site the same id, so titles left over from the site before (or the last run) were tested in another site's name. Each site now gets its own id and only its own titles.
   - Login/Register button pictures are no longer taken for pages.
@@ -33,12 +33,13 @@ Survey of the site connectors in [HaruNeko](https://github.com/manga-download/ha
 
 1. [x] Scythe Scans: works (see above).
 2. [x] Lagoon Scans: works within the time limit (see above).
-3. [ ] Section 3: the 20 sites behind Cloudflare.
-4. [ ] Section 4: the 89 sites on other engines or custom code.
-5. [ ] Section 5: the 5 adult sites.
-6. [ ] Section 6: the 67 sites that didn't answer.
-7. [ ] Recheck the [-] "list not found yet" sites (e.g. Armageddon) now that the page-2 fix is in.
-8. [ ] Survey other languages (`haruneko-connectors.json`).
+3. [ ] Gourmet Scans, once it answers again: clear `gourmetsupremacy.com|chapter` from the test `hostmode.json`, then `MR_CHTEST` must give about 17 pages for both `http` and `light`. If `light` gets none, the early stop cuts off the site's decoding script. Also recheck S2Manga.
+4. [ ] Section 3: the 20 sites behind Cloudflare.
+5. [ ] Section 4: the 89 sites on other engines or custom code.
+6. [ ] Section 5: the 5 adult sites.
+7. [ ] Section 6: the 67 sites that didn't answer.
+8. [ ] Recheck the [-] "list not found yet" sites (e.g. Armageddon) now that the page-2 fix is in.
+9. [ ] Survey other languages (`haruneko-connectors.json`).
 
 Every new site must pass the full `MR_SITEPIPE` run, new chapters and new titles included, not just the first import.
 
