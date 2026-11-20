@@ -40,8 +40,23 @@ const AD_HOSTS = [
   'monetag.com'
 ]
 
-/** url -> Referer to send, for requests the app makes itself (image proxy, downloads). */
-export const refererHints = new Map<string, string>()
+/**
+ * url -> Referer to send, for requests the app makes itself (image proxy, downloads). Keyed without the part after
+ * '#', which a request never carries (an encrypted picture's key travels there, see sealed.ts).
+ */
+class HintMap extends Map<string, string> {
+  private static bare = (url: string): string => url.split('#')[0]
+  override set(url: string, referer: string): this {
+    return super.set(HintMap.bare(url), referer)
+  }
+  override get(url: string): string | undefined {
+    return super.get(HintMap.bare(url))
+  }
+  override delete(url: string): boolean {
+    return super.delete(HintMap.bare(url))
+  }
+}
+export const refererHints = new HintMap()
 
 // Data requests a page makes (XHR/fetch) that the site refused, per hidden window. Lets us tell "this series has
 // no chapters" apart from "the site refused to send them" (rate limits, blocks).
@@ -405,6 +420,9 @@ export function loadPageReady(win: BrowserWindow, url: string, timeoutMs = 20000
   })
 }
 
+/** A picture made inside the page (blob:, data:) exists only there: it can't be fetched again or saved. */
+const downloadable = (u: string): boolean => /^https?:/i.test(u)
+
 export interface GrabResult {
   url: string
   title: string
@@ -615,7 +633,7 @@ export async function grabChapterLight(url: string): Promise<GrabResult> {
       ...new Set(r.imgs.filter((i) => i.reader).map((i) => i.src))
     ].filter((u) => pickPageGroup([u]).length === 1) // (not a logo / icon / plugin picture)
     const pages = reader.length >= 2 ? reader : pickPageGroup(urls)
-    return { url, title: r.title, pages, landed: win.webContents.getURL() }
+    return { url, title: r.title, pages: pages.filter(downloadable), landed: win.webContents.getURL() }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }
@@ -648,7 +666,12 @@ export async function grabChapter(url: string): Promise<GrabResult> {
       mds?: string[]
     }>(win, PAGE_SCRIPT, 120000)
     if (result.mds?.length) return { url, title: result.title, pages: result.mds, landed: win.webContents.getURL() }
-    return { url, title: result.title, pages: pickPages(result.imgs), landed: win.webContents.getURL() }
+    return {
+      url,
+      title: result.title,
+      pages: pickPages(result.imgs.filter((i) => downloadable(i.src))),
+      landed: win.webContents.getURL()
+    }
   } finally {
     if (!win.isDestroyed()) win.destroy()
   }

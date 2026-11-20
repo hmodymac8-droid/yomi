@@ -3,6 +3,7 @@ import { getSettings, setSettings, type AppSettings } from './settings'
 import { presenceSettingsChanged, setPresence, startPresence, stopPresence } from './discord'
 import type { PresenceInput } from './discordLogic'
 import { pageBytes } from './pagebytes'
+import { unseal } from './sealed'
 import { join } from 'path'
 import { dataLog } from './safefile'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
@@ -486,8 +487,14 @@ async function runSiteCheck(id: string): Promise<void> {
       refererHints.set(pages[0], new URL(seriesUrl).origin + '/')
       try {
         const r = await ses.fetch(pages[0])
-        const buf = await r.arrayBuffer()
-        const type = (r.headers.get('content-type') ?? '').split(';')[0]
+        // (an encrypted picture is decrypted first, see sealed.ts; one that won't decrypt counts as not an image)
+        let buf: Buffer = Buffer.from(await r.arrayBuffer())
+        let type = (r.headers.get('content-type') ?? '').split(';')[0]
+        try {
+          ;({ buf, type } = unseal(pages[0], buf, type))
+        } catch {
+          type = 'undecryptable'
+        }
         if (!r.ok || !type.startsWith('image/') || buf.byteLength < 5000)
           return {
             status: 'fail',
@@ -1699,13 +1706,24 @@ app.whenReady().then(async () => {
           ensureSession()
           refererHints.set(g.pages[0], new URL(seriesUrl).origin + '/')
           const r = await ses.fetch(g.pages[0])
-          const buf = await r.arrayBuffer()
+          const pic = unseal(g.pages[0], Buffer.from(await r.arrayBuffer()), (r.headers.get('content-type') ?? '').split(';')[0])
+          const buf = pic.buf
           refererHints.delete(g.pages[0])
           o.imageStatus = r.status
           o.imageKb = Math.round(buf.byteLength / 1024)
-          o.imageType = (r.headers.get('content-type') ?? '').split(';')[0]
+          o.imageType = pic.type
           lap('imageMs')
-          const imageOk = r.ok && String(o.imageType).startsWith('image/') && buf.byteLength > 5000
+          // the same picture the way the reader gets it: through Yomi's image server (mr-img://)
+          const shown = await net.fetch(
+            `mr-img://img/?u=${encodeURIComponent(g.pages[0])}&r=${encodeURIComponent(new URL(seriesUrl).origin + '/')}`
+          )
+          o.readerImage = shown.ok ? (shown.headers.get('content-type') ?? '') : 'HTTP ' + shown.status
+          await shown.arrayBuffer().catch(() => null)
+          const imageOk =
+            r.ok &&
+            String(o.imageType).startsWith('image/') &&
+            buf.byteLength > 5000 &&
+            String(o.readerImage).startsWith('image/')
           const solid =
             chapters.length >= 8 && !incomplete && g.pages.length >= 4 && g.pages.length <= 80
           o.result = !imageOk ? 'IMAGE-FAILED' : solid ? 'WORKS' : 'CHECK' // CHECK: passes, but the numbers look thin or odd
@@ -1739,7 +1757,11 @@ app.whenReady().then(async () => {
           } catch {
             o.listOrder = 'unknown'
           }
-          o.newTitles = o.listOrder === 'newest-first' || (def.sitemaps?.length ?? 0) > 0 ? 'ok' : 'AT-RISK'
+          // (a data feed is read in full on every rescan, like a sitemap)
+          o.newTitles =
+            o.listOrder === 'newest-first' || (def.sitemaps?.length ?? 0) > 0 || !!def.api
+              ? 'ok'
+              : 'AT-RISK'
           if (o.result === 'WORKS' && (o.newChapters !== 2 || o.newTitles !== 'ok')) o.result = 'UPDATES-FAILED'
         }
         try {

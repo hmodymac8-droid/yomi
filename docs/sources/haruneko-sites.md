@@ -102,6 +102,12 @@ Standard template plus some site-specific code in HaruNeko. Try in Yomi; port th
 
 A plain request got a Cloudflare challenge. Yomi's hidden browser window may still get through.
 
+**2026-11-21:** MangaSwat and Stellar Saber no longer have the check, and both pass the full test (now in the site list).
+- MangaSwat is read through its data feed (appswat.com). The test now counts a data feed as finding new titles: it is read in full on every rescan.
+- Stellar Saber encrypts every page picture (AES-GCM; the site's own script decrypts it in the page, so a browser only sees `blob:` pictures). Yomi asks for the chapter's key like HaruNeko does (`flavor_cdn_get_key`), carries it after '#' on each page address, and decrypts after fetching: `src/main/sealed.ts`, used by the image server, downloads and the site check.
+- The test now also loads the first page through the reader's image server (`readerImage`).
+- The other 17 still show Cloudflare's "Just a moment" page to a plain request.
+
 | Done | Lang | Site | Address | Engine | Check |
 |---|---|---|---|---|---|
 | [ ] | EN | Batcave | https://batcave.biz | custom (custom code) | 403 |
@@ -111,7 +117,7 @@ A plain request got a Cloudflare challenge. Yomi's hidden browser window may sti
 | [ ] | EN | Kagane | https://kagane.moe | custom (custom code) | 403 |
 | [ ] | EN | Kissmanga | https://kissmanga.in | Madara | 403 |
 | [ ] | EN | MagusManga | https://magustoon.org | VTheme | 403 |
-| [ ] | AR | MangaSwat | https://meshmanga.com | custom (custom code) | 403 |
+| [x] | AR | MangaSwat | https://meshmanga.com | custom (custom code) | 200 |
 | [ ] | EN | Manhua Us | https://manhuaus.com | Madara | 403 |
 | [ ] | EN | ManhwaTop | https://manhwatop.com | Madara | 403 (already built in) |
 | [ ] | EN | Mgread | https://mgread.io | InitManga | 403 |
@@ -120,7 +126,7 @@ A plain request got a Cloudflare challenge. Yomi's hidden browser window may sti
 | [ ] | EN | Raven Scans | https://ravenscans.org | MangaStream | 403 |
 | [ ] | EN | Read Comics Online | https://readcomicsonline.ru | custom | 403 |
 | [ ] | AR | موقع شقاع (Shqqaa) | https://www.shqqaa.com | custom | 403 |
-| [ ] | AR | Stellar Saber | https://stellarsaber.pro | custom (custom code) | 403 |
+| [x] | AR | Stellar Saber | https://stellarsaber.pro | custom (custom code) | 200 |
 | [ ] | EN | Top Manhua | https://manhuatop.org | custom (custom code) | 403 |
 | [ ] | EN | Webnovel Comics | https://www.webnovel.com | custom (custom code) | 403 |
 | [ ] | EN | XoManga | https://xomanga.site | custom (custom code) | 403 |

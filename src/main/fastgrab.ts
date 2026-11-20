@@ -10,6 +10,7 @@ import {
 import { fetchHtml } from './http'
 import { feedChapter, feedFor } from './feedapi'
 import { parseChapterImages } from './staticParse'
+import { flavorCdnPages, sealedKey } from './sealed'
 import { getMode, setMode } from './hostmode'
 import {
   classifyFailure,
@@ -77,7 +78,9 @@ async function viaHttp(url: string): Promise<GrabResult | null> {
     if (r.status !== 200) return null
     const p = parseChapterImages(r.html, url)
     if (p.locked) lockedNotes.set(url, p.locked)
-    return { url, title: p.title, pages: p.pages, landed: pageAddress(r.html, r.finalUrl, p.title) }
+    // encrypted pictures (Stellar Saber): their addresses carry the chapter's key, see sealed.ts
+    const pages = (await flavorCdnPages(r.html, url)) ?? p.pages
+    return { url, title: p.title, pages, landed: pageAddress(r.html, r.finalUrl, p.title) }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     rememberFault(url, classifyFailure(message), message)
@@ -198,7 +201,9 @@ async function grabInner(url: string): Promise<GrabResult> {
       const [s, l, full] = await Promise.all([sP, lP, fullP])
       if (!full || full.pages.length < 2) {
         // nothing to compare with: trust the fast ways only if they agree with each other
-        if (usable(s) && usable(l) && sameList(s.pages, l.pages)) setMode(key, 'static')
+        // (encrypted pictures come only from the plain page: a browser sees them as pictures it made itself)
+        if (usable(s) && s.pages.some((u) => sealedKey(u))) setMode(key, 'static')
+        else if (usable(s) && usable(l) && sameList(s.pages, l.pages)) setMode(key, 'static')
         else if (usable(l)) setMode(key, 'light')
         return full
       }

@@ -6,6 +6,7 @@ import { readdirSync, statSync, unlinkSync } from 'fs'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { downloadsRoot } from './downloads'
 import { ensureSession, refererHints } from './grabber'
+import { unseal } from './sealed'
 
 export const IMG_SCHEME = 'mr-img'
 
@@ -193,9 +194,16 @@ export function installImageProxy(): void {
 
     try {
       const res = await fetchRemote(target, referer)
-      const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
-      if (!res.ok || !type.startsWith('image/')) return new Response(`upstream ${res.status}`, { status: res.ok ? 502 : res.status })
-      let buf: Buffer = Buffer.from(await res.arrayBuffer())
+      if (!res.ok) return new Response(`upstream ${res.status}`, { status: res.status })
+      // (an encrypted picture comes as plain bytes: decrypted here, see sealed.ts)
+      const got = unseal(
+        target,
+        Buffer.from(await res.arrayBuffer()),
+        (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+      )
+      const type = got.type
+      if (!type.startsWith('image/')) return new Response('upstream not an image', { status: 502 })
+      let buf: Buffer = got.buf
       let outType = type
       if (cover) ({ buf, type: outType } = shrinkCover(buf, type))
       cachePut(key, outType, buf)

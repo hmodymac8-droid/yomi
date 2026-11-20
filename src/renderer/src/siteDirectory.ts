@@ -12,6 +12,8 @@ export interface DirectorySite {
 export const SITE_DIRECTORY: DirectorySite[] = [
   { name: 'مانجا العاشق 3asq', url: 'https://3asq.online/', lang: 'ar' },
   { name: 'Fastest Manga', url: 'https://www.fastestmanga.com/', lang: 'ar' },
+  { name: 'MangaSwat', url: 'https://meshmanga.com/', lang: 'ar' },
+  { name: 'Stellar Saber', url: 'https://stellarsaber.pro/', lang: 'ar' },
 
   { name: 'AquaManga', url: 'https://aquareader.org/', lang: 'en' },
   { name: 'Asura Scans', url: 'https://asurascans.com/', lang: 'en' },

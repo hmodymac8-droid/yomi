@@ -9,6 +9,7 @@ import type { SeriesDetail } from '../preload/index.d'
 import type { DownloadItem, DownloadRequest } from '../preload/index.d'
 import { grabChapterFast } from './fastgrab'
 import { ensureSession, refererHints } from './grabber'
+import { unseal } from './sealed'
 import { getSource } from './catalog'
 import { classifyFailure, isOut, mapHost, urlsToTry } from './repair'
 import { commitFailure, pagesFromFallback } from './fallback'
@@ -361,9 +362,13 @@ async function fetchImage(url: string, referer: string): Promise<{ buf: Buffer; 
     refererHints.delete(url)
   }
   if (!res.ok) throw new Error('HTTP ' + res.status)
-  const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+  // (an encrypted picture is decrypted here, see sealed.ts)
+  const { buf, type } = unseal(
+    url,
+    Buffer.from(await res.arrayBuffer()),
+    (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+  )
   if (type && !type.startsWith('image/') && !type.includes('octet-stream')) throw new Error('not an image: ' + type)
-  const buf = Buffer.from(await res.arrayBuffer())
   if (buf.length < 500) throw new Error('image too small')
   const fromUrl = (url.split('?')[0].match(/\.(jpe?g|png|webp|gif|avif)$/i)?.[1] ?? 'jpg').toLowerCase()
   return { buf, ext: EXT[type] ?? fromUrl.replace('jpeg', 'jpg') }
