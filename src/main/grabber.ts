@@ -37,8 +37,19 @@ const AD_HOSTS = [
   'clickadu.com',
   'hilltopads.net',
   'richpush.co',
-  'monetag.com'
+  'monetag.com',
+  'pubadx.one'
 ]
+
+/** A picture from an ad network is never a chapter page (KingOfShojo: pubadx banners in a one-picture chapter). */
+const fromAdHost = (u: string): boolean => {
+  try {
+    const host = new URL(u).hostname
+    return AD_HOSTS.some((h) => host === h || host.endsWith('.' + h))
+  } catch {
+    return false
+  }
+}
 
 /**
  * url -> Referer to send, for requests the app makes itself (image proxy, downloads). Keyed without the part after
@@ -318,11 +329,13 @@ export async function loadPageSettled(
   const wc = win.webContents
   let grace: NodeJS.Timeout | undefined
   let stopped = false
+  const forwarding = (): boolean => onCheckPage(win, url)
   const onReady = (): void => {
     clearTimeout(grace)
     grace = setTimeout(() => {
       if (win.isDestroyed() || !wc.isLoadingMainFrame()) return
-      if (CHALLENGE_TITLE.test(wc.getTitle())) return onReady() // a "just a moment" check: let it finish
+      // a "just a moment" check, or a check page about to send us on: let it finish
+      if (CHALLENGE_TITLE.test(wc.getTitle()) || forwarding()) return onReady()
       stopped = true
       wc.stop()
     }, graceMs)
@@ -333,6 +346,7 @@ export async function loadPageSettled(
   }
   wc.on('dom-ready', onReady) // (on every dom-ready: a client-side redirect starts a new page)
   wc.on('did-start-navigation', onNavigate)
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
       let timer: NodeJS.Timeout | undefined
@@ -343,17 +357,19 @@ export async function loadPageSettled(
             timer = setTimeout(() => rej(new Error('Page load timed out')), timeoutMs)
           })
         ])
-        return
+        break
       } catch (e) {
-        if (stopped) return // stopped on purpose: the page is there, only its leftovers were cut off
+        if (stopped) break // stopped on purpose: the page is there, only its leftovers were cut off
         const msg = e instanceof Error ? e.message : String(e)
-        if (msg.includes('ERR_ABORTED')) return // a client-side redirect: the new page is still loading
+        if (msg.includes('ERR_ABORTED')) break // a client-side redirect: the new page is still loading
         if (attempt === 2 || msg.includes('timed out')) throw e
-        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)))
+        await sleep(1500 * (attempt + 1))
       } finally {
         clearTimeout(timer)
       }
     }
+    // (its dom-ready + grace stop the real page's leftovers as usual)
+    await waitPastCheckPage(win, url)
   } finally {
     clearTimeout(grace)
     if (!win.isDestroyed()) {
@@ -361,6 +377,29 @@ export async function loadPageSettled(
       wc.removeListener('did-start-navigation', onNavigate)
     }
   }
+}
+
+/**
+ * On a site's own check page that sends you on to the page you asked for when it is done (Batcave:
+ * /_c?t=…&u=<the address asked for>)?
+ */
+function onCheckPage(win: BrowserWindow, asked: string): boolean {
+  if (win.isDestroyed()) return false
+  try {
+    const at = new URL(win.webContents.getURL())
+    return at.href !== asked && [...at.searchParams.values()].includes(asked)
+  } catch {
+    return false
+  }
+}
+
+/** If the site put up such a check page, waits (up to 30 s) until it has sent us on and the real page has loaded. */
+export async function waitPastCheckPage(win: BrowserWindow, asked: string): Promise<void> {
+  if (!onCheckPage(win, asked)) return
+  const end = Date.now() + 30000
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+  while (Date.now() < end && onCheckPage(win, asked)) await sleep(200)
+  while (!win.isDestroyed() && Date.now() < end && win.webContents.isLoadingMainFrame()) await sleep(200)
 }
 
 /**
@@ -420,8 +459,11 @@ export function loadPageReady(win: BrowserWindow, url: string, timeoutMs = 20000
   })
 }
 
-/** A picture made inside the page (blob:, data:) exists only there: it can't be fetched again or saved. */
-const downloadable = (u: string): boolean => /^https?:/i.test(u)
+/**
+ * A picture made inside the page (blob:, data:) exists only there: it can't be fetched again or saved. Ad pictures
+ * are left out too.
+ */
+const downloadable = (u: string): boolean => /^https?:/i.test(u) && !fromAdHost(u)
 
 export interface GrabResult {
   url: string
@@ -627,12 +669,25 @@ export async function grabChapterLight(url: string): Promise<GrabResult> {
       mds?: string[]
     }>(win, LIGHT_SCRIPT)
     if (r.mds?.length) return { url, title: r.title, pages: r.mds, landed: win.webContents.getURL() }
-    const urls = r.imgs.filter((i) => !((i.w && i.w < 200) || (i.h && i.h < 200))).map((i) => i.src)
+    const urls = r.imgs
+      .filter((i) => !((i.w && i.w < 200) || (i.h && i.h < 200)) && downloadable(i.src))
+      .map((i) => i.src)
     // the site's reader area holds exactly the pages, in order (see parseChapterImages)
     const reader = [
       ...new Set(r.imgs.filter((i) => i.reader).map((i) => i.src))
     ].filter((u) => pickPageGroup([u]).length === 1) // (not a logo / icon / plugin picture)
-    const pages = reader.length >= 2 ? reader : pickPageGroup(urls)
+    let pages = reader.length >= 2 ? reader : pickPageGroup(urls)
+    // Readers that draw a page only once the one before it has loaded (Batcave) show just the first few here, with
+    // images off; their whole list is in the page's data (__DATA__.images).
+    const listed: unknown = await win.webContents
+      .executeJavaScript(
+        `(() => { try { const d = typeof __DATA__ !== 'undefined' ? __DATA__ : null; return d && Array.isArray(d.images) ? d.images : null } catch { return null } })()`
+      )
+      .catch(() => null)
+    if (Array.isArray(listed)) {
+      const all = listed.filter((u): u is string => typeof u === 'string' && downloadable(u))
+      if (all.length > pages.length) pages = all
+    }
     return { url, title: r.title, pages: pages.filter(downloadable), landed: win.webContents.getURL() }
   } finally {
     if (!win.isDestroyed()) win.destroy()

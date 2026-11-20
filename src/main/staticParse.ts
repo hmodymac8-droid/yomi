@@ -307,6 +307,21 @@ export function parseChapterImages(
   const $ = cheerio.load(html)
   const locked = lockedChapterNote($)
   if (locked) return { title: $('title').first().text().trim(), pages: [], locked }
+  // DataLife Engine readers (Batcave) list every page in the page's data and draw them one at a time.
+  const data = objectAfter(html, /__DATA__\s*=\s*\{/)
+  if (data && /"images"\s*:/.test(data)) {
+    try {
+      const d = JSON.parse(data) as { images?: unknown; pages?: unknown }
+      let list = Array.isArray(d.images)
+        ? d.images.filter((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u))
+        : []
+      // the reader itself cuts the list to the chapter's page count (the rest is not a page)
+      if (typeof d.pages === 'number' && d.pages > 0 && d.pages < list.length) list = list.slice(0, d.pages)
+      if (list.length >= 2) return { title: $('title').first().text().trim(), pages: list }
+    } catch {
+      /* not JSON after all: read the page as usual */
+    }
+  }
   // Some readers (Mangadar) put each page's address in data-mds, base64-encoded, and only show it as you scroll:
   // read them straight from there, in order.
   const encoded: string[] = []
@@ -586,6 +601,48 @@ export function canonGenres(list: string[]): string[] {
  * keep the rest in a script: `slug:"chapter-7",number:7`). Only used when the page's own chapter links are
  * <series address>/<slug>, so the missing addresses can be written the same way.
  */
+/** The JSON object that starts where `start` (ending in '{') matches, read up to its matching '}'. */
+function objectAfter(html: string, start: RegExp): string | null {
+  const m = start.exec(html)
+  if (!m) return null
+  const from = m.index + m[0].length - 1
+  let depth = 0
+  let inStr = false
+  for (let i = from; i < html.length; i++) {
+    const c = html[i]
+    if (inStr) {
+      if (c === '\\') i++
+      else if (c === '"') inStr = false
+    } else if (c === '"') inStr = true
+    else if (c === '{') depth++
+    else if (c === '}' && --depth === 0) return html.slice(from, i + 1)
+  }
+  return null
+}
+
+/**
+ * Comic sites on DataLife Engine (Batcave): the chapter list is only in the page's data (`__DATA__ = {"news_id": …,
+ * "chapters": [{"id", "title"}…]}`), and a chapter is read at /reader/<news_id>/<chapter id>. Empty when the page is
+ * not like that.
+ */
+export function newsDataChapters(html: string, seriesUrl: string): { title: string; url: string }[] {
+  const json = objectAfter(html, /__DATA__\s*=\s*\{/)
+  if (!json) return []
+  try {
+    const d = JSON.parse(json) as { news_id?: number; chapters?: { id?: number; title?: string; posi?: number }[] }
+    if (!d.news_id || !Array.isArray(d.chapters)) return []
+    const origin = new URL(seriesUrl).origin
+    return d.chapters
+      .filter((c) => c && c.id)
+      .map((c) => ({
+        title: String(c.title || 'Chapter ' + (c.posi ?? c.id)).trim(),
+        url: `${origin}/reader/${d.news_id}/${c.id}`
+      }))
+  } catch {
+    return []
+  }
+}
+
 export function dataChapters(html: string, seriesUrl: string, have: { url: string }[]): { title: string; url: string }[] {
   if (!html) return []
   const base = seriesUrl.replace(/[?#].*$/, '').replace(/\/+$/, '')

@@ -1394,6 +1394,32 @@ app.whenReady().then(async () => {
     return
   }
 
+  // Dev helper: MR_HTMLDUMP=<url>,<file> saves the page's HTML as the hidden browser has it (for sites that refuse plain
+  // requests), plus the address it ended up on.
+  if (process.env['MR_HTMLDUMP']) {
+    ;(async () => {
+      const [u, file] = process.env['MR_HTMLDUMP']!.split(',')
+      const { writeFileSync } = await import('fs')
+      const win = hiddenWindow({ light: true })
+      try {
+        await loadPage(win, u)
+        await new Promise((r) => setTimeout(r, 2500))
+        // a site's own "checking your browser" stop (Batcave's /_c?t=…) moves on by itself: wait for that
+        const checking = (): boolean =>
+          /\/_c\?|just a moment/i.test(win.webContents.getURL() + ' ' + win.webContents.getTitle())
+        for (let i = 0; i < 50 && checking(); i++) await new Promise((r) => setTimeout(r, 500))
+        const html: string = await win.webContents.executeJavaScript('document.documentElement.outerHTML')
+        writeFileSync(file, html)
+        console.log('HTMLDUMP ' + html.length + ' ' + win.webContents.getURL())
+      } finally {
+        if (!win.isDestroyed()) win.destroy()
+      }
+    })()
+      .catch((e) => console.log('HTMLDUMP_ERROR ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => app.quit())
+    return
+  }
+
   // Dev helper: MR_DUMP=<url> prints the page's visible text, button labels and network JSON calls.
   if (process.env['MR_DUMP']) {
     ;(async () => {
@@ -1629,7 +1655,7 @@ app.whenReady().then(async () => {
           def.maxPages = Math.min(def.maxPages, 2)
           addSource(def)
           await crawlSource(def.id, () => undefined)
-          const host = (u: string): string => new URL(u).hostname.replace(/^www./, '')
+          const host = (u: string): string => new URL(u).hostname.replace(/^www\./, '')
           const hits = search('', [def.id], 'site', 0, 60).hits.filter(
             (h) => host(h.entries[0].url) === host(def.baseUrl)
           )
@@ -3130,7 +3156,8 @@ app.on('window-all-closed', () => {
     process.env['MR_SITEPIPE'] ||
     process.env['MR_HEALTHTEST'] ||
     process.env['MR_ANCH'] ||
-    process.env['MR_SEARCHBENCH']
+    process.env['MR_SEARCHBENCH'] ||
+    process.env['MR_HTMLDUMP']
   )
     return
   if (process.platform !== 'darwin') {

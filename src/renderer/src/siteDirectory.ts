@@ -17,6 +17,7 @@ export const SITE_DIRECTORY: DirectorySite[] = [
 
   { name: 'AquaManga', url: 'https://aquareader.org/', lang: 'en' },
   { name: 'Asura Scans', url: 'https://asurascans.com/', lang: 'en' },
+  { name: 'Batcave (comics)', url: 'https://batcave.biz/', lang: 'en' },
   { name: 'Eva Scans', url: 'https://evascans.net/', lang: 'en' },
   { name: 'GD Scans', url: 'https://gdscans.com/', lang: 'en' },
   { name: 'Gourmet Scans', url: 'https://gourmetsupremacy.com/', lang: 'en' },
@@ -29,6 +30,7 @@ export const SITE_DIRECTORY: DirectorySite[] = [
   { name: 'MangaReader.site', url: 'https://mangareader.site/', lang: 'en' },
   { name: 'Mangasushi', url: 'https://mangasushi.org/', lang: 'en' },
   { name: 'ManhwaNex', url: 'https://manhwanex.com/', lang: 'en' },
+  { name: 'Mgread', url: 'https://mgread.io/', lang: 'en' },
   { name: 'Rackus', url: 'https://rackusreads.com/', lang: 'en' },
   { name: 'Rizz Comics', url: 'https://rizzfables.com/', lang: 'en' },
   { name: 'Rokari Comics', url: 'https://rokaricomics.com/', lang: 'en' },

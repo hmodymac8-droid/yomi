@@ -106,11 +106,21 @@ A plain request got a Cloudflare challenge. Yomi's hidden browser window may sti
 - MangaSwat is read through its data feed (appswat.com). The test now counts a data feed as finding new titles: it is read in full on every rescan.
 - Stellar Saber encrypts every page picture (AES-GCM; the site's own script decrypts it in the page, so a browser only sees `blob:` pictures). Yomi asks for the chapter's key like HaruNeko does (`flavor_cdn_get_key`), carries it after '#' on each page address, and decrypts after fetching: `src/main/sealed.ts`, used by the image server, downloads and the site check.
 - The test now also loads the first page through the reader's image server (`readerImage`).
-- The other 17 still show Cloudflare's "Just a moment" page to a plain request.
+- The other 17 still show Cloudflare's "Just a moment" page to a plain request. Loaded in Yomi's hidden browser, 4 of them get through by themselves:
+  - ManhwaTop (already built in) and Mgread pass the full test.
+  - Batcave passes after three fixes:
+    - its own check page (`/_c?t=…&u=<page>`) is waited out, not cut off (`waitPastCheckPage`);
+    - chapters come from the page's `__DATA__` (`/reader/<news_id>/<id>`, `newsDataChapters`);
+    - pages come from `__DATA__.images`, cut to its `pages` count like the site's reader does.
+  - Webnovel Comics: not added. It is mainly a novel site; the comics found had 0-1 chapters, with the rest locked in its app.
+- The remaining 13 (Bokugen, BrainRotComics, Dragon Tea, Kagane, Kissmanga, MagusManga, Manhua Us, Mist Scans, RageScans, Raven Scans, Read Comics Online, Shqqaa, XoManga) need a person to pass the check once, in the app's visible window. The automatic test can't do that.
+- `MR_HTMLDUMP=<url>,<file>` saves a page as the hidden browser sees it (for sites that refuse plain requests).
+- Full test of all 33 sites in the list, 2026-11-21: 24 WORKS, 3 CHECK as before (Lagoon, MangaRead, ManhwaNex), 3 site-side image problems as before (3asq, ZinManga, Top Manhua). AquaManga needs its human check, and Gourmet still doesn't answer. S2Manga is back and works.
+  - KingOfShojo's newest chapter is a single picture, and the browser filled the gap with ad banners (pubadx.one). Ad-network pictures are never taken as pages now, and pubadx.one is blocked.
 
 | Done | Lang | Site | Address | Engine | Check |
 |---|---|---|---|---|---|
-| [ ] | EN | Batcave | https://batcave.biz | custom (custom code) | 403 |
+| [x] | EN | Batcave | https://batcave.biz | custom (custom code) | 403 |
 | [ ] | EN | Bokugen Translation | https://bokugents.com | MangaStream | 403 |
 | [ ] | EN | BrainRotComics | https://brainrotcomics.com | Madara | 403 |
 | [ ] | EN | Dragon Tea Scans | https://dragontea.ink | Madara | 403 |
@@ -119,8 +129,8 @@ A plain request got a Cloudflare challenge. Yomi's hidden browser window may sti
 | [ ] | EN | MagusManga | https://magustoon.org | VTheme | 403 |
 | [x] | AR | MangaSwat | https://meshmanga.com | custom (custom code) | 200 |
 | [ ] | EN | Manhua Us | https://manhuaus.com | Madara | 403 |
-| [ ] | EN | ManhwaTop | https://manhwatop.com | Madara | 403 (already built in) |
-| [ ] | EN | Mgread | https://mgread.io | InitManga | 403 |
+| [x] | EN | ManhwaTop | https://manhwatop.com | Madara | 403 (already built in) |
+| [x] | EN | Mgread | https://mgread.io | InitManga | 403 |
 | [ ] | EN | Mist Scans | https://mistscans.org | custom (custom code) | 403 |
 | [ ] | EN | RageScans | https://ragescans.com | MangaStream | 403 |
 | [ ] | EN | Raven Scans | https://ravenscans.org | MangaStream | 403 |
@@ -128,7 +138,7 @@ A plain request got a Cloudflare challenge. Yomi's hidden browser window may sti
 | [ ] | AR | موقع شقاع (Shqqaa) | https://www.shqqaa.com | custom | 403 |
 | [x] | AR | Stellar Saber | https://stellarsaber.pro | custom (custom code) | 200 |
 | [ ] | EN | Top Manhua | https://manhuatop.org | custom (custom code) | 403 |
-| [ ] | EN | Webnovel Comics | https://www.webnovel.com | custom (custom code) | 403 |
+| [-] | EN | Webnovel Comics | https://www.webnovel.com | custom (custom code) | 403 |
 | [ ] | EN | XoManga | https://xomanga.site | custom (custom code) | 403 |
 
 ## 4. Other engines and custom sites (89)

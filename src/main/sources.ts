@@ -5,7 +5,8 @@ import {
   loadPageReady,
   pageIsChallenge,
   settleLoading,
-  waitForHuman
+  waitForHuman,
+  waitPastCheckPage
 } from './grabber'
 import { discoverSitemap } from './sitemap'
 import { robotsAllows } from './robots'
@@ -191,6 +192,7 @@ const isPage2 = (p: URL): boolean =>
 async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
   const tA = Date.now()
   await loadPageReady(win, pageUrl, 20000)
+  await waitPastCheckPage(win, pageUrl) // (a site's own check page that sends us on: Batcave)
   await settleLoading(win)
   const tLoaded = Date.now()
   const u = new URL(pageUrl)

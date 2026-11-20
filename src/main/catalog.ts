@@ -17,6 +17,7 @@ import { fetchHtml } from './http'
 import {
   canonGenres,
   dataChapters,
+  newsDataChapters,
   parseMeta,
   parseSeries,
   parseSeriesList,
@@ -2258,13 +2259,20 @@ async function browserSeries(
     }
     tr('requests idle')
     let out = await run()
+    // No chapter links, but the page's data holds the list (Batcave): no point waiting for links to appear.
+    const inData =
+      out.chapters.length === 0 &&
+      newsDataChapters(
+        await win.webContents.executeJavaScript('document.documentElement.outerHTML').catch(() => ''),
+        url
+      ).length > 0
     let prevSig = ''
     let stableRounds = 0
     // A series page gets 40 s. While its list keeps growing (a "load more" button adding 50 at a time), each new
     // slice buys a few more seconds, up to 3 minutes in all, so very long series (3,000+ chapters) load completely.
     let deadline = Date.now() + 40000
     const hardEnd = Date.now() + 180000
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 50 && !inData; i++) {
       // the site already refused the request that carries the chapter list: no point waiting for it
       if (
         out.chapters.length === 0 &&
@@ -2302,7 +2310,8 @@ async function browserSeries(
       if (process.env['MR_PAGERDEBUG']) console.log('HARVEST ' + got.length + ' kept=' + acc.size)
     }
     let idleRounds = 0
-    for (let round = 0; round < 200 && Date.now() < deadline; round++) {
+    // (a list in the page's data is complete as it is: nothing to click through)
+    for (let round = 0; round < 200 && Date.now() < deadline && !inData; round++) {
       const before = acc.size
       for (const c of out.chapters) if (!acc.has(c.url)) acc.set(c.url, c)
       if (acc.size > before) deadline = Math.min(hardEnd, Math.max(deadline, Date.now() + 8000))
@@ -2478,7 +2487,11 @@ async function browserSeries(
       .catch(() => '')
     const listed = [...acc.values()]
     // chapters the page keeps in its data without drawing them as links
-    const extra = dataChapters(html, url, listed)
+    const linked = new Set(listed.map((c) => c.url))
+    const extra = [
+      ...dataChapters(html, url, listed),
+      ...newsDataChapters(html, url).filter((c) => !linked.has(c.url))
+    ]
     const chapters = finalizeChapters([...listed, ...extra], slug, url)
     const short = declaredEnd >= 10 && chapters.length < declaredEnd * 0.9
     return {
