@@ -1605,6 +1605,9 @@ app.whenReady().then(async () => {
       ) as { name: string; url: string }[]
       for (const it of list) {
         const o: Record<string, unknown> = { name: it.name, url: it.url }
+        // Each site gets its own id: with one shared id, titles left over from the site before (or from the last run)
+        // were tested in this site's name.
+        const pipeId = 'pipe-' + Date.now().toString(36)
         const t0 = Date.now()
         const lap = (k: string): void => {
           o[k] = Date.now() - t0
@@ -1614,12 +1617,15 @@ app.whenReady().then(async () => {
           lap('detectMs')
           o.listTemplate = def.maxPages > 1 ? 'paged' : def.maxPages === 1 ? 'single page' : 'none'
           o.sitemap = def.sitemaps?.length ?? 0
-          def.id = 'pipe-test'
+          def.id = pipeId
           if (def.sitemaps && def.sitemaps.length > 1) def.sitemaps = def.sitemaps.slice(0, 1) // keep the test light
           def.maxPages = Math.min(def.maxPages, 2)
           addSource(def)
           await crawlSource(def.id, () => undefined)
-          const hits = search('', [def.id], 'site', 0, 60).hits
+          const host = (u: string): string => new URL(u).hostname.replace(/^www./, '')
+          const hits = search('', [def.id], 'site', 0, 60).hits.filter(
+            (h) => host(h.entries[0].url) === host(def.baseUrl)
+          )
           o.titles = hits.length
           o.withCovers = hits.filter((h) => h.cover).length
           lap('listMs')
@@ -1748,7 +1754,7 @@ app.whenReady().then(async () => {
           o.error = (e instanceof Error ? e.message : String(e)).slice(0, 110)
         }
         try {
-          removeSource('pipe-test')
+          removeSource(pipeId)
         } catch {
           /* nothing to remove */
         }

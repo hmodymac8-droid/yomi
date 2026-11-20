@@ -10,9 +10,17 @@ Survey of the site connectors in [HaruNeko](https://github.com/manga-download/ha
 - **Image problems on the site's side, not in Yomi:**
   - 3asq and ZinManga: some older series have missing images on the site itself.
   - Top Manhua: the image server answers with error 526.
-- **Still failing:**
-  - Scythe Scans: pages give "Page load timed out", even after the slow-page change in `loadPageReady`. Where the timeout comes from is still unknown.
-  - Lagoon Scans: the site is so slow that the test runs out of time at 200s. Many older series have no chapters left on the site.
+- **Fixed 2026-11-20:** Scythe Scans and Lagoon Scans.
+  - Cause: Electron runs none of Yomi's reading scripts in a page until the page has fully loaded, and these sites take 8-15 s to finish loading files they don't need (Lagoon's series pages are ready after 0.7 s). Series, list, genre and chapter pages now get a few seconds after they are ready, then their leftovers are stopped (`loadPageSettled`, `settleLoading` in `grabber.ts`). Lagoon's test went from 139 s to about 56 s, and a series page from 10-15 s to under 4 s.
+  - Lagoon still shows CHECK: the site itself keeps only the newest few chapters of each series.
+  - Short chapter lists try the six "page 2" address styles at once instead of one after another.
+- **Retest of all 28, 2026-11-20:** 19 WORKS (Violet after its fix below), 3 CHECK that are fine (Lagoon, MangaRead, ManhwaNex), 3 site-side image problems as before, and 3 sites that had trouble on their side that day (below).
+  - AquaManga now shows a Cloudflare "verify you are human" check. It needs one human check in the app; the automatic test can't pass it.
+  - S2Manga did not answer at all during the test (plain requests time out too).
+  - Gourmet Scans started refusing all requests partway through the testing (probably rate limiting). Its protected chapters still decode: 17 pages from a saved copy of chapter 9.
+  - Violet Scans' newest chapter is sold. A site read through the browser never looked for the lock box, so it reported "no pages": it now checks the plain page for one.
+  - The test tool gave every site the same id, so titles left over from the site before (or the last run) were tested in another site's name. Each site now gets its own id and only its own titles.
+  - Login/Register button pictures are no longer taken for pages.
 - **Fixes this needed in Yomi:**
   - A series' "chapter 2" link was taken for the list's page 2. Saved sites (3asq, olympustaff) are repaired on startup.
   - Sold and members-only chapters are reported as such.
@@ -23,8 +31,8 @@ Survey of the site connectors in [HaruNeko](https://github.com/manga-download/ha
 
 ### To do
 
-1. [ ] Scythe Scans: find where "Page load timed out" comes from (`MR_CHTEST`, `MR_TRACE`), then fix it or remove the site from `siteDirectory.ts`.
-2. [ ] Lagoon Scans: make it work within the time limit, or remove it.
+1. [x] Scythe Scans: works (see above).
+2. [x] Lagoon Scans: works within the time limit (see above).
 3. [ ] Section 3: the 20 sites behind Cloudflare.
 4. [ ] Section 4: the 89 sites on other engines or custom code.
 5. [ ] Section 5: the 5 adult sites.

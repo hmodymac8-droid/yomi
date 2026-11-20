@@ -1,6 +1,12 @@
 import type { BrowserWindow } from 'electron'
 import type { SourceDef } from '../preload/index.d'
-import { hiddenWindow, loadPageReady, pageIsChallenge, waitForHuman } from './grabber'
+import {
+  hiddenWindow,
+  loadPageReady,
+  pageIsChallenge,
+  settleLoading,
+  waitForHuman
+} from './grabber'
 import { discoverSitemap } from './sitemap'
 import { robotsAllows } from './robots'
 import { detectFeedApi } from './feedapi'
@@ -185,6 +191,7 @@ const isPage2 = (p: URL): boolean =>
 async function analyze(win: BrowserWindow, pageUrl: string): Promise<Analysis> {
   const tA = Date.now()
   await loadPageReady(win, pageUrl, 20000)
+  await settleLoading(win)
   const tLoaded = Date.now()
   const u = new URL(pageUrl)
   const host = u.hostname

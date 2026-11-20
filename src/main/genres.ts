@@ -6,7 +6,7 @@ import * as cheerio from 'cheerio'
 import { fetchHtml } from './http'
 import { robotsAllows } from './robots'
 import { getMode } from './hostmode'
-import { hiddenWindow, loadPage } from './grabber'
+import { hiddenWindow, loadPageSettled } from './grabber'
 import { canonGenre, knownGenre, parseMeta, parseSeriesList, type SeriesType } from './staticParse'
 import type { SourceDef } from '../preload/index.d'
 import { addCatalogEntries, catalogUrls, crawlSource, getSource, listSources } from './catalog'
@@ -318,7 +318,7 @@ async function getHtml(url: string, browser: boolean): Promise<string> {
   const release = await browserSlot()
   const w = hiddenWindow({ light: true })
   try {
-    await loadPage(w, url, 30000)
+    await loadPageSettled(w, url, 3000, 30000)
     await new Promise((r) => setTimeout(r, 1500))
     return await w.webContents.executeJavaScript('document.documentElement.outerHTML')
   } finally {

@@ -262,7 +262,7 @@ export function parseSeries(
 // something else: apple-touch-icon-152x152.png, site-logo.png)
 // Also: anything a WordPress plugin ships (Violet / ThunderScans show a coins popup: treasure-chest.png, coin.png), and
 // WordPress's small resized copies such as …-32x32.png / -192x192.png, which are the site icon (Eva Scans).
-const NOT_PAGE = /\/[^/]*(?:^|[-_.])?(logo|favicon|icon|avatar|sprite|emoji|apple-touch)[^/]*\.(png|jpe?g|webp|gif|avif|ico|svg)(?:\?|$)|\/(banner|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)|\/wp-content\/plugins\/|-(?:[1-9]\d|[12]\d\d|300)x(?:[1-9]\d|[12]\d\d|300)\.(png|jpe?g|webp|gif|avif)(?:\?|$)/i
+const NOT_PAGE = /\/[^/]*(?:^|[-_.])?(logo|favicon|icon|avatar|sprite|emoji|apple-touch|button)[^/]*\.(png|jpe?g|webp|gif|avif|ico|svg)(?:\?|$)|\/(banner|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)|\/wp-content\/plugins\/|-(?:[1-9]\d|[12]\d\d|300)x(?:[1-9]\d|[12]\d\d|300)\.(png|jpe?g|webp|gif|avif)(?:\?|$)/i
 
 /**
  * A chapter the site sells (its "lock chapters" plugin: "This chapter is locked. Please purchase it to read the full

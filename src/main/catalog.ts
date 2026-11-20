@@ -12,7 +12,7 @@ import type {
   SourceDef,
   SourceInfo
 } from '../preload/index.d'
-import { hiddenWindow, loadPage, refusedIn, waitXhrIdle } from './grabber'
+import { hiddenWindow, loadPageSettled, refusedIn, waitXhrIdle } from './grabber'
 import { fetchHtml } from './http'
 import {
   canonGenres,
@@ -1018,7 +1018,7 @@ function makeBrowserLister(
           w = hiddenWindow({ light: true })
           wins[i] = w
         }
-        await loadPage(w, url, 30000)
+        await loadPageSettled(w, url, 3000, 30000)
         return extractWithPolling(w, src.seriesRe, 9000)
       }
       const p = chains[i].then(run, run)
@@ -2175,13 +2175,6 @@ async function queryPaging(
   // What the plain page itself holds: a slicing style that just hands back this same page (it ignores the parameter)
   // must not count as "found a new slice".
   let page1 = new Set<string>()
-  try {
-    const r1 = await fetchHtml(base)
-    if (r1.status === 200)
-      page1 = new Set(parseSeries(r1.html, base, src.chapterRe).chapters.map((c) => c.url))
-  } catch {
-    /* no baseline: the acc check below still applies */
-  }
   const ownNew = (list: { title: string; url: string }[]): { title: string; url: string }[] =>
     list.filter(
       (c) => !acc.has(c.url) && !page1.has(c.url) && (!slug || flat(c.url).includes(slug))
@@ -2201,8 +2194,14 @@ async function queryPaging(
   try {
     let style: string | null = null
     let first: { title: string; url: string }[] = []
-    for (const st of styles) {
-      const got = ownNew(await fetchPage(st, 2))
+    // Ask for the plain page and every style's page 2 at once (one after another took 6-7 s on every short series),
+    // then take the first style, in order, that brought chapters the plain page doesn't have.
+    const [r1, ...page2] = await Promise.allSettled([fetchHtml(base), ...styles.map((st) => fetchPage(st, 2))])
+    if (r1.status === 'fulfilled' && r1.value.status === 200)
+      page1 = new Set(parseSeries(r1.value.html, base, src.chapterRe).chapters.map((c) => c.url))
+    for (const [i, st] of styles.entries()) {
+      const p2 = page2[i]
+      const got = ownNew(p2.status === 'fulfilled' ? p2.value : [])
       if (process.env['MR_PAGERDEBUG'])
         console.log('QPAGE style=' + st + ' page2 new=' + got.length + ' slug=' + slug)
       if (got.length > 0) {
@@ -2231,8 +2230,13 @@ async function browserSeries(
   depth = 0
 ): Promise<SeriesDetail> {
   const win = hiddenWindow({ light: true })
+  const tr0 = Date.now()
+  const tr = (m: string): void => {
+    if (process.env['MR_TRACE']) console.log(`TRACE series +${Date.now() - tr0}ms ${m} ${url.slice(-40)}`)
+  }
   try {
-    await loadPage(win, url)
+    await loadPageSettled(win, url)
+    tr('loaded')
     type Run = SeriesDetail & { ownCount: number }
     const run = async (): Promise<Run> => ({
       ...(await win.webContents.executeJavaScript(seriesScript(src.chapterRe, slug))),
@@ -2252,6 +2256,7 @@ async function browserSeries(
         .catch(() => undefined)
       await waitXhrIdle(win, 350, 3000, 200)
     }
+    tr('requests idle')
     let out = await run()
     let prevSig = ''
     let stableRounds = 0
@@ -2277,6 +2282,7 @@ async function browserSeries(
       await sleep(200)
       out = await run()
     }
+    tr('first read: ' + out.chapters.length + ' chapters')
     // Chapters can be spread over pager pages or behind "show more" buttons, and the DOM only shows
     // the current page, so collect links across rounds.
     const acc = new Map<string, { title: string; url: string }>()
@@ -2405,6 +2411,7 @@ async function browserSeries(
         )
       if (!changed) break
     }
+    tr('rounds done: ' + acc.size + ' chapters')
     if (acc.size === 0) {
       const refused = refusedIn(win).find((r) => r.status === 403 || r.status === 429)
       if (refused)
@@ -2446,6 +2453,7 @@ async function browserSeries(
     ) {
       await queryPaging(src, url, slug, acc, 100000)
     }
+    tr('paging done: ' + acc.size + ' chapters')
     // Aggregator sites list several "sources" per series, each with its own page holding the full chapter list while the
     // series page shows only the newest chapter of each: follow the first (biggest) source.
     if (depth === 0 && declaredEnd >= 10 && acc.size < declaredEnd * 0.9) {

@@ -150,6 +150,18 @@ function stopIfLocked(url: string): void {
   if (note) throw new Error(note)
 }
 
+/** Fetches the plain page to see whether the chapter is sold or members-only; throws that message if it is. */
+async function lockCheck(url: string): Promise<void> {
+  if (!lockedNotes.has(url)) {
+    // (only the lock box is wanted here: a plain request the site refuses says nothing about the chapter)
+    const before = faults.get(url)
+    await viaHttp(url)
+    if (before) faults.set(url, before)
+    else faults.delete(url)
+  }
+  stopIfLocked(url)
+}
+
 async function grabInner(url: string): Promise<GrabResult> {
   const key = new URL(url).hostname + '|chapter'
   const mode = getMode(key)
@@ -164,7 +176,14 @@ async function grabInner(url: string): Promise<GrabResult> {
     stopIfLocked(url)
     if (usable(l)) return l
   }
-  if (mode === 'browser') return grabChapter(url)
+  // No pages the site's usual way: a chapter the site sells shows its lock box instead (Violet Scans). Only the plain
+  // page is checked for that box, and a site read through the browser never fetched it: look before giving up.
+  if (mode === 'light') await lockCheck(url)
+  if (mode === 'browser') {
+    const b = await grabChapter(url)
+    if (b.pages.length === 0) await lockCheck(url)
+    return b
+  }
 
   if (mode === undefined) {
     // First chapter opened on this site. Run all three ways side by side. The full browser is slow, so when

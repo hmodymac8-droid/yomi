@@ -289,6 +289,85 @@ export async function loadPage(win: BrowserWindow, url: string, timeoutMs = 4500
 }
 
 /**
+ * Like loadPage, but does not wait forever for a page's slow leftovers. Electron runs no script in a page (so Yomi
+ * cannot read it) until the page has fully loaded, and some sites take 10 s or more to finish loading files they
+ * don't need to show their content (Lagoon Scans: ready after 0.7 s, fully loaded after 8-15 s). The page's own
+ * scripts have all run by dom-ready, so give it a few more seconds for its data requests, then stop the rest.
+ */
+export async function loadPageSettled(
+  win: BrowserWindow,
+  url: string,
+  graceMs = 3000,
+  timeoutMs = 45000
+): Promise<void> {
+  const wc = win.webContents
+  let grace: NodeJS.Timeout | undefined
+  let stopped = false
+  const onReady = (): void => {
+    clearTimeout(grace)
+    grace = setTimeout(() => {
+      if (win.isDestroyed() || !wc.isLoadingMainFrame()) return
+      if (CHALLENGE_TITLE.test(wc.getTitle())) return onReady() // a "just a moment" check: let it finish
+      stopped = true
+      wc.stop()
+    }, graceMs)
+  }
+  // The page sends itself on to another address: wait for that one's dom-ready instead of cutting it off.
+  const onNavigate = (d: { isMainFrame: boolean; isSameDocument: boolean }): void => {
+    if (d.isMainFrame && !d.isSameDocument) clearTimeout(grace)
+  }
+  wc.on('dom-ready', onReady) // (on every dom-ready: a client-side redirect starts a new page)
+  wc.on('did-start-navigation', onNavigate)
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      let timer: NodeJS.Timeout | undefined
+      try {
+        await Promise.race([
+          wc.loadURL(url),
+          new Promise((_, rej) => {
+            timer = setTimeout(() => rej(new Error('Page load timed out')), timeoutMs)
+          })
+        ])
+        return
+      } catch (e) {
+        if (stopped) return // stopped on purpose: the page is there, only its leftovers were cut off
+        const msg = e instanceof Error ? e.message : String(e)
+        if (msg.includes('ERR_ABORTED')) return // a client-side redirect: the new page is still loading
+        if (attempt === 2 || msg.includes('timed out')) throw e
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)))
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+  } finally {
+    clearTimeout(grace)
+    if (!win.isDestroyed()) {
+      wc.removeListener('dom-ready', onReady)
+      wc.removeListener('did-start-navigation', onNavigate)
+    }
+  }
+}
+
+/**
+ * For a page already past dom-ready (see loadPageReady): give it up to graceMs to finish loading, then stop its
+ * leftovers so Yomi can read it (Electron holds back Yomi's scripts until the page has finished loading).
+ */
+export async function settleLoading(win: BrowserWindow, graceMs = 3000): Promise<void> {
+  const end = Date.now() + graceMs
+  while (Date.now() < end) {
+    if (win.isDestroyed() || !win.webContents.isLoadingMainFrame()) return
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  if (win.isDestroyed() || !win.webContents.isLoadingMainFrame()) return
+  // (never cut a "just a moment" check short)
+  if (!CHALLENGE_TITLE.test(win.webContents.getTitle())) win.webContents.stop()
+}
+
+/** The title of a "checking your browser" page (read without running a script: none runs while the page loads). */
+const CHALLENGE_TITLE =
+  /just a moment|checking your browser|attention required|security verification|un instant/i
+
+/**
  * Like loadPage, but returns as soon as the page's structure is ready (dom-ready) instead of waiting for every
  * ad, tracker and image to finish. For reading links and cards that is all that's needed, and it is much quicker
  * on sites that load slow third-party scripts.
@@ -523,7 +602,7 @@ async function runReader<T>(win: BrowserWindow, script: string, ms = 60000): Pro
 export async function grabChapterLight(url: string): Promise<GrabResult> {
   const win = hiddenWindow({ light: true })
   try {
-    await loadPage(win, url, 30000)
+    await loadPageSettled(win, url, 5000, 30000) // (a reader may ask for its page list after dom-ready: 5 s)
     const r = await runReader<{
       title: string
       imgs: { src: string; w: number; h: number; reader?: boolean }[]
