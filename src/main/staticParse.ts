@@ -69,6 +69,30 @@ function textOf(node: any): string {
 }
 
 /**
+ * A chapter link that labels its parts (Stellar Saber: number, title, team and date, each in its own
+ * "chapter-item__…" element) is named by its title part, not by all of its text run together. When that part has no
+ * number in it, the number part goes in front. Null when the link has no such part.
+ */
+const NAME_CLASS = /(?:^|\s)[\w-]*(?:title|name)(?:\s|$)/i
+const NOT_CHAPTER_NAME = /series|manga|comic|post|entry|team|group|author|scanlat/i
+const NUMBER_CLASS = /(?:^|\s)[\w-]*num(?:ber)?(?:\s|$)/i
+function namedTitle($: cheerio.CheerioAPI, a: any): string | null {
+  const parts = $(a).find('[class]').toArray()
+  const cls = (e: any): string => $(e).attr('class') ?? ''
+  const nameEl = parts.find((e) => NAME_CLASS.test(cls(e)) && !NOT_CHAPTER_NAME.test(cls(e)))
+  if (!nameEl) return null
+  let name = textOf(nameEl)
+  if (!name) return null
+  if (!/\d/.test(name)) {
+    const num = parts.find((e) => NUMBER_CLASS.test(cls(e)))
+    const n = num ? textOf(num) : ''
+    if (!/\d/.test(n)) return null
+    name = n + ' - ' + name
+  }
+  return name.slice(0, 80)
+}
+
+/**
  * Cover URLs on list pages are usually tiny thumbnails. Where the site's naming scheme is known, point at the
  * full-size original instead (the caller keeps the thumbnail as a fallback in case the guess is wrong).
  */
@@ -204,6 +228,7 @@ export function parseSeries(
     // is a chapter whatever its address says: Manga Eclipse has …/12-slap/ next to …/chapter-14/.
     const listed = $(a).closest('li.wp-manga-chapter, #chapterlist li, .eplister li').length > 0
     if ((!listed && !re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t)) return
+    t = namedTitle($, a) ?? t
     if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.')
     seen.add(href)
     chapters.push({ title: t, url: href })
@@ -322,6 +347,22 @@ export function parseChapterImages(
       /* not JSON after all: read the page as usual */
     }
   }
+  // MangaStream-theme readers (ts_reader.run({sources: [{images: […]}]})) fill the reader area from that list with
+  // JavaScript, so the plain page shows only the list: read it. (KingOfShojo's one-picture chapter otherwise lost to
+  // two "Related Series" covers.)
+  const ts = objectAfter(html, /ts_reader\.run\(\s*\{/)
+  if (ts) {
+    try {
+      const sources = (JSON.parse(ts) as { sources?: { images?: unknown }[] }).sources
+      const images = Array.isArray(sources) ? sources.find((s) => Array.isArray(s?.images))?.images : null
+      const list = Array.isArray(images)
+        ? images.filter((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u))
+        : []
+      if (list.length >= 1) return { title: $('title').first().text().trim(), pages: list }
+    } catch {
+      /* not JSON after all: read the page as usual */
+    }
+  }
   // Some readers (Mangadar) put each page's address in data-mds, base64-encoded, and only show it as you scroll:
   // read them straight from there, in order.
   const encoded: string[] = []
@@ -360,7 +401,8 @@ export function parseChapterImages(
     const u = imgUrl($(el), pageUrl)
     if (u && !rejected.has(u) && !NOT_PAGE.test(u) && !reader.includes(u)) reader.push(u)
   })
-  let pages = reader.length >= 2 ? reader : pickPageGroup(dom)
+  // (one picture in the reader area is a one-picture chapter: the "Related Series" covers below it are no pages)
+  let pages = reader.length >= 1 ? reader : pickPageGroup(dom)
   if (pages.length < 3) {
     // Some sites ship the page list as JSON inside a script tag and only render the first <img>s.
     // (Only consulted when the <img> tags gave almost nothing: scripts also mention covers and thumbnails.)

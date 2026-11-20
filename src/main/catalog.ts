@@ -1876,6 +1876,21 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
   // nodes instead, with a space between elements, and leave out the row's date (<time>), which is no part of the name.
   const spaced = (el) => { let out = ''; const walk = (k) => { if (k.nodeType === 3) { out += k.data; return; } if (k.nodeType !== 1 || /^(TIME|SCRIPT|STYLE)$/.test(k.tagName)) return; out += ' '; for (const c of k.childNodes) walk(c); out += ' '; }; walk(el); return out; };
   const text = (a) => spaced(a).trim().replace(/\\s+/g, ' ');
+  // A link that labels its parts (number, title, team, date: Stellar Saber's chapter-item__title) is named by its title
+  // part, with the number part in front when the title has no number (same rule as namedTitle in staticParse.ts).
+  const nameClass = /(?:^|\\s)[\\w-]*(?:title|name)(?:\\s|$)/i;
+  const notName = /series|manga|comic|post|entry|team|group|author|scanlat/i;
+  const numClass = /(?:^|\\s)[\\w-]*num(?:ber)?(?:\\s|$)/i;
+  const named = (a) => {
+    const parts = [...a.querySelectorAll('[class]')];
+    const cls = (e) => e.getAttribute('class') || '';
+    const el = parts.find((e) => nameClass.test(cls(e)) && !notName.test(cls(e)));
+    if (!el) return null;
+    let nm = text(el);
+    if (!nm) return null;
+    if (!/\\d/.test(nm)) { const num = parts.find((e) => numClass.test(cls(e))); const nt = num ? text(num) : ''; if (!/\\d/.test(nt)) return null; nm = nt + ' - ' + nm; }
+    return nm;
+  };
   // A chapter is a link whose ADDRESS looks like one (…/chapter-12) OR whose visible text does ("Chapter 12"):
   // some sites use opaque addresses (…/chapters/01J76X…), so the address alone misses their whole list.
   const byText = (t) => /^(vol(ume)?\\.?\\s*\\d+\\s*[,:.\\-]?\\s*)?(chapter|chap\\.?|ch\\.?|episode|ep\\.?|ال?فصل|حلقة|الحلقة)\\s*\\d/i.test(t);
@@ -1895,6 +1910,7 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
     const sn = slugNum(href);
     try { if (new URL(href).pathname.replace(/\\/$/, '') === base) continue; } catch (e) { /* keep going */ }
     if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t) || seen.has(href)) continue;
+    t = named(a) || t;
     // a whole card of text is no title: name it by its number
     if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.');
     seen.add(href);
@@ -2646,6 +2662,9 @@ const seriesCachePath = (): string =>
 
 const SERIES_CACHE_VERSION = 7
 
+/** A chapter name that says its label and number twice: a row's number, title and more run together. */
+const GLUED_NAME = /(chapter|ال?فصل)\s*(\d+(?:\.\d+)?)(?!\d)[\s\S]*?\1\s*\2(?!\d)/i
+
 function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   if (seriesCache && !isUnreadable(seriesCachePath())) return seriesCache
   seriesCache =
@@ -2663,6 +2682,15 @@ function loadSeriesCache(): Record<string, SeriesCacheEntry> {
   let cleaned = false
   for (const [k, row] of Object.entries(seriesCache)) {
     if (k === '__v' || !row?.detail?.chapters) continue
+    // Names saved with a row's parts run together ("الفصل 16 الفصل 16 Manga Origin منذ 5 أشهر", before namedTitle):
+    // forget the list so it is read again with clean names. (Followed series know their chapters by address too, so
+    // nothing comes back as new.)
+    const glued = row.detail.chapters.filter((c) => GLUED_NAME.test(c.title)).length
+    if (glued > row.detail.chapters.length / 2) {
+      delete seriesCache[k]
+      cleaned = true
+      continue
+    }
     const kept = dropOtherSeries(row.detail.chapters, row.detail.url || k)
     if (kept.length === row.detail.chapters.length) continue
     cleaned = true

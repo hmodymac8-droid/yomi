@@ -598,6 +598,8 @@ const LIGHT_SCRIPT = `
       const sw = /(?:^|;)\\s*(?:max-)?width:\\s*(\\d+)px/i.exec(img.getAttribute('style') || '');
       if ((sw && Number(sw[1]) < 200) || /\\b(sticker|emoji|emoticon|avatar)\\b/i.test(img.className || '')) continue;
       const reader = !!img.closest('.reading-content, #readerarea') || img.classList.contains('wp-manga-chapter-img');
+      // a sidebar or widget ("popular series" covers) never holds the chapter's pages (KingOfShojo)
+      if (!reader && img.closest('aside, #sidebar, .sidebar, .widget, .widget-area')) continue;
       out.push({ src, w: Number(img.getAttribute('width')) || 0, h: Number(img.getAttribute('height')) || 0, reader });
     }
     return out;
@@ -676,7 +678,8 @@ export async function grabChapterLight(url: string): Promise<GrabResult> {
     const reader = [
       ...new Set(r.imgs.filter((i) => i.reader).map((i) => i.src))
     ].filter((u) => pickPageGroup([u]).length === 1) // (not a logo / icon / plugin picture)
-    let pages = reader.length >= 2 ? reader : pickPageGroup(urls)
+    // (one picture in the reader area is a one-picture chapter, not a reason to look at the sidebar's covers)
+    let pages = reader.length >= 1 ? reader : pickPageGroup(urls)
     // Readers that draw a page only once the one before it has loaded (Batcave) show just the first few here, with
     // images off; their whole list is in the page's data (__DATA__.images).
     const listed: unknown = await win.webContents

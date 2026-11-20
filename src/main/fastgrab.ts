@@ -169,15 +169,21 @@ async function grabInner(url: string): Promise<GrabResult> {
   const key = new URL(url).hostname + '|chapter'
   const mode = getMode(key)
 
+  let single: GrabResult | null = null // the plain page's answer when it found exactly one picture
   if (mode === 'static') {
     const s = await viaHttp(url)
     stopIfLocked(url)
+    if (s?.pages.length === 1) single = s
     if (usable(s)) return s
   }
   if (mode === 'static' || mode === 'light') {
     const l = await viaLight(url)
     stopIfLocked(url)
+    const lonePage = l?.pages.length === 1 ? l.pages[0] : null
     if (usable(l)) return l
+    // A chapter of one picture (KingOfShojo): both ways agree on it, so it is the chapter, not a failed read. (The full
+    // browser would go looking for big pictures and could bring the sidebar's covers.)
+    if (single && lonePage === single.pages[0]) return single
   }
   // No pages the site's usual way: a chapter the site sells shows its lock box instead (Violet Scans). Only the plain
   // page is checked for that box, and a site read through the browser never fetched it: look before giving up.
