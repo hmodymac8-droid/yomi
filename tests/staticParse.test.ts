@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseChapterImages, parseSeries } from '../src/main/staticParse.ts'
+import { parseChapterImages, parseSeries, textNumber } from '../src/main/staticParse.ts'
 
 const page = 'https://www.fastestmanga.com/ar/manga/a-fortune-telling-princess/'
 const re = '/manga/[^/]+/(?:fsl|chapter)-[^/]+/?$'
@@ -101,4 +101,46 @@ test("entries of a Madara chapter list are chapters even without 'chapter' in th
     <a href="https://mangaeclipse.com/manga/other-series/">Other series</a>`
   const { chapters } = parseSeries(html, page, '(?:chapter|chap|ch|episode|ep|read)[-_/ ]?\d')
   assert.deepEqual(chapters.map((c) => c.url), [`${page}chapter-14/`, `${page}12-slap/`, `${page}11-the-duel/`])
+})
+
+test('a long id after the series id is not a chapter number: the link text names it (Flame Comics)', () => {
+  const page = 'https://flamecomics.xyz/series/1'
+  const html = `<a href="/series/1/9257901643665640"><p>Chapter <span>185</span> - Side Story 6</p><p>2 years ago</p></a>
+    <a href="/series/1/c12b13b0dae48c94"><p>Chapter <span>184</span> - Side Story 5</p></a>`
+  const { chapters } = parseSeries(html, page, 'zzz')
+  assert.equal(chapters.length, 2)
+  assert.match(chapters[0].title, /^Chapter 185 - Side Story 6/)
+})
+
+test("the text's chapter number wins over a series id glued into the address (GodaComic)", () => {
+  assert.equal(textNumber('Chapter 99', '19055_99'), '99')
+  assert.equal(textNumber('Chapter 12', '12'), null)
+  assert.equal(textNumber('Chapter 5916 months ago', '59'), null) // the age glued on, not chapter 5916
+  assert.equal(textNumber('no number here', '7'), null)
+})
+
+test('KeyoApp pages are read from their uid, and early access chapters are locked (Eris Scans)', () => {
+  const page = 'https://erisscans.com/chapter/x/'
+  const html = `<script>realUrl = \`https://cdn.meowing.org/uploads/\${uid}\`;</script>
+    <img src="/assets/images/placeholder.svg" uid="a1.avif" class="lazy w-full myImage">
+    <img src="/assets/images/placeholder.svg" uid="a2.avif" class="lazy w-full myImage">
+    <img src="https://api.iconify.design/cbi:discord.svg?color=white">`
+  const r = parseChapterImages(html, page)
+  assert.deepEqual(r.pages, ['https://cdn.meowing.org/uploads/a1.avif', 'https://cdn.meowing.org/uploads/a2.avif'])
+  const locked = parseChapterImages(
+    `<span>This is an early access chapter. In order to read it, you first have to sign in and then purchase the chapter using cards balance.</span>
+     <img src="https://api.iconify.design/cbi:discord.svg?color=white" width="900" height="900">`,
+    page
+  )
+  assert.deepEqual(locked.pages, [])
+  assert.match(locked.locked ?? '', /locked/)
+})
+
+test('NovelDex pages come whole from the Next.js data, signature included (Drake Comics)', () => {
+  const page = 'https://drakecomic.net/series/comic/x/chapter/140'
+  const html = `<script>self.__next_f.push([1,"{\\"pages\\":[{\\"id\\":\\"a\\",\\"imageUrl\\":\\"/uploads/comic-pages/x/140/page-001.webp?sig=ab\\u0026exp=9\\"},{\\"id\\":\\"b\\",\\"imageUrl\\":\\"/uploads/comic-pages/x/140/page-002.webp?sig=cd\\u0026exp=9\\"}]}"])</script>`
+  assert.deepEqual(parseChapterImages(html, page).pages, [
+    'https://drakecomic.net/uploads/comic-pages/x/140/page-001.webp?sig=ab&exp=9',
+    'https://drakecomic.net/uploads/comic-pages/x/140/page-002.webp?sig=cd&exp=9'
+  ])
 })

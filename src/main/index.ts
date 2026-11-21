@@ -72,6 +72,7 @@ import {
   scanDue,
   search,
   searchAsync,
+  debugSeriesOrder,
   sourcesWithChapterTitles,
   sourcesWithSeriesAsList
 } from './catalog'
@@ -1767,6 +1768,12 @@ app.whenReady().then(async () => {
           // (2) New titles: a rescan reads the list from page 1 and stops at the first page with nothing new, so the
           // list must show the newest first. A sitemap is re-read in full each time and covers an A-Z list.
           o.tpl = def.listTemplate
+          const slugOf = (h: string): string =>
+            decodeURIComponent(h.replace(/\/$/, '').split('/').pop() ?? '').toLowerCase()
+          const orderOf = (slugs: string[]): string => {
+            const sorted = slugs.length >= 8 && slugs.every((x, i) => i === 0 || slugs[i - 1] <= x)
+            return slugs.length < 8 ? 'unknown' : sorted ? 'a-z' : 'newest-first'
+          }
           try {
             const first = await fetchHtml(def.listTemplate.replace('{n}', '1'), 15000)
             const sre = new RegExp(def.seriesRe)
@@ -1775,17 +1782,27 @@ app.whenReady().then(async () => {
                 [...first.html.matchAll(/href=["']([^"']+)["']/g)]
                   .map((m) => m[1])
                   .filter((h) => sre.test(h))
-                  .map((h) => decodeURIComponent(h.replace(/\/$/, '').split('/').pop() ?? '').toLowerCase())
+                  .map(slugOf)
               )
             ]
-            const sorted = slugs.length >= 8 && slugs.every((x, i) => i === 0 || slugs[i - 1] <= x)
-            o.listOrder = slugs.length < 8 ? 'unknown' : sorted ? 'a-z' : 'newest-first'
+            o.listOrder = orderOf(slugs)
           } catch {
             o.listOrder = 'unknown'
           }
+          // A list drawn by the page's script shows little in the plain copy: judge the order from the list as Yomi
+          // read it (page 1 first; only without a sitemap, which would come first).
+          if (o.listOrder === 'unknown' && !def.sitemaps?.length)
+            o.listOrder = orderOf(debugSeriesOrder(def.id).slice(0, 30).map(slugOf))
+          // a "latest updates" page lists the newest first by what it is
+          if (o.listOrder !== 'a-z' && /\/(latest|updates?|recent|new)(?:[/?-]|$)/i.test(def.listTemplate))
+            o.listOrder = 'newest-first'
           // (a data feed is read in full on every rescan, like a sitemap)
           o.newTitles =
-            o.listOrder === 'newest-first' || (def.sitemaps?.length ?? 0) > 0 || !!def.api
+            o.listOrder === 'newest-first' ||
+            (def.sitemaps?.length ?? 0) > 0 ||
+            !!def.api ||
+            // a list on one page is read whole on every rescan, whatever its order
+            !def.listTemplate.includes('{n}')
               ? 'ok'
               : 'AT-RISK'
           if (o.result === 'WORKS' && (o.newChapters !== 2 || o.newTitles !== 'ok')) o.result = 'UPDATES-FAILED'

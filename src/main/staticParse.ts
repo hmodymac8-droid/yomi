@@ -69,6 +69,19 @@ function textOf(node: any): string {
 }
 
 /**
+ * The chapter number a link's text names, when it differs from the one in its address: GodaComic's
+ * …/manga/<series>/19055_99 reads "Chapter 99" (19055 is the series' id). Null when they agree or the text has none.
+ */
+export function textNumber(text: string, fromUrl: string): string | null {
+  const m = /(?:chapter|chap|ch|episode|ep|ال?فصل|الحلقة|حلقة)\.?\s*(\d+(?:\.\d+)?)/i.exec(text)
+  if (!m) return null
+  const n = m[1].replace(/^0+(?=\d)/, '')
+  const u = fromUrl.replace(/[_-]/g, '.').replace(/^0+(?=\d)/, '')
+  // (…/59 with "Chapter 5916 months ago": the age glued onto the number, not chapter 5916)
+  return n === u || n.startsWith(u) ? null : n
+}
+
+/**
  * A chapter link that labels its parts (Stellar Saber: number, title, team and date, each in its own
  * "chapter-item__…" element) is named by its title part, not by all of its text run together. When that part has no
  * number in it, the number part goes in front. Null when the link has no such part.
@@ -208,7 +221,8 @@ export function parseSeries(
     if (!slugNumRe) return null
     try {
       const m = slugNumRe.exec(decodeURIComponent(new URL(h).pathname))
-      return m ? m[1] : null
+      // …/series/1/9257901643665640 (Flame Comics) is the chapter's id, not its number: the link's text names it
+      return m && /^\d{1,5}(?:\D|$)/.test(m[1]) ? m[1] : null
     } catch {
       return null
     }
@@ -229,7 +243,7 @@ export function parseSeries(
     const listed = $(a).closest('li.wp-manga-chapter, #chapterlist li, .eplister li').length > 0
     if ((!listed && !re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t)) return
     t = namedTitle($, a) ?? t
-    if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.')
+    if (sn !== null) t = 'Chapter ' + (textNumber(t, sn) ?? sn.replace(/[_-]/g, '.'))
     seen.add(href)
     chapters.push({ title: t, url: href })
   })
@@ -287,13 +301,23 @@ export function parseSeries(
 // something else: apple-touch-icon-152x152.png, site-logo.png)
 // Also: anything a WordPress plugin ships (Violet / ThunderScans show a coins popup: treasure-chest.png, coin.png), and
 // WordPress's small resized copies such as …-32x32.png / -192x192.png, which are the site icon (Eva Scans).
-const NOT_PAGE = /\/[^/]*(?:^|[-_.])?(logo|favicon|icon|avatar|sprite|emoji|apple-touch|button)[^/]*\.(png|jpe?g|webp|gif|avif|ico|svg)(?:\?|$)|\/(banner|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)|\/wp-content\/plugins\/|-(?:[1-9]\d|[12]\d\d|300)x(?:[1-9]\d|[12]\d\d|300)\.(png|jpe?g|webp|gif|avif)(?:\?|$)/i
+// (an svg is a drawing for the site's buttons and icons, never a scanned page: KeyoApp sites draw theirs from iconify)
+// (a chapter's own thumbnail sits in its page folder (Mangayi), and googleusercontent's /a/ pictures are the avatars of
+// people commenting, signed in with Google (StoneScape))
+const NOT_PAGE = /\.svg(?:[?#]|$)|^https?:\/\/api\.iconify\.design\/|\/thumb(?:nail)?\.(?:png|jpe?g|webp|gif|avif)(?:\?|$)|^https?:\/\/lh\d\.googleusercontent\.com\/a\/|\/[^/]*(?:^|[-_.])?(logo|favicon|icon|avatar|sprite|emoji|apple-touch|button)[^/]*\.(png|jpe?g|webp|gif|avif|ico|svg)(?:\?|$)|\/(banner|loading|placeholder)[^/]*\.(png|jpe?g|webp|gif|avif)|\/wp-content\/plugins\/|-(?:[1-9]\d|[12]\d\d|300)x(?:[1-9]\d|[12]\d\d|300)\.(png|jpe?g|webp|gif|avif)(?:\?|$)/i
 
 /**
  * A chapter the site sells (its "lock chapters" plugin: "This chapter is locked. Please purchase it to read the full
  * content. Free in 2027-05-24"). Returns what to tell the reader, or '' when the chapter is open.
  */
 export function lockedChapterNote($: cheerio.CheerioAPI): string {
+  // KeyoApp sites: "This is an early access chapter. In order to read it, you first have to sign in and then purchase
+  // the chapter using cards balance."
+  if (
+    $('img.myImage').length === 0 &&
+    /This is an early access chapter\.[^<]{0,80}purchase/i.test($('body').text().replace(/\s+/g, ' '))
+  )
+    return 'This chapter is locked on the site: it is early access and has to be bought there.'
   const box = $('.lock-container, .lock-title, .lock-status').first()
   const text = (box.closest('.lock-container').text() || box.text()).replace(/\s+/g, ' ')
   if (!box.length || !/locked|purchase|unlock/i.test(text)) return ''
@@ -328,7 +352,13 @@ export function pickPageGroup(urls: string[]): string[] {
 export function parseChapterImages(
   html: string,
   pageUrl: string
-): { title: string; pages: string[]; locked?: string } {
+): {
+  title: string
+  pages: string[]
+  locked?: string
+  /** the site's own page list, read from the page's data: trust it over what a browser shows */
+  exact?: boolean
+} {
   const $ = cheerio.load(html)
   const locked = lockedChapterNote($)
   if (locked) return { title: $('title').first().text().trim(), pages: [], locked }
@@ -371,6 +401,61 @@ export function parseChapterImages(
     if (/^https?:\/\//.test(u)) encoded.push(u)
   })
   if (encoded.length > 0) return { title: $('title').first().text().trim(), pages: encoded }
+  // NovelDex-theme readers (Drake, Diva, Kayn, Valir, Elf Toon) are Next.js pages: the chapter's list is in the page's
+  // data as "pages":[{"imageUrl":"/uploads/…?sig=…&exp=…"}], escaped once or twice over. The signature is part of
+  // the address, so it must come through whole.
+  const next = html.replace(/\\\\u0026|\\u0026/g, '&').replace(/\\"/g, '"')
+  const nextPages = /"imageUrl"\s*:/.test(next) ? objectAfter(next, /"pages"\s*:\s*\[(?=\s*\{)/) : null
+  if (nextPages) {
+    try {
+      const raw = JSON.parse(nextPages) as {
+        imageUrl?: unknown
+        kind?: unknown
+        isEncrypted?: unknown
+        tiles?: unknown
+        fragments?: unknown
+        isRedacted?: unknown
+      }[]
+      // every page held back (no address): a chapter the site sells (Diva Scans' newest)
+      if (raw.length > 0 && raw.every((p) => p?.isRedacted === true))
+        return {
+          title: $('title').first().text().trim(),
+          pages: [],
+          locked: 'This chapter is locked on the site: it has to be bought there.'
+        }
+      // Pages the site sends scrambled (encrypted, cut into tiles or fragments) are put together by its own script:
+      // leave those to the browser.
+      const scrambled = raw.some(
+        (p) =>
+          p?.isEncrypted === true ||
+          (Array.isArray(p?.tiles) && p.tiles.length > 0) ||
+          (Array.isArray(p?.fragments) && p.fragments.length > 0)
+      )
+      const list = raw
+        .filter((p) => typeof p?.imageUrl === 'string' && (p.kind === undefined || p.kind === 'CONTENT'))
+        .map((p) => new URL(p.imageUrl as string, pageUrl).href)
+        .filter((u) => !NOT_PAGE.test(u))
+      if (!scrambled && list.length >= 1)
+        return { title: $('title').first().text().trim(), pages: list, exact: true }
+    } catch {
+      /* not JSON after all: read the page as usual */
+    }
+  }
+  // KeyoApp readers (Eris, GenzToon, Timeless Toons): every page is a placeholder whose file name is in `uid`, and the
+  // page's script puts the CDN in front (realUrl = `https://cdn.meowing.org/uploads/${uid}`).
+  const uids = $('img.myImage[uid]')
+    .toArray()
+    .map((el) => String($(el).attr('uid') ?? '').trim())
+    .filter(Boolean)
+  if (uids.length > 0) {
+    const base =
+      /realUrl\s*=\s*`([^`$]+)\$\{uid\}`/.exec(html)?.[1] ?? 'https://cdn.meowing.org/uploads/'
+    return {
+      title: $('title').first().text().trim(),
+      pages: uids.map((u) => new URL(u, base).href),
+      exact: true
+    }
+  }
   const decrypted = protectedChapterImages(html)
   if (decrypted.length > 0) return { title: $('title').first().text().trim(), pages: decrypted }
   const dom: string[] = []
@@ -648,6 +733,9 @@ function objectAfter(html: string, start: RegExp): string | null {
   const m = start.exec(html)
   if (!m) return null
   const from = m.index + m[0].length - 1
+  // (the start may end on a '[' as well: then the whole list is taken)
+  const open = html[from] === '[' ? '[' : '{'
+  const close = open === '[' ? ']' : '}'
   let depth = 0
   let inStr = false
   for (let i = from; i < html.length; i++) {
@@ -656,8 +744,8 @@ function objectAfter(html: string, start: RegExp): string | null {
       if (c === '\\') i++
       else if (c === '"') inStr = false
     } else if (c === '"') inStr = true
-    else if (c === '{') depth++
-    else if (c === '}' && --depth === 0) return html.slice(from, i + 1)
+    else if (c === open) depth++
+    else if (c === close && --depth === 0) return html.slice(from, i + 1)
   }
   return null
 }

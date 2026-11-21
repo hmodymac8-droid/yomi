@@ -133,7 +133,9 @@ function installAdBlocker(): void {
       h['Accept'] = 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
       h['Sec-Fetch-Dest'] = 'image'
       h['Sec-Fetch-Mode'] = 'no-cors'
-      h['Sec-Fetch-Site'] = 'cross-site'
+      // what a browser says for a picture on that page: a site that keeps its pages on its own server (Drake Comics)
+      // refuses "cross-site" requests for them
+      h['Sec-Fetch-Site'] = fetchSite(details.url, h['Referer'])
     } else if (isHtml) {
       h['Sec-Fetch-Dest'] = 'document'
       h['Sec-Fetch-Mode'] = 'navigate'
@@ -168,6 +170,21 @@ function installAdBlocker(): void {
     }
     cb({})
   })
+}
+
+/** Sec-Fetch-Site of a request for `url` made from the page `referer`, as a browser would send it. */
+export function fetchSite(url: string, referer: string | undefined): string {
+  if (!referer) return 'cross-site'
+  try {
+    const a = new URL(url)
+    const b = new URL(referer)
+    if (a.origin === b.origin) return 'same-origin'
+    // (the last two labels of the host name: close enough to the registrable domain for these sites)
+    const site = (h: string): string => h.split('.').slice(-2).join('.')
+    return a.protocol === b.protocol && site(a.hostname) === site(b.hostname) ? 'same-site' : 'cross-site'
+  } catch {
+    return 'cross-site'
+  }
 }
 
 export function ensureSession(): void {
@@ -471,6 +488,8 @@ export interface GrabResult {
   pages: string[]
   /** The address the page ended up on (a site can send a chapter that's gone to its home page). */
   landed?: string
+  /** The list came from the site itself (decryption key, or asked for by chapter number): trust it over a browser. */
+  fromSite?: boolean
 }
 
 // Runs inside the page: scroll to trigger lazy loading, then collect big images in DOM order.

@@ -1417,6 +1417,11 @@ function mixHash(key: string): number {
   return h >>> 0
 }
 
+/** Dev/test helper: a site's title addresses in the order they were found (list page 1 first, when no sitemap). */
+export function debugSeriesOrder(id: string): string[] {
+  return (load().series[id] ?? []).map((e) => e.url)
+}
+
 export function search(
   q: string,
   sourceIds: string[],
@@ -1903,7 +1908,7 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
   // Sites that number chapters by address only: …/reader/<series-slug>/138 (no "chapter" word anywhere).
   const lastSeg = decodeURIComponent(base.split('/').pop() || '').replace(/[.*+?^$()|[\\]{}\\\\]/g, '\\\\$&');
   const slugNumRe = lastSeg ? new RegExp('/' + lastSeg + '/(\\\\d+(?:[._-]\\\\d+)?)/?$', 'i') : null;
-  const slugNum = (h) => { if (!slugNumRe) return null; try { const m = slugNumRe.exec(decodeURIComponent(new URL(h).pathname)); return m ? m[1] : null; } catch (e) { return null; } };
+  const slugNum = (h) => { if (!slugNumRe) return null; try { const m = slugNumRe.exec(decodeURIComponent(new URL(h).pathname)); return m && /^\\d{1,5}(?:\\D|$)/.test(m[1]) ? m[1] : null; } catch (e) { return null; } };
   for (const a of document.querySelectorAll('a[href]')) {
     const href = a.href.split('#')[0];
     let t = text(a);
@@ -1912,7 +1917,7 @@ const seriesScript = (chapterRe: string, slug: string): string => `(() => {
     if ((!re.test(href) && !byText(t) && !underBase(href) && sn === null) || junk(t) || seen.has(href)) continue;
     t = named(a) || t;
     // a whole card of text is no title: name it by its number
-    if (sn !== null) t = 'Chapter ' + sn.replace(/[_-]/g, '.');
+    if (sn !== null) { const tm = /(?:chapter|chap|ch|episode|ep|ال?فصل|الحلقة|حلقة)\\.?\\s*(\\d+(?:\\.\\d+)?)/i.exec(t); const tn = tm ? tm[1].replace(/^0+(?=\\d)/, '') : null; const un = sn.replace(/[_-]/g, '.').replace(/^0+(?=\\d)/, ''); t = 'Chapter ' + (tn && tn !== un && !tn.startsWith(un) ? tn : sn.replace(/[_-]/g, '.')); }
     seen.add(href);
     chapters.push({ title: t.slice(0, 80), url: href });
   }
@@ -2858,6 +2863,18 @@ export async function prefetchSeries(sourceId: string, url: string): Promise<voi
   }
 }
 
+/**
+ * Is this quick look (a series' first chapter page) the OLDEST chapters rather than the newest? True when its newest
+ * chapter is older than the newest one already saved.
+ */
+export function oldestFirstPage(quick: SeriesDetail, saved: SeriesDetail): boolean {
+  const nums = (d: SeriesDetail): number[] =>
+    d.chapters.map(chapterNum).filter((n): n is number => n !== null)
+  const q = nums(quick)
+  const s = nums(saved)
+  return q.length > 0 && s.length > 0 && Math.max(...q) < Math.max(...s)
+}
+
 async function getSeriesInner(
   sourceId: string,
   url: string,
@@ -2882,10 +2899,17 @@ async function getSeriesInner(
   let result: SeriesDetail
 
   if (newestOnly) {
-    return (
+    // A series never read before is read in full, once (as opening it does): its first page alone may be the oldest
+    // chapters, and they would become what the update checks compare with.
+    const saved = getSeriesCached(url)
+    if (!saved) return getSeries(sourceId, url)
+    const quick =
       (mode === 'static' ? await staticSeries(src, url, slug) : null) ??
       (await browserSeries(src, url, slug, true))
-    )
+    if (!oldestFirstPage(quick, saved)) return quick
+    // Some sites list a series' chapters oldest first, 100 to a page (Drake, Valir): their first page never shows a new
+    // chapter. Read the whole list for those.
+    return getSeries(sourceId, url)
   }
   if (mode === 'browser') {
     result = await browserSeries(src, url, slug)

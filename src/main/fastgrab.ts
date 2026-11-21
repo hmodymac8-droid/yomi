@@ -10,7 +10,8 @@ import {
 import { fetchHtml } from './http'
 import { feedChapter, feedFor } from './feedapi'
 import { parseChapterImages } from './staticParse'
-import { flavorCdnPages, sealedKey } from './sealed'
+import { flavorCdnPages } from './sealed'
+import { askedPages } from './pageLists'
 import { getMode, setMode } from './hostmode'
 import {
   classifyFailure,
@@ -79,8 +80,16 @@ async function viaHttp(url: string): Promise<GrabResult | null> {
     const p = parseChapterImages(r.html, url)
     if (p.locked) lockedNotes.set(url, p.locked)
     // encrypted pictures (Stellar Saber): their addresses carry the chapter's key, see sealed.ts
-    const pages = (await flavorCdnPages(r.html, url)) ?? p.pages
-    return { url, title: p.title, pages, landed: pageAddress(r.html, r.finalUrl, p.title) }
+    // ...or a page list the site hands out on request (ManhuaPlus), see pageLists.ts
+    const asked = (await flavorCdnPages(r.html, url)) ?? (await askedPages(r.html, url))
+    const pages = asked ?? p.pages
+    return {
+      url,
+      title: p.title,
+      pages,
+      landed: pageAddress(r.html, r.finalUrl, p.title),
+      ...(asked || p.exact ? { fromSite: true } : {})
+    }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     rememberFault(url, classifyFailure(message), message)
@@ -205,11 +214,15 @@ async function grabInner(url: string): Promise<GrabResult> {
 
     const verify = async (): Promise<GrabResult | null> => {
       const [s, l, full] = await Promise.all([sP, lP, fullP])
+      // A list the site handed out itself (encrypted pictures, or one asked for by chapter number) is the site's own
+      // word: a browser sees decrypted pictures as ones it made itself, or the sidebar's covers before the list.
+      if (usable(s) && s.fromSite) {
+        setMode(key, 'static')
+        return full
+      }
       if (!full || full.pages.length < 2) {
         // nothing to compare with: trust the fast ways only if they agree with each other
-        // (encrypted pictures come only from the plain page: a browser sees them as pictures it made itself)
-        if (usable(s) && s.pages.some((u) => sealedKey(u))) setMode(key, 'static')
-        else if (usable(s) && usable(l) && sameList(s.pages, l.pages)) setMode(key, 'static')
+        if (usable(s) && usable(l) && sameList(s.pages, l.pages)) setMode(key, 'static')
         else if (usable(l)) setMode(key, 'light')
         return full
       }
