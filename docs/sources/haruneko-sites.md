@@ -177,7 +177,7 @@ Online, but built on another engine or fully custom. Each needs checking; some n
 | [ ] | EN | Comix | https://comix.to | custom (custom code) | 200 |
 | [-] | EN | CoolMic | https://coolmic.me | custom (custom code) | 200 |
 | [ ] | EN | DeathTollScans | https://reader.deathtollscans.net | FoolSlide | 200 |
-| [ ] | AR | Dilar | https://dilar.tube | custom (custom code) | 200 |
+| [x] | AR | Dilar | https://dilar.tube | custom (custom code) | 200 |
 | [x] | EN | Diva Scans | https://divascans.org | NovelDexTheme | 200 |
 | [x] | EN | Drake Scans | https://drakecomic.net | NovelDexTheme | 200 |
 | [x] | EN | Elf Toon | https://elftoon.net | NovelDexTheme | 200 |
@@ -200,7 +200,7 @@ Online, but built on another engine or fully custom. Each needs checking; some n
 | [-] | EN | MangaFox | https://fanfox.net | DM5 (custom code) | 200 |
 | [-] | EN | MangaFoxFun | https://mangafox.fun | MangaHubBase | 200 |
 | [-] | EN | MangaFreak | https://ww3.mangafreak.me | custom (custom code) | 200 (already built in) |
-| [ ] | EN | MangaGeko | https://www.mgeko.cc | custom (custom code) | 200 |
+| [x] | EN | MangaGeko | https://www.mgeko.cc | custom (custom code) | 200 |
 | [-] | EN | MangaHere | https://www.mangahere.cc | DM5 (custom code) | 200 |
 | [-] | EN | MangaHereFun | https://mangahere.onl | MangaHubBase | 200 |
 | [-] | EN | MangaKakalot | https://www.kakamanga.com | MangaNel | 200 |
@@ -210,7 +210,7 @@ Online, but built on another engine or fully custom. Each needs checking; some n
 | [x] | EN | Manganato | https://www.manganato.gg | MangaNel | 200 |
 | [-] | EN | MangaOnlineFun | https://mangaonline.fun | MangaHubBase | 200 |
 | [ ] | AR | Manga Origin | https://mangaoriginread.blogspot.com | ZeistManga | 200 |
-| [ ] | EN | MangaPill | https://mangapill.com | custom (custom code) | 200 |
+| [x] | EN | MangaPill | https://mangapill.com | custom (custom code) | 200 |
 | [ ] | AR | MangaTales | https://mangatales.com | custom (custom code) | 200 |
 | [ ] | EN | MangaTaro | https://mangataro.org | MangaPeakBase | 200 |
 | [x] | AR | MangaTek | https://mangatek.com | custom | 200 |
@@ -292,10 +292,24 @@ Not in yet ([-]):
 - Viz - Shonen Jump: official paid store.
 - Voyce: official paid store.
 
+**Batch 3 (2026-11-21):** all 36 open sites retested with the current code.
+- Added: Dilar (AR; the reader shows "page 1 of 6" and Yomi finds 6), MangaPill (134 and 13 pages, both exactly what
+  the site has; the list now finds new titles), MangaGeko (92 of 93 pages; a series showing 1 chapter has only 1 on
+  the site too).
+- Asmodeus Scans: the plain read finds 32 "pages" that are cover thumbnails of other series; the browser finds 1-2. Not in.
+- Comick (.live): plain read and browser agree on 123 pages, but the reader shows no page count to check against,
+  and the full browser read finds 82. Not in until checked.
+- Thin page counts, as before: AZORA 2, Vortex 1, RenaScans 3, Rinko 2, HNI-Scantrad 3, Comix 1 (VTheme and
+  others; the pages are probably loaded as you scroll).
+- One chapter per series: AllManga, MangaTaro, Rolia Scan, MangaTime (2).
+- No chapters / no pages: ComicHub Free, DeathTollScans, Hive Scans, MangaTown, WebDex, Hachirumi, Nyx, Philia,
+  Rithar. No list found: Arc-Relight, Magical Translators, MangaCloud, Manga Origin, MangaTales, Punk Records,
+  XoxoComics. MangaFire times out, MangaKatana's image server answers 502, Novel Cool's pictures fail.
+
 Still to look at ([ ]): AllManga, Arc-Relight, Atsumaru (profile pictures taken for pages), ComicHub Free, Comick, Comix
-(Cloudflare), DeathTollScans, Dilar, VTheme sites that find only 1-2 pages (AZORA, Nyx, Vortex), Hachirumi and Magical
-Translators (Guya API), Hive Scans, HNI-Scantrad, MangaCloud, MangaFire and MangaGeko (time out), MangaKatana (image
-server 502), MangaPill (search-based list), MangaTales, MangaTaro and Rolia Scan (one chapter per series),
+(Cloudflare), DeathTollScans, VTheme sites that find only 1-2 pages (AZORA, Nyx, Vortex), Hachirumi and Magical
+Translators (Guya API), Hive Scans, HNI-Scantrad, MangaCloud, MangaFire (time out), MangaKatana (image
+server 502), MangaTales, MangaTaro and Rolia Scan (one chapter per series),
 MangaTime, Manga Origin (Blogger), NihonKuni, Novel Cool, Philia Scans, Punk Records, RenaScans, Rinko Comics,
 Rithar Scans, Asmodeus Scans, WebDex Scans, XoxoComics.
 
