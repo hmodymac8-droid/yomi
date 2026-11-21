@@ -35,7 +35,7 @@ Survey of the site connectors in [HaruNeko](https://github.com/manga-download/ha
 2. [x] Lagoon Scans: works within the time limit (see above).
 3. [ ] Gourmet Scans, once it answers again: clear `gourmetsupremacy.com|chapter` from the test `hostmode.json`, then `MR_CHTEST` must give about 17 pages for both `http` and `light`. If `light` gets none, the early stop cuts off the site's decoding script. Also recheck S2Manga.
 4. [ ] Section 3: the 20 sites behind Cloudflare.
-5. [ ] Section 4: the 89 sites on other engines or custom code.
+5. [ ] Section 4: the 89 sites on other engines or custom code (25 added 2026-11-21; see the notes there).
 6. [ ] Section 5: the 5 adult sites.
 7. [ ] Section 6: the 67 sites that didn't answer.
 8. [ ] Recheck the [-] "list not found yet" sites (e.g. Armageddon) now that the page-2 fix is in.
@@ -150,92 +150,136 @@ Online, but built on another engine or fully custom. Each needs checking; some n
 | [ ] | EN | AllManga | https://mkissa.to | custom (custom code) | 200 |
 | [ ] | EN | Arc-Relight | https://arc-relight.com | custom | 200 |
 | [ ] | EN | Asmodeus Scans | https://asmotoon.com | custom (custom code) | 200 |
-| [ ] | EN | Asura Toons | https://www.asuratoons.info | custom | 200 |
+| [x] | EN | Asura Toons | https://www.asuratoons.info | custom | 200 |
 | [ ] | EN | Atsumaru | https://atsu.moe | Grouple (custom code) | 200 |
 | [ ] | AR | ازورا مانجا (AZORA MANGA / WORLD) | https://azorafly.com | VTheme | 200 |
 | [ ] | EN | ComicHub Free | https://comichubfree.com | custom (custom code) | 200 |
 | [ ] | EN | Comick (.live) | https://comick.live | custom (custom code) | 200 |
-| [ ] | EN | Comikey | https://comikey.com | custom (custom code) | 200 |
+| [-] | EN | Comikey | https://comikey.com | custom (custom code) | 200 |
 | [ ] | EN | Comix | https://comix.to | custom (custom code) | 200 |
-| [ ] | EN | CoolMic | https://coolmic.me | custom (custom code) | 200 |
+| [-] | EN | CoolMic | https://coolmic.me | custom (custom code) | 200 |
 | [ ] | EN | DeathTollScans | https://reader.deathtollscans.net | FoolSlide | 200 |
 | [ ] | AR | Dilar | https://dilar.tube | custom (custom code) | 200 |
-| [ ] | EN | Diva Scans | https://divascans.org | NovelDexTheme | 200 |
-| [ ] | EN | Drake Scans | https://drakecomic.net | NovelDexTheme | 200 |
-| [ ] | EN | Elf Toon | https://elftoon.net | NovelDexTheme | 200 |
-| [ ] | EN | Eris Scans | https://erisscans.com | KeyoApp | 200 |
-| [ ] | EN | Flame Comics | https://flamecomics.xyz | custom (custom code) | 200 |
-| [ ] | EN | GenzToon | https://genztoons.org | KeyoApp | 200 |
-| [ ] | EN | GodaComic | https://manhuascans.org | GodaBase (custom code) | 200 |
+| [x] | EN | Diva Scans | https://divascans.org | NovelDexTheme | 200 |
+| [x] | EN | Drake Scans | https://drakecomic.net | NovelDexTheme | 200 |
+| [x] | EN | Elf Toon | https://elftoon.net | NovelDexTheme | 200 |
+| [x] | EN | Eris Scans | https://erisscans.com | KeyoApp | 200 |
+| [x] | EN | Flame Comics | https://flamecomics.xyz | custom (custom code) | 200 |
+| [x] | EN | GenzToon | https://genztoons.org | KeyoApp | 200 |
+| [x] | EN | GodaComic | https://manhuascans.org | GodaBase (custom code) | 200 |
 | [ ] | EN | Hachirumi | https://hachirumi.com | Guya | 200 |
-| [ ] | EN | Hijala Scans | https://en-hijala.com | VTheme | 200 |
+| [-] | EN | Hijala Scans | https://en-hijala.com | VTheme | 200 |
 | [ ] | EN | Hive Scans | https://hivetoons.org | VTheme | 200 |
 | [ ] | EN | HNI-Scantrad | https://hni-scantrad.net | PizzaReader | 200 |
-| [ ] | EN | HolonoMetria | https://holoearth.com | custom (custom code) | 200 |
-| [ ] | EN | Kayn Scan | https://kaynscans.com | NovelDexTheme | 200 |
-| [ ] | EN | Lua Scans | https://luacomic.org | HeanCMS | 200 |
+| [-] | EN | HolonoMetria | https://holoearth.com | custom (custom code) | 200 |
+| [-] | EN | Kayn Scan | https://kaynscans.com | NovelDexTheme | 200 |
+| [x] | EN | Lua Scans | https://luacomic.org | HeanCMS | 200 |
 | [ ] | EN | Magical Translators | https://mahoushoujobu.com | Guya | 200 |
-| [ ] | EN | MangaBat | https://www.mangabats.com | MangaNel | 200 |
+| [-] | EN | MangaBat | https://www.mangabats.com | MangaNel | 200 |
 | [ ] | EN | MangaCloud | https://mangacloud.org | custom (custom code) | 200 |
-| [ ] | EN | MangaDemon | https://demonicscans.org | custom | 200 |
+| [x] | EN | MangaDemon | https://demonicscans.org | custom | 200 |
 | [ ] | EN | MangaFire | https://mangafire.to | custom (custom code) | 200 |
-| [ ] | EN | MangaFox | https://fanfox.net | DM5 (custom code) | 200 |
-| [ ] | EN | MangaFoxFun | https://mangafox.fun | MangaHubBase | 200 |
-| [ ] | EN | MangaFreak | https://ww3.mangafreak.me | custom (custom code) | 200 (already built in) |
+| [-] | EN | MangaFox | https://fanfox.net | DM5 (custom code) | 200 |
+| [-] | EN | MangaFoxFun | https://mangafox.fun | MangaHubBase | 200 |
+| [-] | EN | MangaFreak | https://ww3.mangafreak.me | custom (custom code) | 200 (already built in) |
 | [ ] | EN | MangaGeko | https://www.mgeko.cc | custom (custom code) | 200 |
-| [ ] | EN | MangaHere | https://www.mangahere.cc | DM5 (custom code) | 200 |
-| [ ] | EN | MangaHereFun | https://mangahere.onl | MangaHubBase | 200 |
-| [ ] | EN | MangaKakalot | https://www.kakamanga.com | MangaNel | 200 |
-| [ ] | EN | MangaKakalotFun | https://mangakakalot.fun | MangaHubBase | 200 |
+| [-] | EN | MangaHere | https://www.mangahere.cc | DM5 (custom code) | 200 |
+| [-] | EN | MangaHereFun | https://mangahere.onl | MangaHubBase | 200 |
+| [-] | EN | MangaKakalot | https://www.kakamanga.com | MangaNel | 200 |
+| [-] | EN | MangaKakalotFun | https://mangakakalot.fun | MangaHubBase | 200 |
 | [ ] | EN | MangaKatana | https://mangakatana.com | custom | 200 |
-| [ ] | EN | MangaKio | https://mangak.io | MangakBase | 200 |
-| [ ] | EN | Manganato | https://www.manganato.gg | MangaNel | 200 |
-| [ ] | EN | MangaOnlineFun | https://mangaonline.fun | MangaHubBase | 200 |
+| [x] | EN | MangaKio | https://mangak.io | MangakBase | 200 |
+| [x] | EN | Manganato | https://www.manganato.gg | MangaNel | 200 |
+| [-] | EN | MangaOnlineFun | https://mangaonline.fun | MangaHubBase | 200 |
 | [ ] | AR | Manga Origin | https://mangaoriginread.blogspot.com | ZeistManga | 200 |
 | [ ] | EN | MangaPill | https://mangapill.com | custom (custom code) | 200 |
 | [ ] | AR | MangaTales | https://mangatales.com | custom (custom code) | 200 |
 | [ ] | EN | MangaTaro | https://mangataro.org | MangaPeakBase | 200 |
-| [ ] | AR | MangaTek | https://mangatek.com | custom | 200 |
+| [x] | AR | MangaTek | https://mangatek.com | custom | 200 |
 | [ ] | AR | MangaTime | https://mangatime.org | custom (custom code) | 200 |
-| [ ] | AR | MangaToon (Arabic) | https://ar.mangatoon.mobi | MangaToonBase | 200 |
-| [ ] | EN | MangaToon (English) | https://mangatoon.mobi | MangaToonBase | 200 |
+| [-] | AR | MangaToon (Arabic) | https://ar.mangatoon.mobi | MangaToonBase | 200 |
+| [-] | EN | MangaToon (English) | https://mangatoon.mobi | MangaToonBase | 200 |
 | [ ] | EN | MangaTown | https://www.mangatown.com | custom (custom code) | 200 |
-| [ ] | EN | MangaUp (Global) | https://global.manga-up.com | custom (custom code) | 200 |
-| [ ] | EN | Mangayi | https://mangayi.com | custom (custom code) | 200 |
-| [ ] | EN | Manhua Buddy | https://manhuabuddy.com | custom | 200 |
-| [ ] | EN | ManhuaPlus | https://manhuaplus.org | Liliana | 200 |
-| [ ] | EN | Monochrome Scans | https://manga.d34d.one | custom (custom code) | 200 |
-| [ ] | EN | MyAnimeList (Manga) | https://myanimelist.net | custom (custom code) | 200 |
-| [ ] | EN | MyMangaList | https://www5.mymangalist.org | custom (custom code) | 200 |
+| [-] | EN | MangaUp (Global) | https://global.manga-up.com | custom (custom code) | 200 |
+| [x] | EN | Mangayi | https://mangayi.com | custom (custom code) | 200 |
+| [x] | EN | Manhua Buddy | https://manhuabuddy.com | custom | 200 |
+| [x] | EN | ManhuaPlus | https://manhuaplus.org | Liliana | 200 |
+| [-] | EN | Monochrome Scans | https://manga.d34d.one | custom (custom code) | 200 |
+| [-] | EN | MyAnimeList (Manga) | https://myanimelist.net | custom (custom code) | 200 |
+| [x] | EN | MyMangaList | https://www5.mymangalist.org | custom (custom code) | 200 |
 | [ ] | EN | NihonKuni | https://nihonkuni.com | FlatManga (custom code) | 200 |
 | [ ] | EN | Novel Cool (English) | https://www.novelcool.com | NiaddBase | 200 |
 | [ ] | EN | Nyx Scans | https://nyxscans.com | VTheme | 200 |
 | [ ] | EN | Philia Scans | https://philiascans.org | custom (custom code) | 200 |
-| [ ] | EN | Project Suki | https://projectsuki.com | custom (custom code) | 200 |
+| [x] | EN | Project Suki | https://projectsuki.com | custom (custom code) | 200 |
 | [ ] | EN | Punk Records | https://punkrecordz.com | custom (custom code) | 200 |
-| [ ] | EN | Qi Scans | https://qimanga.com | EzMangaBase | 200 |
+| [x] | EN | Qi Scans | https://qimanga.com | EzMangaBase | 200 |
 | [ ] | EN | RenaScans | https://renascans.net | custom (custom code) | 200 |
 | [ ] | EN | Rinko Comics | https://rinkocomics.com | custom (custom code) | 200 |
 | [ ] | EN | Rithar Scans | https://ritharscans.com | KeyoApp | 200 |
 | [ ] | EN | Rolia Scan | https://roliascan.com | MangaPeakBase | 200 |
-| [ ] | EN | SeinagiFansub (EN) | https://reader.seinagi.org.es | FoolSlide | 200 |
-| [ ] | EN | SetsuScans | https://manga.saytsu.com | custom (custom code) | 200 |
-| [ ] | EN | StoneScape | https://stonescape.sayki.fr | custom (custom code) | 200 |
-| [ ] | EN | Tapas | https://tapas.io | custom (custom code) | 200 |
-| [ ] | EN | TappyToon | https://www.tappytoon.com | custom (custom code) | 200 |
-| [ ] | EN | Tapread | https://www.tapread.com | custom (custom code) | 200 |
-| [ ] | EN | TCB Scans | https://tcbonepiecechapters.com | custom | 200 |
-| [ ] | AR | Team X | https://olympustaff.com | custom | 200 |
-| [ ] | EN | Timeless Toons | https://timelesstoons.org | KeyoApp | 200 |
-| [ ] | EN | Toptoon (Global) | https://global.toptoon.com | custom (custom code) | 200 |
-| [ ] | EN | Valir Scans | https://valirscans.org | NovelDexTheme | 200 |
-| [ ] | EN | Viz - Shonen Jump | https://www.viz.com | custom (custom code) | 200 |
+| [x] | EN | SeinagiFansub (EN) | https://reader.seinagi.org.es | FoolSlide | 200 |
+| [-] | EN | SetsuScans | https://manga.saytsu.com | custom (custom code) | 200 |
+| [-] | EN | StoneScape | https://stonescape.sayki.fr | custom (custom code) | 200 |
+| [-] | EN | Tapas | https://tapas.io | custom (custom code) | 200 |
+| [-] | EN | TappyToon | https://www.tappytoon.com | custom (custom code) | 200 |
+| [-] | EN | Tapread | https://www.tapread.com | custom (custom code) | 200 |
+| [x] | EN | TCB Scans | https://tcbonepiecechapters.com | custom | 200 |
+| [-] | AR | Team X | https://olympustaff.com | custom | 200 |
+| [x] | EN | Timeless Toons | https://timelesstoons.org | KeyoApp | 200 |
+| [-] | EN | Toptoon (Global) | https://global.toptoon.com | custom (custom code) | 200 |
+| [x] | EN | Valir Scans | https://valirscans.org | NovelDexTheme | 200 |
+| [-] | EN | Viz - Shonen Jump | https://www.viz.com | custom (custom code) | 200 |
 | [ ] | EN | Vortex Scans | https://vortexscans.org | VTheme (custom code) | 200 |
-| [ ] | EN | Voyce | https://www.voyce.me | custom (custom code) | 200 |
-| [ ] | EN | VyManga | https://mangavyvy.com | custom (custom code) | 200 |
+| [-] | EN | Voyce | https://www.voyce.me | custom (custom code) | 200 |
+| [x] | EN | VyManga | https://mangavyvy.com | custom (custom code) | 200 |
 | [ ] | EN | WebDex Scans | https://webdexscans.com | custom (custom code) | 200 |
-| [ ] | EN | WeebCentral | https://weebcentral.com | custom (custom code) | 200 |
+| [x] | EN | WeebCentral | https://weebcentral.com | custom (custom code) | 200 |
 | [ ] | EN | XoxoComics | https://xoxocomic.com | custom (custom code) | 200 |
+
+**Batch 2 (section 4), 2026-11-21:** 76 free sites tested end to end with `MR_SITEPIPE`; 25 work and are in the
+app's directory ([x]), after these fixes in Yomi: page lists the site hands out on request (ManhuaPlus, WeebCentral),
+KeyoApp and NovelDex pages read from the page itself, early-access and redacted chapters reported as locked,
+svg/icon/thumbnail/avatar pictures never taken for pages, picture requests marked same-origin like a browser (Drake),
+chapter ids in addresses no longer taken for numbers (Flame, GodaComic), and update checks that read the whole list
+when a site shows its oldest chapters first (Drake, Valir). The 11 official paid stores were left out.
+
+Not in yet ([-]):
+- Comikey: official paid store.
+- CoolMic: official paid store.
+- Hijala Scans: page count changes between reads (13, then 2): not reliable yet.
+- HolonoMetria: official site.
+- Kayn Scan: pages are encrypted and cut into tiles that only its own script puts together.
+- MangaBat: same site and catalogue as Manganato (same pictures), so only Manganato is listed.
+- MangaFox: DM5 packed reader script: needs its own reader.
+- MangaFoxFun: MangaHub API copy: needs a key handshake and decrypting each page list.
+- MangaFreak: already built in.
+- MangaHere: DM5 packed reader script: needs its own reader.
+- MangaHereFun: MangaHub API copy (as MangaFoxFun).
+- MangaKakalot: moved to katamanga.com; same catalogue as Manganato, and its chapter list comes in pieces.
+- MangaKakalotFun: MangaHub API copy (as MangaFoxFun).
+- MangaOnlineFun: MangaHub API copy (as MangaFoxFun).
+- MangaToon (Arabic): signed API and scrambled picture bytes: needs its own reader.
+- MangaToon (English): signed API and scrambled picture bytes: needs its own reader.
+- MangaUp (Global): official paid app.
+- Monochrome Scans: the browser sees only some pages (5, 6 … 93, 94); needs its API.
+- MyAnimeList (Manga): official paid store.
+- SetsuScans: Cloudflare blocks its picture folder for anything but its own pages.
+- StoneScape: an app that loads everything from its API: needs its own reader.
+- Tapas: official paid store.
+- TappyToon: official paid store.
+- Tapread: official paid store.
+- Team X: already in Yomi (olympustaff).
+- Toptoon (Global): official paid store.
+- Viz - Shonen Jump: official paid store.
+- Voyce: official paid store.
+
+Still to look at ([ ]): AllManga, Arc-Relight, Atsumaru (profile pictures taken for pages), ComicHub Free, Comick, Comix
+(Cloudflare), DeathTollScans, Dilar, VTheme sites that find only 1-2 pages (AZORA, Nyx, Vortex), Hachirumi and Magical
+Translators (Guya API), Hive Scans, HNI-Scantrad, MangaCloud, MangaFire and MangaGeko (time out), MangaKatana (image
+server 502), MangaPill (search-based list), MangaTales, MangaTaro and Rolia Scan (one chapter per series),
+MangaTime, Manga Origin (Blogger), NihonKuni, Novel Cool, Philia Scans, Punk Records, RenaScans, Rinko Comics,
+Rithar Scans, Asmodeus Scans, WebDex Scans, XoxoComics.
 
 ## 5. Adult (18+) (5)
 

@@ -2097,14 +2097,16 @@ function mergeProviders(list: { title: string; url: string }[]): Ch[] {
     // One consistent name: "Chapter 34", whatever the site prints ("Ch. 34 108p Today", "34", "Ch.170 Thunderscans 4h ago").
     const shown = num ?? (chapterNum(c) !== null ? String(chapterNum(c)) : null)
     const title = shown !== null ? `Chapter ${shown}` : c.title || 'Chapter'
-    if (num) {
-      const have = byNum.get(num)
+    // (a number from the address counts too: Asura Toons also lists …/manga/<series>/chapter/53, named just "53")
+    const key = num ?? shown
+    if (key) {
+      const have = byNum.get(key)
       if (have) {
         have.alts = [...(have.alts ?? []), c.url]
         continue
       }
       const entry: Ch = { title, url: c.url, alts: [] }
-      byNum.set(num, entry)
+      byNum.set(key, entry)
       out.push(entry)
     } else {
       out.push({ title, url: c.url })
