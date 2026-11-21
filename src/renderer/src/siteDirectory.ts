@@ -16,7 +16,6 @@ export const SITE_DIRECTORY: DirectorySite[] = [
   { name: 'Stellar Saber', url: 'https://stellarsaber.pro/', lang: 'ar' },
   { name: 'MangaTek', url: 'https://mangatek.com/', lang: 'ar' },
 
-  { name: 'AquaManga', url: 'https://aquareader.org/', lang: 'en' },
   { name: 'Asura Scans', url: 'https://asurascans.com/', lang: 'en' },
   { name: 'Asura Toons', url: 'https://www.asuratoons.info/', lang: 'en' },
   { name: 'Batcave (comics)', url: 'https://batcave.biz/', lang: 'en' },

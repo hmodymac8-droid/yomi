@@ -1395,6 +1395,69 @@ app.whenReady().then(async () => {
     return
   }
 
+  // Dev helper: MR_HUMANLOOK=<url>,<folder> opens the "verify you are human" window the way the app does and records
+  // what it shows (screenshots, console, refused requests) for 40 s. It never clicks anything: the check is a person's.
+  if (process.env['MR_HUMANLOOK']) {
+    ;(async () => {
+      const [u, dir] = process.env['MR_HUMANLOOK']!.split(',')
+      const { writeFileSync } = await import('fs')
+      const { join: pjoin } = await import('path')
+      // MR_HUMANPLAIN=1: a fresh session with none of Yomi's hooks (to tell a site problem from a Yomi one)
+      const plain = process.env['MR_HUMANPLAIN']
+      const partition = plain ? 'persist:cftest-' + Date.now() : 'persist:sources'
+      if (!plain) ensureSession()
+      const win = new BrowserWindow({
+        width: 980,
+        height: 760,
+        show: true,
+        autoHideMenuBar: true,
+        webPreferences: { partition, sandbox: true, contextIsolation: true }
+      })
+      const ses = win.webContents.session
+      if (!plain) ses.webRequest.onCompleted((d) => {
+        if (d.webContentsId === win.webContents.id && d.statusCode >= 400)
+          console.log(`HUMAN status ${d.statusCode} ${d.url.slice(0, 160)}`)
+      })
+      if (!plain) ses.webRequest.onErrorOccurred((d) => {
+        if (d.webContentsId === win.webContents.id) console.log(`HUMAN error ${d.error} ${d.url.slice(0, 160)}`)
+      })
+      if (!plain) ses.webRequest.onSendHeaders((d) => {
+        if (d.webContentsId !== win.webContents.id || d.resourceType !== 'mainFrame') return
+        const h = { ...d.requestHeaders }
+        if (h['Cookie']) h['Cookie'] = h['Cookie'].replace(/=[^;]*/g, '=…')
+        console.log('HUMAN sent ' + d.method + ' ' + d.url.slice(0, 80) + ' ' + JSON.stringify(h))
+      })
+      win.webContents.on('console-message', (_e, level, message) =>
+        console.log(`HUMAN console[${level}] ${message.slice(0, 300)}`)
+      )
+      win.webContents.on('did-navigate', (_e, nav) => console.log('HUMAN navigate ' + nav))
+      void win.loadURL(u).catch((e) => console.log('HUMAN load ' + String(e)))
+      const t0 = Date.now()
+      for (const at of [3, 8, 15, 25, 40]) {
+        await new Promise((r) => setTimeout(r, Math.max(0, at * 1000 - (Date.now() - t0))))
+        if (win.isDestroyed()) break
+        try {
+          const img = await win.webContents.capturePage()
+          writeFileSync(pjoin(dir, `human-${at}s.png`), img.toPNG())
+        } catch (e) {
+          console.log('HUMAN capture ' + String(e))
+        }
+        const info = await win.webContents
+          .executeJavaScript(
+            `JSON.stringify({ title: document.title, webdriver: navigator.webdriver, chrome: typeof window.chrome === 'object' ? Object.keys(window.chrome) : String(typeof window.chrome), plugins: navigator.plugins.length, pdf: navigator.pdfViewerEnabled, langs: navigator.languages, notif: typeof Notification !== 'undefined' ? Notification.permission : 'none', webgl: (() => { try { const g = document.createElement('canvas').getContext('webgl'); const e = g.getExtension('WEBGL_debug_renderer_info'); return g.getParameter(e.UNMASKED_RENDERER_WEBGL) } catch (x) { return String(x) } })(), text: document.body ? document.body.innerText.slice(0, 120) : '' })`
+          )
+          .catch((e) => String(e))
+        console.log(`HUMAN at ${at}s ${info}`)
+      }
+      const cookies = await ses.cookies.get({ url: u })
+      console.log('HUMAN cookies ' + cookies.map((c) => c.name).join(','))
+      if (!win.isDestroyed()) win.destroy()
+    })()
+      .catch((e) => console.log('HUMAN_ERROR ' + (e instanceof Error ? e.message : String(e))))
+      .finally(() => app.quit())
+    return
+  }
+
   // Dev helper: MR_HTMLDUMP=<url>,<file> saves the page's HTML as the hidden browser has it (for sites that refuse plain
   // requests), plus the address it ended up on.
   if (process.env['MR_HTMLDUMP']) {

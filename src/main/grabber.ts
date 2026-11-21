@@ -3,6 +3,19 @@ import { pickPageGroup } from './staticParse'
 
 const PARTITION = 'persist:sources'
 
+/**
+ * Look like a normal Chrome: Electron's own name ("… Electron/x manga-reader/y") trips some bot checks, and Chrome
+ * itself only gives its major version ("Chrome/152.0.0.0").
+ *
+ * It is set once for the whole app, before any page opens, and never per session: a session's own name reaches its
+ * pages and requests but not the background workers they start, and Cloudflare's "verify you are human" check compares
+ * the two. Seeing two different browsers, it gave its pass and then refused it, reloading forever (2026-11-21).
+ */
+export function chromeName(ua: string): string {
+  return ua.replace(/\s(?:Electron|manga-reader|yomi)\/\S+/gi, '').replace(/Chrome\/(\d+)\.[\d.]+/, 'Chrome/$1.0.0.0')
+}
+if (process.env['MR_KEEP_UA'] !== '1') app.userAgentFallback = chromeName(app.userAgentFallback)
+
 const AD_HOSTS = [
   'doubleclick.net',
   'googlesyndication.com',
@@ -114,8 +127,7 @@ function installAdBlocker(): void {
   if (blockerInstalled) return
   blockerInstalled = true
   const ses = session.fromPartition(PARTITION)
-  // Look like a normal Chrome: Electron's default user-agent trips some bot checks.
-  if (process.env['MR_KEEP_UA'] !== '1') ses.setUserAgent(app.userAgentFallback.replace(/\s(?:Electron|manga-reader)\/\S+/g, ''))
+  // (the browser's name is set for the whole app, see chromeName at the top, not per session here)
   // Requests the app makes itself (image proxy, plain-HTTP page fetches, downloads) don't carry the headers a
   // real browser adds, and Cloudflare-protected image servers answer those with "Attention Required" (403).
   // Add them here. Requests made by hidden browser windows already have them (webContentsId is set).
@@ -412,12 +424,13 @@ function onCheckPage(win: BrowserWindow, asked: string): boolean {
 
 /** If the site put up such a check page, waits (up to 30 s) until it has sent us on and the real page has loaded. */
 export async function waitPastCheckPage(win: BrowserWindow, asked: string): Promise<void> {
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
   if (!onCheckPage(win, asked)) return
   const end = Date.now() + 30000
-  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
   while (Date.now() < end && onCheckPage(win, asked)) await sleep(200)
   while (!win.isDestroyed() && Date.now() < end && win.webContents.isLoadingMainFrame()) await sleep(200)
 }
+
 
 /**
  * For a page already past dom-ready (see loadPageReady): give it up to graceMs to finish loading, then stop its
