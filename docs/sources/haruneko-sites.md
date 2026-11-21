@@ -34,7 +34,7 @@ Survey of the site connectors in [HaruNeko](https://github.com/manga-download/ha
 1. [x] Scythe Scans: works (see above).
 2. [x] Lagoon Scans: works within the time limit (see above).
 3. [ ] Gourmet Scans, once it answers again: clear `gourmetsupremacy.com|chapter` from the test `hostmode.json`, then `MR_CHTEST` must give about 17 pages for both `http` and `light`. If `light` gets none, the early stop cuts off the site's decoding script. Also recheck S2Manga.
-4. [x] Section 3: the 20 sites behind Cloudflare (those needing a person to pass the check were dropped, 2026-11-21).
+4. [ ] Section 3: the 20 sites behind Cloudflare.
 5. [ ] Section 4: the 89 sites on other engines or custom code (25 added 2026-11-21; see the notes there).
 6. [ ] Section 5: the 5 adult sites.
 7. [ ] Section 6: the 67 sites that didn't answer.
@@ -51,7 +51,7 @@ Madara / MangaStream sites that HaruNeko reads with its standard template. Yomi 
 
 | Done | Lang | Site | Address | Engine | Check |
 |---|---|---|---|---|---|
-| [-] | EN | AquaManga | https://aquareader.org | Madara | 200 |
+| [x] | EN | AquaManga | https://aquareader.org | Madara | 200 |
 | [-] | EN | Armageddon | https://www.silentquill.net | MangaStream | 200 | list not found yet |
 | [x] | EN | Eva Scans | https://evascans.net | MangaStream | 200 |
 | [x] | EN | GD Scans | https://gdscans.com | Madara | 200 |
@@ -114,17 +114,24 @@ A plain request got a Cloudflare challenge. Yomi's hidden browser window may sti
     - pages come from `__DATA__.images`, cut to its `pages` count like the site's reader does.
   - Webnovel Comics: not added. It is mainly a novel site; the comics found had 0-1 chapters, with the rest locked in its app.
 - The remaining 13 (Bokugen, BrainRotComics, Dragon Tea, Kagane, Kissmanga, MagusManga, Manhua Us, Mist Scans, RageScans, Raven Scans, Read Comics Online, Shqqaa, XoManga) need a person to pass the check once, in the app's visible window. The automatic test can't do that.
-- **2026-11-21, dropped: sites that need a person to pass a check.** The user decided sites that only work after
-  someone passes a "verify you are human" check by hand are not wanted. Marked [-]: AquaManga (also taken out of the
-  directory), Bokugen, BrainRotComics, Dragon Tea, Kagane, Kissmanga, MagusManga, Manhua Us, Mist Scans, RageScans,
-  Raven Scans, Shqqaa and XoManga. (Dragon Tea gets past the check by itself now, but its pictures are refused.)
-  Read Comics Online is left open: no check, but no chapters found yet.
 - **The check window itself was broken (fixed 2026-11-21).** Yomi gave its pages a Chrome name per session; the
   background workers Cloudflare starts kept the old name, so the check saw two browsers, gave its pass and refused it,
   reloading forever with no box to click. The name is now set once for the whole app (`chromeName` in grabber.ts).
-  A plain Electron window and the fixed Yomi both pass Dragon Tea, Kissmanga and AquaManga by themselves in a
-  visible window; Raven shows a normal checkbox. `MR_HUMANLOOK=<url>,<folder>` (with `MR_HUMANPLAIN=1` for a session
-  without Yomi's hooks) records what the check window shows.
+  Dragon Tea, Kissmanga and AquaManga then passed by themselves in a visible window; after many test visits Cloudflare
+  shows them a normal "Verify you are human" checkbox instead, which is what the window is for.
+  `MR_HUMANLOOK=<url>,<folder>` (with `MR_HUMANPLAIN=1` for a session without Yomi's hooks) records what it shows.
+  (These 13 sites were briefly marked dropped on a misread of the user's wish; that was undone the same day.)
+- **Fake checks (ClickFix), 2026-11-21.** Hacked sites and their ads show fake "verify you are human" pages that copy a
+  command and ask you to paste it into Run (Win+R) or a terminal; it installs a password stealer. The user meant these
+  when asking to drop "sites that need a terminal to verify". Yomi now:
+  - closes the check window the moment such a page shows (any frame; `FAKE_CHECK_RE` in `src/main/fakeCheck.ts`) and
+    refuses to add the site with a plain warning;
+  - wipes a command that was put on the clipboard while the window was open (`COMMAND_RE`);
+  - gives site pages no clipboard permission at all, and keeps the check window on the site (an ad cannot navigate it
+    away; server redirects still go through);
+  - titles the window "Yomi: site check for <host>" instead of "Verify you are human".
+  `MR_FAKECHECK=<url>` (with `MR_FAKECLIP=<text>`) runs the check window and prints how it ended. No listed site was
+  seen showing one; any that does is dropped with the reason "fake check / malware".
 - `MR_HTMLDUMP=<url>,<file>` saves a page as the hidden browser sees it (for sites that refuse plain requests).
 - Full test of all 33 sites in the list, 2026-11-21: 24 WORKS, 3 CHECK as before (Lagoon, MangaRead, ManhwaNex), 3 site-side image problems as before (3asq, ZinManga, Top Manhua). AquaManga needs its human check, and Gourmet still doesn't answer. S2Manga is back and works.
   - KingOfShojo's newest chapter is a single picture, and the browser filled the gap with ad banners (pubadx.one). Ad-network pictures are never taken as pages now, and pubadx.one is blocked.
@@ -132,25 +139,25 @@ A plain request got a Cloudflare challenge. Yomi's hidden browser window may sti
 | Done | Lang | Site | Address | Engine | Check |
 |---|---|---|---|---|---|
 | [x] | EN | Batcave | https://batcave.biz | custom (custom code) | 403 |
-| [-] | EN | Bokugen Translation | https://bokugents.com | MangaStream | 403 |
-| [-] | EN | BrainRotComics | https://brainrotcomics.com | Madara | 403 |
-| [-] | EN | Dragon Tea Scans | https://dragontea.ink | Madara | 403 |
-| [-] | EN | Kagane | https://kagane.moe | custom (custom code) | 403 |
-| [-] | EN | Kissmanga | https://kissmanga.in | Madara | 403 |
-| [-] | EN | MagusManga | https://magustoon.org | VTheme | 403 |
+| [ ] | EN | Bokugen Translation | https://bokugents.com | MangaStream | 403 |
+| [ ] | EN | BrainRotComics | https://brainrotcomics.com | Madara | 403 |
+| [ ] | EN | Dragon Tea Scans | https://dragontea.ink | Madara | 403 |
+| [ ] | EN | Kagane | https://kagane.moe | custom (custom code) | 403 |
+| [ ] | EN | Kissmanga | https://kissmanga.in | Madara | 403 |
+| [ ] | EN | MagusManga | https://magustoon.org | VTheme | 403 |
 | [x] | AR | MangaSwat | https://meshmanga.com | custom (custom code) | 200 |
-| [-] | EN | Manhua Us | https://manhuaus.com | Madara | 403 |
+| [ ] | EN | Manhua Us | https://manhuaus.com | Madara | 403 |
 | [x] | EN | ManhwaTop | https://manhwatop.com | Madara | 403 (already built in) |
 | [x] | EN | Mgread | https://mgread.io | InitManga | 403 |
-| [-] | EN | Mist Scans | https://mistscans.org | custom (custom code) | 403 |
-| [-] | EN | RageScans | https://ragescans.com | MangaStream | 403 |
-| [-] | EN | Raven Scans | https://ravenscans.org | MangaStream | 403 |
+| [ ] | EN | Mist Scans | https://mistscans.org | custom (custom code) | 403 |
+| [ ] | EN | RageScans | https://ragescans.com | MangaStream | 403 |
+| [ ] | EN | Raven Scans | https://ravenscans.org | MangaStream | 403 |
 | [ ] | EN | Read Comics Online | https://readcomicsonline.ru | custom | 403 |
-| [-] | AR | موقع شقاع (Shqqaa) | https://www.shqqaa.com | custom | 403 |
+| [ ] | AR | موقع شقاع (Shqqaa) | https://www.shqqaa.com | custom | 403 |
 | [x] | AR | Stellar Saber | https://stellarsaber.pro | custom (custom code) | 200 |
 | [ ] | EN | Top Manhua | https://manhuatop.org | custom (custom code) | 403 |
 | [-] | EN | Webnovel Comics | https://www.webnovel.com | custom (custom code) | 403 |
-| [-] | EN | XoManga | https://xomanga.site | custom (custom code) | 403 |
+| [ ] | EN | XoManga | https://xomanga.site | custom (custom code) | 403 |
 
 ## 4. Other engines and custom sites (89)
 

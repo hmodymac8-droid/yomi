@@ -512,8 +512,13 @@ export async function detectSource(
     T(`home page read: ${pick.cards} cards, paged=${pick.paged}`)
     // Nothing found: is the site hiding behind a "verify you are human" screen? If so, let the person pass it.
     if (pick.cards < 5 && challenged && !(await planP)) {
-      const ok = await waitForHuman(input)
-      if (!ok)
+      const check = await waitForHuman(input)
+      if (check === 'fake')
+        throw new Error(
+          'This site showed a fake "verify you are human" page that asks you to paste a command into Run or a ' +
+            'terminal. That is a trick to install malware: never paste it. Yomi closed the page and will not add this site.'
+        )
+      if (check !== 'passed')
         throw new Error(
           'This site shows a "verify you are human" check that was not completed, so the app cannot read it. ' +
             'Add it again and finish the check in the window that opens.'

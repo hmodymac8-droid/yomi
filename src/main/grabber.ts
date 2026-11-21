@@ -1,5 +1,6 @@
-import { app, BrowserWindow, session } from 'electron'
+import { app, BrowserWindow, clipboard, session } from 'electron'
 import { pickPageGroup } from './staticParse'
+import { COMMAND_RE, FAKE_CHECK_RE } from './fakeCheck'
 
 const PARTITION = 'persist:sources'
 
@@ -128,6 +129,11 @@ function installAdBlocker(): void {
   blockerInstalled = true
   const ses = session.fromPartition(PARTITION)
   // (the browser's name is set for the whole app, see chromeName at the top, not per session here)
+  // Site pages never get the clipboard: fake "verify you are human" pages put a command there and ask you to paste it
+  // into Run or a terminal (see FAKE_CHECK_RE). Only these two permissions; everything else keeps Electron's default.
+  const CLIPBOARD = new Set<string>(['clipboard-read', 'clipboard-sanitized-write'])
+  ses.setPermissionRequestHandler((_wc, permission, cb) => cb(!CLIPBOARD.has(permission)))
+  ses.setPermissionCheckHandler((_wc, permission) => !CLIPBOARD.has(permission))
   // Requests the app makes itself (image proxy, plain-HTTP page fetches, downloads) don't carry the headers a
   // real browser adds, and Cloudflare-protected image servers answer those with "Attention Required" (403).
   // Add them here. Requests made by hidden browser windows already have them (webContentsId is set).
@@ -253,45 +259,104 @@ export async function pageIsChallenge(win: BrowserWindow): Promise<boolean> {
   return CHALLENGE_RE.test(text)
 }
 
+/** A script call that answers within 1.5 s, or '' (Cloudflare's own check frame can leave one waiting forever). */
+function frameText(run: () => Promise<unknown>): Promise<string> {
+  return Promise.race([
+    run()
+      .then((t) => String(t))
+      .catch(() => ''),
+    new Promise<string>((r) => setTimeout(() => r(''), 1500))
+  ])
+}
+
+/** The text of every frame in the window (a fake check often sits in a frame from another site). */
+async function windowText(win: BrowserWindow): Promise<string> {
+  // (Cloudflare's own check frame is left alone: a script run inside it makes the real check fail)
+  const frames = win.webContents.mainFrame.framesInSubtree.filter((f) => !/^https:\/\/challenges\.cloudflare\.com\//.test(f.url))
+  const texts = await Promise.all(
+    frames.map((f) =>
+      frameText(() =>
+        f.executeJavaScript('(document.title || "") + " " + (document.body ? document.body.innerText.slice(0, 4000) : "")')
+      )
+    )
+  )
+  return texts.join('\n')
+}
+
+/** passed: the real page showed. closed: you closed the window or gave up. fake: a fake check that asks for a command. */
+export type HumanCheck = 'passed' | 'closed' | 'fake'
+
 /**
  * Some sites put a "verify you are human" check in front of everything. The app never tries to pass it by itself.
  * This opens a normal, visible window on the site and waits while YOU complete the check; the proof it gives
- * (a cookie) is kept for the app's hidden windows. Resolves true once the real page shows, false if you close the
- * window or it takes more than 4 minutes.
+ * (a cookie) is kept for the app's hidden windows. Gives up after 4 minutes.
+ * The window stays on the site (an ad cannot send it elsewhere), and closes at once on a fake check page; a command
+ * such a page put on the clipboard is wiped.
  */
-export function waitForHuman(url: string): Promise<boolean> {
-  if (process.env['MR_NOHUMAN']) return Promise.resolve(false) // dev batch tests must never open windows
+export function waitForHuman(url: string): Promise<HumanCheck> {
+  if (process.env['MR_NOHUMAN']) return Promise.resolve('closed') // dev batch tests must never open windows
   installAdBlocker()
   const host = new URL(url).hostname
+  const site = (h: string): string => h.split('.').slice(-2).join('.')
   const win = new BrowserWindow({
     width: 980,
     height: 760,
     show: true,
-    title: `Verify you are human — ${host}`,
+    title: `Yomi: site check for ${host}`,
     autoHideMenuBar: true,
     webPreferences: { partition: PARTITION, sandbox: true, contextIsolation: true }
   })
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  // The page (or an ad on it) may not take the window to another site: that is how ads bring fake checks in.
+  // (Redirects the site's server answers with still go through: sites move to new addresses.)
+  win.webContents.on('will-navigate', (e) => {
+    try {
+      if (site(new URL(e.url).hostname) !== site(host)) e.preventDefault()
+    } catch {
+      e.preventDefault()
+    }
+  })
   void win.loadURL(url).catch(() => undefined)
+  const clipBefore = clipboard.readText().catch(() => '')
+  /** Did something put a command on the clipboard while the window was open? Wipe it. */
+  const commandPlanted = async (): Promise<boolean> => {
+    const now = await clipboard.readText().catch(() => '')
+    if (now === (await clipBefore) || !COMMAND_RE.test(now)) return false
+    clipboard.clear()
+    return true
+  }
   return new Promise((resolve) => {
     let finished = false
-    const finish = (ok: boolean): void => {
+    const finish = async (how: HumanCheck): Promise<void> => {
       if (finished) return
       finished = true
       clearInterval(timer)
       if (!win.isDestroyed()) win.destroy()
-      resolve(ok)
+      resolve((await commandPlanted()) ? 'fake' : how)
     }
     const started = Date.now()
+    let busy = false // one look at a time
     const timer = setInterval(async () => {
-      if (win.isDestroyed()) return finish(false)
-      if (Date.now() - started > 4 * 60 * 1000) return finish(false)
-      if (!(await pageIsChallenge(win))) {
-        await new Promise((r) => setTimeout(r, 1200)) // let the site set its cookie before we close
-        finish(true)
+      if (finished || busy) return
+      if (win.isDestroyed()) return finish('closed')
+      if (Date.now() - started > 4 * 60 * 1000) return finish('closed')
+      busy = true
+      try {
+        if ((await commandPlanted()) || FAKE_CHECK_RE.test(await windowText(win))) return finish('fake')
+        if (win.isDestroyed()) return finish('closed')
+        const text = await frameText(() =>
+          win.webContents.executeJavaScript('document.title + " " + (document.body ? document.body.innerText.slice(0, 400) : "")')
+        )
+        if (process.env['MR_FAKEDEBUG']) console.log('CHECKWIN', Math.round((Date.now() - started) / 1000), JSON.stringify(text.slice(0, 80)))
+        if (text && !CHALLENGE_RE.test(text)) {
+          await new Promise((r) => setTimeout(r, 1200)) // let the site set its cookie before we close
+          finish('passed')
+        }
+      } finally {
+        busy = false
       }
     }, 1000)
-    win.on('closed', () => finish(false))
+    win.on('closed', () => finish('closed'))
   })
 }
 

@@ -38,6 +38,7 @@ import {
   loadPage,
   probeLinks,
   refererHints,
+  waitForHuman,
   warmUp
 } from './grabber'
 import { installImageProxy, registerImageScheme } from './imageProxy'
@@ -1392,6 +1393,25 @@ app.whenReady().then(async () => {
         recentProgress(5).length
     )
     app.quit()
+    return
+  }
+
+  // Dev helper: MR_FAKECHECK=<url> runs the app's own check window on a page and prints how it ended (passed / closed /
+  // fake) and where the window ended up. MR_FAKECLIP=<text> puts text on the clipboard 2 s in, the way a fake check
+  // page would on a click (the clipboard is put back afterwards).
+  if (process.env['MR_FAKECHECK']) {
+    ;(async () => {
+      const { clipboard } = await import('electron')
+      const before = await clipboard.readText().catch(() => '')
+      const plant = process.env['MR_FAKECLIP']
+      if (plant) setTimeout(() => void clipboard.writeText(plant), 2000)
+      const started = Date.now()
+      const how = await waitForHuman(process.env['MR_FAKECHECK']!)
+      const after = await clipboard.readText().catch(() => '')
+      console.log(`FAKECHECK ${how} after ${Math.round((Date.now() - started) / 1000)}s clipboard=${JSON.stringify(after)}`)
+      await clipboard.writeText(before)
+      app.quit()
+    })()
     return
   }
 
