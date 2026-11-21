@@ -3,7 +3,7 @@ import electronUpdater from 'electron-updater'
 import type { AppUpdateState } from '../preload/index.d'
 
 /*
- * Updates come from the GitHub releases of hmodymac8-droid/yomi. The installed app checks at startup and every
+ * Updates come from the GitHub releases of hmodymac8-droid/yomi-manga-manhwa-reader. The installed app checks at startup and every
  * few hours (or when "Check for updates" is pressed in Settings), downloads a newer version in the background,
  * and tells the window it is ready. "Restart" installs it now; otherwise it is installed the next time Yomi is
  * closed. Nothing is checked while developing.

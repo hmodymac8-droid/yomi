@@ -22,7 +22,7 @@ export interface DiscordActivity {
 export type PresenceMode = 'off' | 'app' | 'full'
 
 export const YOMI_LOGO =
-  'https://raw.githubusercontent.com/hmodymac8-droid/yomi/main/resources/icon.png'
+  'https://raw.githubusercontent.com/hmodymac8-droid/yomi-manga-manhwa-reader/main/resources/icon.png'
 
 const SCREEN_TEXT: Record<string, string> = {
   browse: 'Browsing Discover',

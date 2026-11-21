@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>All your manga, manhwa and manhua sites in one clean, ad-free reader for Windows.</b><br>
-  <a href="https://github.com/hmodymac8-droid/yomi/releases/latest"><b>⬇ Download for Windows</b></a>
+  <a href="https://github.com/hmodymac8-droid/yomi-manga-manhwa-reader/releases/latest"><b>⬇ Download for Windows</b></a>
   &nbsp;·&nbsp; <a href="#العربية">العربية</a>
 </p>
 
@@ -63,7 +63,7 @@ Tested end to end (title list, chapters, pages and images). Copy an address, pas
 
 ## How to use
 
-1. Download **Yomi-Setup** from [Releases](https://github.com/hmodymac8-droid/yomi/releases/latest) and run it.
+1. Download **Yomi-Setup** from [Releases](https://github.com/hmodymac8-droid/yomi-manga-manhwa-reader/releases/latest) and run it.
    If Windows shows *"Windows protected your PC"*, click **More info → Run anyway**.
 2. On **Discover**, paste a manga site's address into **Add a site** and press **Add**.
 3. Search with the top bar (**Ctrl + K**), open a title, and press **Start** or **Continue**.
@@ -119,7 +119,7 @@ npm run build:win  # make the installer in dist/
 
 ### طريقة الاستخدام
 
-1. حمّل **Yomi-Setup** من صفحة [الإصدارات](https://github.com/hmodymac8-droid/yomi/releases/latest) وشغّله.
+1. حمّل **Yomi-Setup** من صفحة [الإصدارات](https://github.com/hmodymac8-droid/yomi-manga-manhwa-reader/releases/latest) وشغّله.
    إذا ظهرت رسالة *"Windows protected your PC"* اضغط **More info** ثم **Run anyway**.
 2. في صفحة **Discover** الصق رابط موقع مانجا في خانة **Add a site** واضغط **Add**.
 3. ابحث من الشريط العلوي (**Ctrl + K**)، افتح أي عمل، واضغط **Start** أو **Continue**.

@@ -54,5 +54,5 @@ npmRebuild: false
 publish:
   provider: github
   owner: hmodymac8-droid
-  repo: yomi
+  repo: yomi-manga-manhwa-reader
   releaseType: release
